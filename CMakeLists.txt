@@ -1,0 +1,157 @@
+# Dirk Simple; a player for FMV games.
+#
+# Please see the file LICENSE.txt in the source's root directory.
+#
+# This file written by Ryan C. Gordon.
+
+project(DirkSimple)
+cmake_minimum_required(VERSION 3.0.0)
+
+include(CheckLibraryExists)
+
+CHECK_LIBRARY_EXISTS(m floor "" HAVE_LIB_M)
+                                                                                                                                         
+set(DIRKSIMPLE_SDL_DEFAULT ON)
+set(DIRKSIMPLE_LIBRETRO_DEFAULT ON)
+
+# Building as part of RetroArch? Turn off everything but the libretro plugin by default.
+if(LIBRETRO)
+    set(DIRKSIMPLE_SDL_DEFAULT OFF)
+endif()
+
+option(DIRKSIMPLE_SDL "Build the DirkSimple SDL app" ${DIRKSIMPLE_SDL_DEFAULT})
+#option(DIRKSIMPLE_LIBRETRO "Build the DirkSimple libretro core" ${DIRKSIMPLE_LIBRETRO_DEFAULT})
+
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+    add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+else()  # This assumes you have GCC or Clang at the moment.
+    add_definitions(-Wall)
+endif()
+
+add_library(dirksimple-ogg STATIC
+	thirdparty/libogg/src/bitwise.c
+	thirdparty/libogg/src/framing.c
+)
+
+add_library(dirksimple-vorbis STATIC
+    thirdparty/libvorbis/lib/analysis.c
+    thirdparty/libvorbis/lib/bitrate.c
+    thirdparty/libvorbis/lib/block.c
+    thirdparty/libvorbis/lib/codebook.c
+    thirdparty/libvorbis/lib/envelope.c
+    thirdparty/libvorbis/lib/floor0.c
+    thirdparty/libvorbis/lib/floor1.c
+    thirdparty/libvorbis/lib/info.c
+    thirdparty/libvorbis/lib/lpc.c
+    thirdparty/libvorbis/lib/lsp.c
+    thirdparty/libvorbis/lib/mapping0.c
+    thirdparty/libvorbis/lib/mdct.c
+    thirdparty/libvorbis/lib/psy.c
+    thirdparty/libvorbis/lib/registry.c
+    thirdparty/libvorbis/lib/res0.c
+    thirdparty/libvorbis/lib/sharedbook.c
+    thirdparty/libvorbis/lib/smallft.c
+    thirdparty/libvorbis/lib/synthesis.c
+    thirdparty/libvorbis/lib/vorbisenc.c
+    thirdparty/libvorbis/lib/vorbisfile.c
+    thirdparty/libvorbis/lib/window.c
+)
+target_include_directories(dirksimple-vorbis PRIVATE
+    thirdparty/libogg/include
+    thirdparty/libvorbis/lib
+)
+
+add_library(dirksimple-theora STATIC
+    thirdparty/libtheora/lib/apiwrapper.c
+    thirdparty/libtheora/lib/bitpack.c
+    thirdparty/libtheora/lib/decapiwrapper.c
+    thirdparty/libtheora/lib/decinfo.c
+    thirdparty/libtheora/lib/decode.c
+    thirdparty/libtheora/lib/dequant.c
+    thirdparty/libtheora/lib/fragment.c
+    thirdparty/libtheora/lib/huffdec.c
+    thirdparty/libtheora/lib/idct.c
+    thirdparty/libtheora/lib/info.c
+    thirdparty/libtheora/lib/internal.c
+    thirdparty/libtheora/lib/quant.c
+    thirdparty/libtheora/lib/state.c
+)
+
+add_library(dirksimple-theoraplay STATIC
+    thirdparty/theoraplay/theoraplay.c
+)
+target_include_directories(dirksimple-theoraplay PRIVATE
+    thirdparty/libogg/include
+    thirdparty/libvorbis/include
+    thirdparty/libtheora/include
+)
+
+add_library(dirksimple-lua STATIC
+    thirdparty/lua/src/lapi.c
+    thirdparty/lua/src/ldebug.c
+    thirdparty/lua/src/ldo.c
+    thirdparty/lua/src/ldump.c
+    thirdparty/lua/src/lfunc.c
+    thirdparty/lua/src/lgc.c
+    thirdparty/lua/src/lmem.c
+    thirdparty/lua/src/lobject.c
+    thirdparty/lua/src/lopcodes.c
+    thirdparty/lua/src/lstate.c
+    thirdparty/lua/src/lstring.c
+    thirdparty/lua/src/ltable.c
+    thirdparty/lua/src/ltm.c
+    thirdparty/lua/src/lundump.c
+    thirdparty/lua/src/lvm.c
+    thirdparty/lua/src/lzio.c
+    thirdparty/lua/src/lauxlib.c
+    thirdparty/lua/src/lbaselib.c
+    thirdparty/lua/src/lstrlib.c
+    thirdparty/lua/src/ltablib.c
+    thirdparty/lua/src/lctype.c
+    thirdparty/lua/src/lparser.c
+    thirdparty/lua/src/llex.c
+    thirdparty/lua/src/lcode.c
+    thirdparty/lua/src/linit.c
+    thirdparty/lua/src/lctype.c
+    thirdparty/lua/src/ldblib.c
+    thirdparty/lua/src/liolib.c
+    thirdparty/lua/src/lmathlib.c
+    thirdparty/lua/src/loslib.c
+    thirdparty/lua/src/lcorolib.c
+    thirdparty/lua/src/loadlib.c
+)
+target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_MKSTEMP=1")  # as opposed to tmpnam(), yuck!
+target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_ULONGJMP=1")
+
+if(DIRKSIMPLE_SDL)
+    find_package(SDL2 REQUIRED)
+    add_executable(dirksimple dirksimple.c dirksimple_sdl.c)
+    target_include_directories(dirksimple PRIVATE
+        ${SDL2_INCLUDE_DIRS} ${SDL2_INCLUDE_DIR}
+        thirdparty/lua/src
+        thirdparty/theoraplay
+    )
+    target_link_libraries(dirksimple ${SDL2_LIBRARIES} ${SDL2_LIBRARY})
+    target_link_libraries(dirksimple dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+    if(HAVE_LIB_M)
+        target_link_libraries(dirksimple m)
+    endif()
+endif()
+
+#if(DIRKSIMPLE_LIBRETRO)
+#    add_library(dirksimple_libretro SHARED dirksimple_libretro.c)
+#    set_target_properties(dirksimple_libretro PROPERTIES PREFIX "")
+#    target_include_directories(dirksimple PRIVATE
+#        thirdparty/lua/src
+#        thirdparty/theoraplay
+#    )
+#    target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+#    if(HAVE_LIB_M)
+#        target_link_libraries(dirksimple_libretro m)
+#    endif()
+#endif()
+
+# end of CMakeLists.txt ...
+
