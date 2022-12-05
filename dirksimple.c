@@ -55,9 +55,10 @@ static uint64_t GTicks = 0;
 static uint64_t GTicksOffset = 0;
 static uint32_t GFrameMS = 0;
 static int64_t GSeekToTicksOffset = 0;
-static uint64_t GTicksAtStartOfClip = 0;
-static uint64_t GClipStartMs = 0;
+static uint64_t GClipStartMs = 0;   // Milliseconds into video stream that starts this clip.
+static uint64_t GClipStartTicks = 0;  // GTicks when clip started playing
 static unsigned int GSeekGeneration = 0;
+static int GNeedInitialLuaTick = 1;
 static const THEORAPLAY_VideoFrame *GPendingVideoFrame = NULL;
 
 
@@ -327,23 +328,21 @@ void DirkSimple_debugger(void)
     luahook_DirkSimple_debugger(GLua);
 }
 
-static void DirkSimple_start_clip(uint32_t startms, uint32_t durationms)
+static void DirkSimple_start_clip(uint32_t startms)
 {
     if (GDecoder) {
         DirkSimple_log("START CLIP: GTicks %u, startms %u\n", (unsigned int) GTicks, (unsigned int) startms);
         GSeekGeneration = THEORAPLAY_seek(GDecoder, startms);
         DirkSimple_cleardiscaudio();
-        GTicksAtStartOfClip = GTicks;
         GClipStartMs = startms;
-        GSeekToTicksOffset = ((int64_t) GTicks) - ((int64_t) startms);
+        GClipStartTicks = 0;
     }
 }
 
 static int luahook_DirkSimple_start_clip(lua_State *L)
 {
-    const uint32_t startms = (uint32_t) luaL_checkinteger(L, 1);
-    const uint32_t durationms = (uint32_t) luaL_checkinteger(L, 2);
-    DirkSimple_start_clip(startms, durationms);
+    const uint32_t startms = (uint32_t) lua_tonumber(L, 1);
+    DirkSimple_start_clip(startms);
     return 0;
 }
 
@@ -452,6 +451,7 @@ static void setup_lua(void)
     lua_newtable(GLua);
         set_cfunc(GLua, luahook_DirkSimple_start_clip, "start_clip");
         set_cfunc(GLua, luahook_DirkSimple_log, "log");
+        set_cfunc(GLua, luahook_panic, "panic");
         set_cfunc(GLua, luahook_DirkSimple_stackwalk, "stackwalk");
         set_cfunc(GLua, luahook_DirkSimple_debugger, "debugger");
         set_string(GLua, "", "gametitle");
@@ -542,9 +542,10 @@ void DirkSimple_shutdown(void)
     GTicks = 0;
     GTicksOffset = 0;
     GSeekToTicksOffset = 0;
-    GTicksAtStartOfClip = 0;
     GClipStartMs = 0xFFFFFFFF;
+    GClipStartTicks = 0;
     GSeekGeneration = 0;
+    GNeedInitialLuaTick = 1;
     GPreviousInputBits = 0;
     GDiscoveredVideoFormat = 0;
     GDiscoveredAudioFormat = 0;
@@ -614,10 +615,34 @@ static void push_inputs_table(lua_State *L, const uint64_t curbits)
     // inputs table is ready, on top of Lua stack.
 }
 
+static void call_lua_tick(lua_State *L, uint64_t ticks, uint64_t clipstartticks, uint64_t inputbits)
+{
+    lua_getglobal(L, DIRKSIMPLE_LUA_NAMESPACE);
+    if (!lua_istable(L, -1)) {  // namespace is sane?
+        DirkSimple_panic("DirkSimple Lua namespace is not a table!");
+    }
+    lua_getfield(L, -1, "tick");
+    if (!lua_isfunction(L, -1)) {
+        DirkSimple_panic("DirkSimple.tick is not a function!");
+    }
+    lua_pushnumber(L, (lua_Number) ticks);
+    lua_pushnumber(L, (lua_Number) clipstartticks);
+    push_inputs_table(L, inputbits);
+    lua_call(L, 3, 0);  // this will pop the function and args
+    lua_pop(L, 1);  // pop the namespace
+
+    // Clean up any Lua tick waste.
+    collect_lua_garbage(L);  // we can move this to start_clip if it turns out to be too heavy.
+}
+
 void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 {
     lua_State *L = GLua;
     const THEORAPLAY_AudioPacket *audio = NULL;
+
+    if (!L) {
+        DirkSimple_panic("Lua VM is missing?!");
+    }
 
     if (GTicksOffset == 0) {
         if (monotonic_ms == 0) {
@@ -684,16 +709,6 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         THEORAPLAY_freeAudio(audio);  // dump this, the game is going to seek at startup anyhow.
     }
 
-    while ((audio = THEORAPLAY_getAudio(GDecoder)) != NULL) {
-        if (audio->seek_generation == GSeekGeneration) {  // frame from before our latest seek, dump it.
-            const uint64_t playms = (uint64_t) (audio->playms + GSeekToTicksOffset);
-            if (playms >= GTicks) {
-                DirkSimple_discaudio(audio->samples, audio->frames);
-            }
-        }
-        THEORAPLAY_freeAudio(audio);
-    }
-
     if (!GPendingVideoFrame) {
         GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder);
     }
@@ -704,8 +719,26 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
     // the current seek generation. This also helps it not show video at startup before the game logic has
     // selected a clip to play.
     while (GPendingVideoFrame && ((GPendingVideoFrame->seek_generation != GSeekGeneration) || (GPendingVideoFrame->playms < GClipStartMs))) {
+        //if (GPendingVideoFrame->seek_generation != GSeekGeneration) { DirkSimple_log("Dumping video frame from previous seek generation"); }
+        //else if (GPendingVideoFrame->playms < GClipStartMs) { DirkSimple_log("Dumping video frame from before clip start time (%u vs %u)", (unsigned int) GPendingVideoFrame->playms, (unsigned int) GClipStartMs); }
         THEORAPLAY_freeVideo(GPendingVideoFrame);
         GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder);
+    }
+
+    // has seek completed? Sync us back up.
+    if (GPendingVideoFrame && (GClipStartTicks == 0)) {
+        GClipStartTicks = GTicks;
+        GSeekToTicksOffset = ((int64_t) GTicks) - ((int64_t) GClipStartMs);
+    }
+
+    while ((audio = THEORAPLAY_getAudio(GDecoder)) != NULL) {
+        if (audio->seek_generation == GSeekGeneration) {  // frame from before our latest seek, dump it.
+            const uint64_t playms = (uint64_t) (audio->playms + GSeekToTicksOffset);
+            if (playms >= GTicks) {
+                DirkSimple_discaudio(audio->samples, audio->frames);
+            }
+        }
+        THEORAPLAY_freeAudio(audio);
     }
 
     // Feed the next video frame when it's time.
@@ -749,24 +782,13 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         }
     }
 
-    // Call our Lua tick function...
-    if (L != NULL) {
-        lua_getglobal(L, DIRKSIMPLE_LUA_NAMESPACE);
-        if (!lua_istable(L, -1)) {  // namespace is sane?
-            DirkSimple_panic("DirkSimple Lua namespace is not a table!");
-        }
-        lua_getfield(L, -1, "tick");
-        if (!lua_isfunction(L, -1)) {
-            DirkSimple_panic("DirkSimple.tick is not a function!");
-        }
-        lua_pushnumber(L, (lua_Number) (GTicks - GTicksAtStartOfClip));
-        push_inputs_table(L, inputbits);
-        lua_call(L, 2, 0);  // this will pop the function and args
-        lua_pop(L, 1);  // pop the namespace
+    // Call our Lua tick function if we aren't seeking...
+    if (GNeedInitialLuaTick) {
+        GNeedInitialLuaTick = 0;
+        call_lua_tick(L, 0, 0, 0);
+    } else if (GClipStartTicks) {
+        call_lua_tick(L, GTicks, (GTicks - GClipStartTicks), inputbits);
     }
-
-    // Clean up any Lua tick waste.
-    collect_lua_garbage(L);  // we can move this to start_clip if it turns out to be too heavy.
 
     GPreviousInputBits = inputbits;
 }

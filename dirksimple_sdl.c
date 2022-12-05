@@ -165,9 +165,9 @@ int main(int argc, char **argv)
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
                         case SDLK_UP: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_DOWN: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_LEFT: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_RIGHT: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
+                        case SDLK_DOWN: keyinputbits |= DIRKSIMPLE_INPUT_DOWN; break;
+                        case SDLK_LEFT: keyinputbits |= DIRKSIMPLE_INPUT_LEFT; break;
+                        case SDLK_RIGHT: keyinputbits |= DIRKSIMPLE_INPUT_RIGHT; break;
                         case SDLK_SPACE: keyinputbits |= DIRKSIMPLE_INPUT_ACTION1; break;
                         case SDLK_a: keyinputbits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
                         case SDLK_TAB: keyinputbits |= DIRKSIMPLE_INPUT_COINSLOT; break;
@@ -179,9 +179,9 @@ int main(int argc, char **argv)
                 case SDL_KEYUP:
                     switch (e.key.keysym.sym) {
                         case SDLK_UP: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_DOWN: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_LEFT: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_RIGHT: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
+                        case SDLK_DOWN: keyinputbits &= ~DIRKSIMPLE_INPUT_DOWN; break;
+                        case SDLK_LEFT: keyinputbits &= ~DIRKSIMPLE_INPUT_LEFT; break;
+                        case SDLK_RIGHT: keyinputbits &= ~DIRKSIMPLE_INPUT_RIGHT; break;
                         case SDLK_SPACE: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION1; break;
                         case SDLK_a: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
                         case SDLK_TAB: keyinputbits &= ~DIRKSIMPLE_INPUT_COINSLOT; break;

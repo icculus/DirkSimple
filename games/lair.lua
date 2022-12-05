@@ -1,4 +1,3 @@
---
 -- Dirk Simple; a player for FMV games.
 --
 -- Please see the file LICENSE.txt in the source's root directory.
@@ -65,145 +64,314 @@ local scenes = nil  -- gets set up later in the file.
 
 
 -- GAME STATE
+
 local lives_left = 0
+local current_score = 0
 local current_scene = nil
-local input_accepted_until = 0
-local run_after_clip = nil
+local current_sequence = nil
+local current_ticks = 0
+local current_sequence_ticks = 0
+local current_sequence_tick_offset = 0
+local accepted_input = nil
 
 
 -- FUNCTIONS
+
+local function laserdisc_frame_to_ms(frame)
+    return (frame / 25.0) * 1000.0
+end
+
+local function laserdisc_no_seek()
+    return -1
+end
 
 local function time_to_ms(minutes, seconds, ms)
     return (((minutes * 60) + seconds) * 1000) + ms
 end
 
-local function play_clip_then(startms, durationms, thenfn)
-    DirkSimple.tick = function(clipms, inputs)
-        if clipms >= durationms then
-            DirkSimple.tick = standard_tick;
-            thenfn()
-        end
+local function start_sequence(sequencename)
+    DirkSimple.log("Starting sequence '" .. sequencename .. "'")
+    current_sequence = current_scene[sequencename]
+    accepted_input = nil
+    if current_sequence.start_time < 0 then  -- if negative, no seek desired (just keep playing from current location)
+        current_sequence_tick_offset = current_sequence_tick_offset + current_sequence_ticks
+    else
+        DirkSimple.start_clip(current_sequence.start_time)  -- will suspend ticking until the seek completes and reset sequence tick count
+        current_sequence_tick_offset = 0
     end
-    DirkSimple.start_clip(startms, durationms)
 end
-
-local function start_current_scene_gameplay()
-    input_accepted_until = 0
-    DirkSimple.start_clip(current_scene.start_time, current_scene.duration)
-end
-
 
 local function start_scene(scenename, is_resurrection)
-print("Running start_scene ('" .. scenename .. "', " .. tostring(is_resurrection) .. ")")
-    current_scene = scenes[scenename]
-    if is_resurrection and (current_scene.resurrect_start_time ~= nil) and (current_scene.resurrect_duration ~= nil) then
-        play_clip_then(current_scene.resurrect_start_time, current_scene.resurrect_duration, start_current_scene_gameplay)
+    DirkSimple.log("Starting scene '" .. scenename .. "'")
+
+    local sequencename
+    if is_resurrection then
+        sequencename = "start_dead"
     else
-        start_current_scene_gameplay()
+        sequencename = "start_alive"
     end
+
+    current_scene = scenes[scenename]
+    start_sequence(sequencename)
 end
 
-local function start_attract_mode()
-    start_scene('attract_mode', false)
+local function start_attract_mode(after_game_over)
+    start_scene('attract_mode', after_game_over)
 end
 
 local function game_over()
-    if (current_scene ~= nil) and (current_scene.gameover_start_time ~= nil) and (current_scene.gameover_duration ~= nil) then
-        play_clip_then(current_scene.gameover_start_time, current_scene.gameover_duration, start_attract_mode)
-    else
-        start_attract_mode()
-    end
+    DirkSimple.log("Game over!")
+    -- !!! FIXME: show correct game over scene
+    --if (current_scene ~= nil) and (current_scene.gameover_start_time ~= nil) and (current_scene.gameover_duration ~= nil) then
+    --    play_clip_then(current_scene.gameover_start_time, current_scene.gameover_duration, start_attract_mode)
+    --else
+        start_attract_mode(true)
+    --end
 end
 
 local function start_game()
+    DirkSimple.log("Start game!")
     lives_left = starting_lives
-    start_scene('bower', false)   -- !!! FIXME: this is just temp code until we have more scenes and a way to manage them.
+    current_score = 0
+    start_scene('flaming_ropes', false)   -- !!! FIXME: this is just temp code until we have more scenes and a way to manage them.
 end
 
 local function kill_player()
-print("Running kill_player (lives_left=" .. lives_left .. ")")
     if lives_left > 0 then
         lives_left = lives_left - 1
     end
+    DirkSimple.log("Killing player (lives now left=" .. lives_left .. ")")
     if lives_left == 0 then
         game_over()
     else
-        start_scene('bower', true)  -- !!! FIXME: just replays the bower for now. Should select the next level.
+        start_scene('flaming_ropes', true)  -- !!! FIXME: just replays the flaming_ropes for now. Should select the next level.
     end
 end
 
-local function failscene(clip_start_time, clip_duration)
-    return function()
-print("Running failscene (" .. clip_start_time .. ", " .. clip_duration .. ")");
-        play_clip_then(clip_start_time, clip_duration, kill_player)
-    end
-end
-
-local function acceptinput_until(ms)
-    return function()
-        -- !!! FIXME: positive beep to acknowledge input
-        input_accepted_until = ms
-    end
-end
-
-local function check_actions(clipms, inputs)
-    if input_accepted_until == -1 then
-        return false  -- ignore all input until end of scene.
-    elseif input_accepted_until >= clipms then
-        return false  -- ignore input until later in the scene.
+local function check_actions(inputs)
+    if accepted_input ~= nil then
+        return true  -- ignore all input until end of sequence.
     end
 
-    local noneaccepted = nil
-    for i,v in ipairs(current_scene.actions) do
-        if (clipms >= v.from) and (clipms <= v.to) then  -- ignore if not in the time window for this input.
-            local input = v.input
-            if input == 'noneaccepted' then   -- save this off, in case nothing else is accepted this frame.
-                noneaccepted = v  -- shame on you if there are two of these valid at the same time!
-            elseif inputs.pressed[input] then  -- we got one!
-                print("action: " .. input)
-                v.actionfn()
-                return true
+    if current_sequence.actions ~= nil then
+        for i,v in ipairs(current_sequence.actions) do
+            -- ignore if not in the time window for this input.
+            if (current_sequence_ticks >= v.from) and (current_sequence_ticks <= v.to) then
+                local input = v.input
+                if inputs.pressed[input] then  -- we got one!
+                    DirkSimple.log("accepted action '" .. input .. "' at " .. tostring(current_sequence_ticks / 1000.0))
+                    accepted_input = v
+                    return true
+                end
             end
         end
-    end
-
-    if noneaccepted ~= nil then
-        print("action: noneaccepted")
-        noneaccepted.actionfn()
-        return true
+        -- !!! FIXME: make buzzing sound to signify input wasn't accepted?
     end
 
     return false
 end
 
-standard_tick = function(clipms, inputs)
-    if current_scene == nil then
-        start_attract_mode()
-    elseif check_actions(clipms, inputs) then
-        return  -- we did _something_ this tick
-    elseif clipms >= current_scene.duration then  -- player won the scene.
-        start_scene('bower', false)  -- !!! FIXME: just replays the bower for now.
+local function check_timeout()
+    local done_with_sequence = false
+    if current_sequence_ticks >= current_sequence.timeout.when then  -- whole sequence has run to completion.
+        done_with_sequence = true
+    elseif (accepted_input ~= nil) and accepted_input.interrupt ~= nil then  -- If interrupting, forego the timeout.
+        done_with_sequence = true
     end
+
+    if not done_with_sequence then
+        return  -- sequence is not complete yet.
+    end
+
+    DirkSimple.log("Done with current sequence")
+
+    local outcome
+    if accepted_input ~= nil then
+        outcome = accepted_input
+    else
+        outcome = current_sequence.timeout
+    end
+
+    if outcome.award_points ~= nil then
+        current_score = current_score + outcome.award_points
+    end
+
+    if outcome.interrupt ~= nil then
+        outcome.interrupt()
+    elseif outcome.nextsequence ~= nil then  -- end of scene?
+        start_sequence(outcome.nextsequence)
+    else
+        if current_sequence.kills_player then
+            kill_player()  -- will update state, start new scene.
+        else
+            start_scene('flaming_ropes', false)  -- !!! FIXME: just replays the flaming_ropes for now. We need a scene manager still.
+        end
+    end
+
+    -- as a special hack, if the new sequence has a timeout of 0, we process it immediately without
+    -- waiting for the next tick, since it's just trying to set up some state before an actual
+    -- sequence and we don't want the video to move ahead in a completed sequence or progress
+    -- before the actual sequence is ticking.
+    if current_sequence.timeout.when == 0 then
+        check_timeout(0)
+    end
+end
+
+standard_tick = function(ticks, sequenceticks, inputs)
+    current_ticks = ticks
+    current_sequence_ticks = sequenceticks - current_sequence_tick_offset
+    --DirkSimple.log("LUA TICK(ticks=" .. tostring(current_ticks) .. ", sequenceticks=" .. tostring(current_sequence_ticks) .. ")")
+    if current_sequence == nil then
+        start_attract_mode(false)
+    end
+    check_actions(inputs)   -- check inputs before timeout, in case an input came through at the last possible moment, even if we're over time.
+    check_timeout()
 end
 
 -- Start with standard_tick, but other things might override it later.
 DirkSimple.tick = standard_tick
 
 
+
 -- The scene table!
 -- http://www.dragons-lair-project.com/games/related/sequence.asp
 scenes = {
     attract_mode = {
-        start_time = time_to_ms(0, 7, 0),
-        duration = time_to_ms(0, 43, 0),
-        actions = {
-            -- Player hit start to start the game
-            { input="start", from=time_to_ms(0, 0, 0), to=time_to_ms(60, 0, 0), actionfn=start_game },
-            -- Attract mode ran to completion, restart it.
-            { input="noneaccepted", from=time_to_ms(0, 42, 900), to=time_to_ms(60, 0, 0), actionfn=start_attract_mode },
+        start_alive = {
+            start_time = time_to_ms(0, 7, 0),
+            timeout = { when=time_to_ms(0, 43, 0), next_sequence="start_alive" },
+            actions = {
+                -- Player hit start to start the game
+                { input="start", from=time_to_ms(0, 0, 0), to=time_to_ms(60, 0, 0), interrupt=start_game, nextsequence=nil },
+            }
+        },
+        start_dead = {
+            start_time = laserdisc_no_seek(),  -- !!! FIXME: Queue up the game over frame and pause there for a few seconds.
+            timeout = { when=0, nextsequence="start_alive" },
+        },
+    },
+
+    -- Swinging ropes, burning over a fiery pit.
+    flaming_ropes = {
+        start_dead = {
+            start_time = laserdisc_frame_to_ms(3505),
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="enter_room" }
+        },
+
+        start_alive = {
+            start_time = laserdisc_no_seek(),
+            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+        },
+
+        enter_room = {
+            start_time = laserdisc_frame_to_ms(3561),
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="platform_sliding" },
+            actions = {
+                -- Player grabs rope too soon
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 245), nextsequence="fall_to_death", award_points=-49 },
+                -- Player grabs rope correctly
+                { input="right", from=time_to_ms(0, 1, 245), to=time_to_ms(0, 2, 130), nextsequence="rope1", award_points=251 },
+                -- Player grabs rope too late
+                { input="right", from=time_to_ms(0, 2, 130), to=time_to_ms(0, 4, 260), nextsequence="fall_to_death", award_points=-49 },
+                -- Player tries to fly
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 490), nextsequence="fall_to_death", award_points=-49 },
+                -- Player tries to dive
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 490), nextsequence="fall_to_death", award_points=-49 },
+            }
+        },
+
+        platform_sliding = {  -- Player hesitated, platform starts pulling back
+            start_time = laserdisc_no_seek(),
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="fall_to_death", award_points=-49 },  -- player hesitated, platform is gone, player falls
+            actions = {
+                -- Player grabs rope too soon
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-49 },
+                -- Player grabs rope correctly
+                { input="right", from=time_to_ms(0, 1, 835), to=time_to_ms(0, 2, 884), nextsequence="rope1", award_points=251 },
+                -- Player tries to flee
+                { input="left", from=time_to_ms(0, 1, 835), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death", award_points=-49 },
+                -- Player tries to fly
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death", award_points=-49 },
+                -- Player tries to dive
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death", award_points=-49 },
+            }
+        },
+
+        rope1 = {  -- player grabbed first rope
+            start_time = laserdisc_frame_to_ms(3693),
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", award_points=-300 },
+            actions = {
+                -- Player grabs rope too soon
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 81), nextsequence="fall_to_death", award_points=-300 },
+                -- Player grabs rope correctly
+                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="rope2", award_points=379 },
+                -- Player tries to fly
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-300 },
+                -- Player tries to dive
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-300 },
+                -- Player tries to flee
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-300 },
+            }
+        },
+
+        rope2 = {  -- player grabbed second rope
+            start_time = laserdisc_no_seek(),
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", award_points=-679 },
+            actions = {
+                -- Player grabs rope too soon
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 81), nextsequence="fall_to_death", award_points=-679 },
+                -- Player grabs rope correctly
+                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="rope3", award_points=495 },
+                -- Player tries to fly
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-679 },
+                -- Player tries to dive
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-679 },
+                -- Player tries to flee
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-679 },
+            }
+        },
+
+        rope3 = {  -- player grabbed third rope
+            start_time = laserdisc_no_seek(),
+            timeout = { when=time_to_ms(0, 1, 507), nextsequence="misses_landing", award_points=-1174 },
+            actions = {
+                -- Player grabs rope too soon
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 852), nextsequence="fall_to_death", award_points=-1174 },
+                -- Player grabs rope correctly
+                { input="right", from=time_to_ms(0, 0, 852), to=time_to_ms(0, 1, 704), nextsequence="exit_room", award_points=915 },
+                -- Player tries to fly
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death", award_points=-1174 },
+                -- Player tries to dive
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death", award_points=-1174 },
+                -- Player tries to flee
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death", award_points=-1174 },
+            }
+        },
+
+        exit_room = {  -- player reaches exit platform
+            start_time = laserdisc_no_seek(),
+            timeout = { when=time_to_ms(0, 1, 49), nextsequence=nil },
+        },
+
+        misses_landing = {  -- player landed on exit platform, but fell backwards
+            start_time = laserdisc_frame_to_ms(3879),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 540), nextsequence=nil },
+        },
+
+        burns_hands = {  -- rope burns up to hands, making player fall
+            start_time = laserdisc_frame_to_ms(3925),
+            timeout = { when=time_to_ms(0, 1, 475), nextsequence="fall_to_death" }
+        },
+
+        fall_to_death = {  -- player falls into the flames
+            start_time = laserdisc_frame_to_ms(3963),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
         }
     },
 
+--[[  !!! FIXME: was never correct, needs updating anyhow.
     -- Bedroom where brick wall appears in front of you to be jumped through.
     bower = {
         resurrect_start_time = time_to_ms(6, 13, 0),
@@ -217,10 +385,11 @@ scenes = {
             { input="up", from=time_to_ms(0, 2, 0), to=time_to_ms(0, 3, 500), actionfn=acceptinput_until(-1) },
             -- Jumped through the wall too late.
             { input="up", from=time_to_ms(0, 3, 500), to=time_to_ms(0, 4, 0), actionfn=failscene(time_to_ms(6, 21, 0), time_to_ms(0, 2, 0)) },
-            -- No move in time, room fills with poison gas.
-            { input="noneaccepted", from=time_to_ms(0, 3, 0), to=time_to_ms(0, 6, 0), actionfn=failscene(time_to_ms(6, 23, 0), time_to_ms(0, 1, 800)) },
+            -- No move in time, room fills with poison gas (apparently unused?)
+            --{ input="noneaccepted", from=time_to_ms(0, 3, 0), to=time_to_ms(0, 6, 0), actionfn=failscene(time_to_ms(6, 23, 0), time_to_ms(0, 1, 800)) },
         }
     }
+]]--
 }
 
 -- end of lair.lua ...
