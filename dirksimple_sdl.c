@@ -13,6 +13,8 @@
 static SDL_Window *GWindow = NULL;
 static SDL_Renderer *GRenderer = NULL;
 static SDL_Texture *GLaserDiscTexture = NULL;
+static SDL_AudioDeviceID GAudioDeviceID = 0;
+static int GAudioChannels = 0;
 static int GLaserDiscTextureWidth = 0;
 static int GLaserDiscTextureHeight = 0;
 
@@ -78,6 +80,20 @@ DirkSimple_Io *DirkSimple_openfile_read(const char *path)
 
 void DirkSimple_audioformat(int channels, int freq)
 {
+    SDL_AudioSpec spec;
+    SDL_zero(spec);
+    spec.freq = freq;
+    spec.format = AUDIO_F32SYS;
+    spec.channels = channels;
+    spec.samples = 256;
+    spec.callback = NULL;
+    GAudioChannels = channels;
+    GAudioDeviceID = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0);
+    if (GAudioDeviceID == 0) {
+        DirkSimple_log("Audio device open failed: %s", SDL_GetError());
+        DirkSimple_log("Going on without sound!");
+    }
+    SDL_PauseAudioDevice(GAudioDeviceID, 0);
 }
 
 void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height)
@@ -120,9 +136,17 @@ void DirkSimple_discvideo(const uint8_t *iyuv)
     SDL_UpdateTexture(GLaserDiscTexture, NULL, iyuv, GLaserDiscTextureWidth);
 }
 
-void DirkSimple_discaudio(const float *pcm, int numframes) {}
+void DirkSimple_discaudio(const float *pcm, int numframes)
+{
+    SDL_QueueAudio(GAudioDeviceID, pcm, numframes * sizeof (float) * GAudioChannels);
+}
 
-void DirkSimple_cleardiscaudio(void) {}
+void DirkSimple_cleardiscaudio(void)
+{
+    if (GAudioDeviceID) {
+        SDL_ClearQueuedAudio(GAudioDeviceID);
+    }
+}
 
 static void render_frame()
 {
@@ -206,6 +230,8 @@ int main(int argc, char **argv)
     SDL_DestroyTexture(GLaserDiscTexture);
     SDL_DestroyRenderer(GRenderer);
     SDL_DestroyWindow(GWindow);
+
+    SDL_CloseAudioDevice(GAudioDeviceID);
 
     SDL_Quit();
     return 0;
