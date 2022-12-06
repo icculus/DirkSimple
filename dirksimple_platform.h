@@ -51,6 +51,9 @@ extern void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits);
 // You call this once when done with a game to clean up.
 extern void DirkSimple_shutdown(void);
 
+// Log a formatted string. This will eventually call DirkSimple_logwrite() in the platform code with the final formatted string.
+void DirkSimple_log(const char *fmt, ...);
+
 // These just wrap standard malloc, etc, but call DirkSimple_panic if they fail.
 extern void *DirkSimple_xmalloc(size_t len);
 extern void *DirkSimple_xcalloc(size_t nmemb, size_t len);

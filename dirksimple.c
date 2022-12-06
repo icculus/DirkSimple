@@ -103,7 +103,7 @@ char *DirkSimple_xstrdup(const char *str)
     return retval;
 }
 
-static void DirkSimple_log(const char *fmt, ...)
+void DirkSimple_log(const char *fmt, ...)
 {
     char *str = NULL;
     va_list ap;
