@@ -105,7 +105,9 @@ void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t heig
         sdlpanic("Failed to create laserdisc texture");
     }
 
-    Uint8 *pixels = DirkSimple_xcalloc(2, width * height);  // this is a overallocation, actually.
+    // initialize the YUV texture to black.
+    Uint8 *pixels = DirkSimple_xcalloc(1, (width * height) + ((width * height) / 2));
+    SDL_memset(pixels + (width*height), 128, (width * height) / 2);
     SDL_UpdateTexture(GLaserDiscTexture, NULL, pixels, width);  // make sure it's zeroed out.
     free(pixels);
 
