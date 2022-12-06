@@ -34,6 +34,9 @@ add_library(dirksimple-ogg STATIC
 	thirdparty/libogg/src/bitwise.c
 	thirdparty/libogg/src/framing.c
 )
+target_include_directories(dirksimple-ogg PRIVATE
+    thirdparty/libogg/include
+)
 
 add_library(dirksimple-vorbis STATIC
     thirdparty/libvorbis/lib/analysis.c
@@ -60,6 +63,7 @@ add_library(dirksimple-vorbis STATIC
 )
 target_include_directories(dirksimple-vorbis PRIVATE
     thirdparty/libogg/include
+    thirdparty/libvorbis/include
     thirdparty/libvorbis/lib
 )
 
@@ -77,6 +81,10 @@ add_library(dirksimple-theora STATIC
     thirdparty/libtheora/lib/internal.c
     thirdparty/libtheora/lib/quant.c
     thirdparty/libtheora/lib/state.c
+)
+target_include_directories(dirksimple-theora PRIVATE
+    thirdparty/libogg/include
+    thirdparty/libtheora/include
 )
 
 add_library(dirksimple-theoraplay STATIC
