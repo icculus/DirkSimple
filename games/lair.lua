@@ -282,7 +282,7 @@ scenes = {
 
         platform_sliding = {  -- Player hesitated, platform starts pulling back
             start_time = laserdisc_no_seek(),
-            timeout = { when=time_to_ms(0, 2, 228), nextsequence="fall_to_death", award_points=-49 },  -- player hesitated, platform is gone, player falls
+            timeout = { when=time_to_ms(0, 2, 621), nextsequence="fall_to_death", award_points=-49 },  -- player hesitated, platform is gone, player falls
             actions = {
                 -- Player grabs rope too soon
                 { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-49 },
