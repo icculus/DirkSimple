@@ -518,7 +518,7 @@ static void WorkerThread(TheoraDecoder *ctx)
             if (current_seek_generation != ctx->seek_generation)
                 break;  // seek requested? Break out of the loop right away so we can handle it; this loop's work would be wasted.
 
-            if (resolving_audio_seek && ((playms >= seek_target) || ((seek_target - playms) <= (unsigned long) (1000.0 / fps))))
+            if (resolving_audio_seek && audiotime >= 0.0 && ((playms >= seek_target) || ((seek_target - playms) <= (unsigned long) (1000.0 / fps))))
                 resolving_audio_seek = 0;
 
             frames = vorbis_synthesis_pcmout(&vdsp, &pcm);
