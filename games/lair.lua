@@ -78,7 +78,7 @@ local accepted_input = nil
 -- FUNCTIONS
 
 local function laserdisc_frame_to_ms(frame)
-    return (frame / 25.0) * 1000.0
+    return ((frame / 23.976) * 1000.0) - 6297.0
 end
 
 local function laserdisc_no_seek()
