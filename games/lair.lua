@@ -141,6 +141,15 @@ end
 
 local function choose_next_scene(is_resurrection)
     -- this is obviously going to get more complex later.
+
+    -- intro must be played first.
+    --  (!!! FIXME: if we add back in the drawbridge, do we want this to
+    --  require it be _completed_ first?
+    if scene_manager["introduction"] == 0 then
+        start_scene("introduction", is_resurrection)
+        return
+    end
+
     local eligible = {}
     for name,completed in pairs(scene_manager) do
         if completed == 0 and name ~= current_scene_name then
@@ -286,6 +295,30 @@ scenes = {
         start_dead = {
             start_time = time_laserdisc_noseek(),  -- !!! FIXME: Queue up the game over frame and pause there for a few seconds.
             timeout = { when=0, nextsequence="start_alive" },
+        },
+    },
+
+    -- Intro level, no gameplay in the arcade version.
+    introduction = {
+        start_dead = {
+            start_time = time_laserdisc_frame(1367),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="castle_exterior" }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="castle_exterior" }
+        },
+
+        castle_exterior = {  -- exterior shot of the castle
+            start_time = time_laserdisc_frame(1424),
+            timeout = { when=time_to_ms(0, 5, 767), nextsequence="exit_room" },
+        },
+
+        -- this skips the drawbridge itself, like the arcade does.
+        exit_room = {  -- player runs through the gates.
+            start_time = time_laserdisc_frame(1823) - laserdisc_frame_to_ms(2),
+            timeout = { when=time_to_ms(0, 2, 359) + laserdisc_frame_to_ms(10), nextsequence=nil },
         },
     },
 
