@@ -79,10 +79,18 @@ local scene_manager = nil
 -- FUNCTIONS
 
 local function laserdisc_frame_to_ms(frame)
-    return ((frame / 23.976) * 1000.0) - 6297.0
+    return ((frame / 23.976) * 1000.0)
 end
 
-local function laserdisc_no_seek()
+local function time_laserdisc_frame(frame)
+    -- 6297 is the magic millsecond offset between the ROM test screens and the actual game content, I think,
+    --  When the ROM would ask for a frame, we have to adjust by this number.
+    --  Since we're filling in the timings from the original ROM's data table,
+    --  we make this adjustment ourselves.
+    return laserdisc_frame_to_ms(frame) - 6297.0
+end
+
+local function time_laserdisc_noseek()
     return -1
 end
 
@@ -276,7 +284,7 @@ scenes = {
             }
         },
         start_dead = {
-            start_time = laserdisc_no_seek(),  -- !!! FIXME: Queue up the game over frame and pause there for a few seconds.
+            start_time = time_laserdisc_noseek(),  -- !!! FIXME: Queue up the game over frame and pause there for a few seconds.
             timeout = { when=0, nextsequence="start_alive" },
         },
     },
@@ -284,17 +292,17 @@ scenes = {
     -- Swinging ropes, burning over a fiery pit.
     flaming_ropes = {
         start_dead = {
-            start_time = laserdisc_frame_to_ms(3505),
+            start_time = time_laserdisc_frame(3505),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="enter_room" }
         },
 
         start_alive = {
-            start_time = laserdisc_no_seek(),
+            start_time = time_laserdisc_noseek(),
             timeout = { when=0, nextsequence="enter_room", award_points = 49 }
         },
 
         enter_room = {
-            start_time = laserdisc_frame_to_ms(3561),
+            start_time = time_laserdisc_frame(3561),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="platform_sliding" },
             actions = {
                 -- Player grabs rope too soon
@@ -311,7 +319,7 @@ scenes = {
         },
 
         platform_sliding = {  -- Player hesitated, platform starts pulling back
-            start_time = laserdisc_no_seek(),
+            start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 2, 621), nextsequence="fall_to_death", award_points=-49 },  -- player hesitated, platform is gone, player falls
             actions = {
                 -- Player grabs rope too soon
@@ -328,7 +336,7 @@ scenes = {
         },
 
         rope1 = {  -- player grabbed first rope
-            start_time = laserdisc_frame_to_ms(3693),
+            start_time = time_laserdisc_frame(3693),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", award_points=-300 },
             actions = {
                 -- Player grabs rope too soon
@@ -345,7 +353,7 @@ scenes = {
         },
 
         rope2 = {  -- player grabbed second rope
-            start_time = laserdisc_no_seek(),
+            start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", award_points=-679 },
             actions = {
                 -- Player grabs rope too soon
@@ -362,7 +370,7 @@ scenes = {
         },
 
         rope3 = {  -- player grabbed third rope
-            start_time = laserdisc_no_seek(),
+            start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 507), nextsequence="misses_landing", award_points=-1174 },
             actions = {
                 -- Player grabs rope too soon
@@ -379,23 +387,23 @@ scenes = {
         },
 
         exit_room = {  -- player reaches exit platform
-            start_time = laserdisc_no_seek(),
+            start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 49), nextsequence=nil },
         },
 
         misses_landing = {  -- player landed on exit platform, but fell backwards
-            start_time = laserdisc_frame_to_ms(3879),
+            start_time = time_laserdisc_frame(3879),
             kills_player = true,
             timeout = { when=time_to_ms(0, 1, 540), nextsequence=nil },
         },
 
         burns_hands = {  -- rope burns up to hands, making player fall
-            start_time = laserdisc_frame_to_ms(3925),
+            start_time = time_laserdisc_frame(3925),
             timeout = { when=time_to_ms(0, 1, 475), nextsequence="fall_to_death" }
         },
 
         fall_to_death = {  -- player falls into the flames
-            start_time = laserdisc_frame_to_ms(3963),
+            start_time = time_laserdisc_frame(3963),
             kills_player = true,
             timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
         }
