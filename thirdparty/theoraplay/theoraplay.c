@@ -478,7 +478,7 @@ static void WorkerThread(TheoraDecoder *ctx)
                             ms = (unsigned long) (vorbis_granule_time(&vdsp, granulepos) * 1000.0);
                         } // else
 
-                        if ((ms < targetms) && ((targetms - ms) <= 250))   // !!! FIXME: tweak this number?
+                        if ((ms < targetms) && ((targetms - ms) >= 500) && ((targetms - ms) <= 1000))   // !!! FIXME: tweak this number?
                             hi = lo;  // found something close enough to the target!
                         else  // adjust binary search position and try again.
                         {
