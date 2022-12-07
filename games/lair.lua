@@ -68,12 +68,13 @@ local scenes = nil  -- gets set up later in the file.
 local lives_left = 0
 local current_score = 0
 local current_scene = nil
+local current_scene_name = nil
 local current_sequence = nil
 local current_ticks = 0
 local current_sequence_ticks = 0
 local current_sequence_tick_offset = 0
 local accepted_input = nil
-
+local scene_manager = nil
 
 -- FUNCTIONS
 
@@ -111,6 +112,7 @@ local function start_scene(scenename, is_resurrection)
         sequencename = "start_alive"
     end
 
+    current_scene_name = scenename
     current_scene = scenes[scenename]
     start_sequence(sequencename)
 end
@@ -119,7 +121,7 @@ local function start_attract_mode(after_game_over)
     start_scene('attract_mode', after_game_over)
 end
 
-local function game_over()
+local function game_over(won)
     DirkSimple.log("Game over!")
     -- !!! FIXME: show correct game over scene
     --if (current_scene ~= nil) and (current_scene.gameover_start_time ~= nil) and (current_scene.gameover_duration ~= nil) then
@@ -129,11 +131,38 @@ local function game_over()
     --end
 end
 
+local function choose_next_scene(is_resurrection)
+    -- this is obviously going to get more complex later.
+    local eligible = {}
+    for name,completed in pairs(scene_manager) do
+        if completed == 0 and name ~= current_scene_name then
+            eligible[#eligible+1] = name
+        end
+    end
+
+    if #eligible == 0 then   -- have we completed all the scenes?
+        game_over(true)
+    else
+        start_scene(eligible[(current_ticks % #eligible) + 1], is_resurrection)
+    end
+end
+
+local function setup_scene_manager()
+    -- this is obviously going to get more complex later.
+    scene_manager = {}
+    for name,scene in pairs(scenes) do
+        if name ~= 'attract_mode' then  -- don't put attract mode in the game's scene list.
+           scene_manager[name] = 0
+        end
+    end
+end
+
 local function start_game()
     DirkSimple.log("Start game!")
     lives_left = starting_lives
     current_score = 0
-    start_scene('flaming_ropes', false)   -- !!! FIXME: this is just temp code until we have more scenes and a way to manage them.
+    setup_scene_manager()
+    choose_next_scene(false)
 end
 
 local function kill_player()
@@ -142,9 +171,9 @@ local function kill_player()
     end
     DirkSimple.log("Killing player (lives now left=" .. lives_left .. ")")
     if lives_left == 0 then
-        game_over()
+        game_over(false)
     else
-        start_scene('flaming_ropes', true)  -- !!! FIXME: just replays the flaming_ropes for now. Should select the next level.
+        choose_next_scene(true)
     end
 end
 
@@ -204,7 +233,8 @@ local function check_timeout()
         if current_sequence.kills_player then
             kill_player()  -- will update state, start new scene.
         else
-            start_scene('flaming_ropes', false)  -- !!! FIXME: just replays the flaming_ropes for now. We need a scene manager still.
+            scene_manager[current_scene_name] = scene_manager[current_scene_name] + 1
+            choose_next_scene(false)
         end
     end
 
