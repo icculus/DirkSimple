@@ -409,25 +409,40 @@ scenes = {
         }
     },
 
---[[  !!! FIXME: was never correct, needs updating anyhow.
     -- Bedroom where brick wall appears in front of you to be jumped through.
     bower = {
-        resurrect_start_time = time_to_ms(6, 13, 0),
-        resurrect_duration = time_to_ms(0, 2, 0),
-        gameover_start_time = time_to_ms(6, 25, 0),
-        gameover_duration = time_to_ms(0, 4, 0),
-        start_time = time_to_ms(6, 15, 200),
-        duration = time_to_ms(0, 6, 0),
-        actions = {
-            -- Successful jump through the wall.
-            { input="up", from=time_to_ms(0, 2, 0), to=time_to_ms(0, 3, 500), actionfn=acceptinput_until(-1) },
-            -- Jumped through the wall too late.
-            { input="up", from=time_to_ms(0, 3, 500), to=time_to_ms(0, 4, 0), actionfn=failscene(time_to_ms(6, 21, 0), time_to_ms(0, 2, 0)) },
-            -- No move in time, room fills with poison gas (apparently unused?)
-            --{ input="noneaccepted", from=time_to_ms(0, 3, 0), to=time_to_ms(0, 6, 0), actionfn=failscene(time_to_ms(6, 23, 0), time_to_ms(0, 1, 800)) },
-        }
-    }
-]]--
+        start_dead = {
+            start_time = time_laserdisc_frame(9093),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(9181) - laserdisc_frame_to_ms(15),
+            timeout = { when=time_to_ms(0, 1, 147) + laserdisc_frame_to_ms(15), nextsequence="trapped_in_wall" },
+            actions = {
+                -- Player jumps through the hole in the wall
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 409) + laserdisc_frame_to_ms(15), nextsequence="exit_room", award_points=379 },
+            }
+        },
+
+        trapped_in_wall = {  -- player fails to climb through.
+            start_time = time_laserdisc_frame(9301) - laserdisc_frame_to_ms(15),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 0, 492) + laserdisc_frame_to_ms(30), nextsequence=nil }
+        },
+
+        exit_room = {  -- player reaches the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 2, 425) + laserdisc_frame_to_ms(15), nextsequence=nil },
+        },
+    },
+
+
 }
 
 -- end of lair.lua ...
