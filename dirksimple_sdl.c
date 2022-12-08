@@ -253,16 +253,18 @@ int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
 
-#if 0
+    #ifdef __EMSCRIPTEN__
+    char varbuf[32];  // GDirkSimpleGameId is set up in the Javascript loader.
+    EM_ASM({ stringToUTF8('/' + GDirkSimpleGameId + '.ogv', $0, $1); }, varbuf, sizeof (varbuf));
+    gamepath = varbuf;
+    #else
     if (argc != 2) {
         SDL_Log("USAGE: %s <path/to/game.ogv>", argv[0]);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "USAGE", "USAGE: dirksimple <path/to/game.ogv>", NULL);
         return 1;
     }
-
     gamepath = argv[1];
-#endif
-gamepath = "lair.ogv";
+    #endif
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
         const char *errstr = SDL_GetError();

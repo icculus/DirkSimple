@@ -14,6 +14,13 @@ CHECK_LIBRARY_EXISTS(m floor "" HAVE_LIB_M)
 set(DIRKSIMPLE_SDL_DEFAULT ON)
 set(DIRKSIMPLE_LIBRETRO_DEFAULT ON)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(EMSCRIPTEN TRUE)
+  set(IPO_SUPPORTED YES)  # !!! FIXME: -flto=thin currently broken in Emscripten: https://github.com/emscripten-core/emscripten/issues/12763
+  set(IPO_FLAG "-flto")
+  add_definitions("${IPO_FLAG}")  # Force every compile to the thing Emscripten currently supports.
+endif()
+
 # Building as part of RetroArch? Turn off everything but the libretro plugin by default.
 if(LIBRETRO)
     set(DIRKSIMPLE_SDL_DEFAULT OFF)
@@ -145,6 +152,10 @@ if(DIRKSIMPLE_SDL)
     target_link_libraries(dirksimple dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
     if(HAVE_LIB_M)
         target_link_libraries(dirksimple m)
+    endif()
+    if(EMSCRIPTEN)
+        set_target_properties(dirksimple PROPERTIES OUTPUT_NAME "dirksimple-wasm")
+        set_target_properties(dirksimple PROPERTIES LINK_FLAGS "${IPO_FLAG} -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ASSERTIONS=0 -s EXPORTED_RUNTIME_METHODS=['addRunDependency','removeRunDependency'] -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=['$autoResumeAudioContext','$dynCall']")
     endif()
 endif()
 
