@@ -286,7 +286,7 @@ scenes = {
     attract_mode = {
         start_alive = {
             start_time = time_to_ms(0, 7, 0),
-            timeout = { when=time_to_ms(0, 43, 0), next_sequence="start_alive" },
+            timeout = { when=time_to_ms(0, 43, 0), nextsequence="start_alive" },
             actions = {
                 -- Player hit start to start the game
                 { input="start", from=time_to_ms(0, 0, 0), to=time_to_ms(60, 0, 0), interrupt=start_game, nextsequence=nil },
