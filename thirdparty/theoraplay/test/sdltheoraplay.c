@@ -405,7 +405,7 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
 
     printf("Trying file '%s' ...\n", fname);
 
-    decoder = THEORAPLAY_startDecodeFile(fname, MAX_FRAMES, vidfmt);
+    decoder = THEORAPLAY_startDecodeFile(fname, MAX_FRAMES, vidfmt, 1);
     if (!decoder)
     {
         fprintf(stderr, "Failed to start decoding '%s'!\n", fname);
@@ -416,7 +416,10 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
     //  file. In a video game, you could choose not to block on this, and
     //  instead do something else until the file is ready.
     while (!THEORAPLAY_isInitialized(decoder))
+    {
         SDL_Delay(10);
+        THEORAPLAY_pumpDecode(decoder, 5);
+    } // while
 
     // Once we're initialized, we can tell if this file has audio and/or video.
     has_audio = THEORAPLAY_hasAudioStream(decoder);
@@ -437,7 +440,10 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
     if (has_video)
     {
         while ((video = THEORAPLAY_getVideo(decoder)) == NULL)
+        {
             SDL_Delay(10);
+            THEORAPLAY_pumpDecode(decoder, 5);
+        } // while
     } // if
 
     if (has_audio)
@@ -447,6 +453,7 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
             if ((has_video) && (THEORAPLAY_availableVideo(decoder) >= MAX_FRAMES))
                 break;  // we'll never progress, there's no audio yet but we've prebuffered as much as we plan to.
             SDL_Delay(10);
+            THEORAPLAY_pumpDecode(decoder, 5);
         } // while
     } // if
 
@@ -558,7 +565,11 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
 
     while (!quit && THEORAPLAY_isDecoding(decoder))
     {
-        const Uint32 now = SDL_GetTicks() - baseticks;
+        Uint32 now;
+
+        THEORAPLAY_pumpDecode(decoder, 5);
+
+        now = SDL_GetTicks() - baseticks;
 
         // Open the audio device as soon as we know what it should be.
         if ((has_audio) && (!opened_audio))
@@ -604,6 +615,7 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
                 while ((video = THEORAPLAY_getVideo(decoder)) != NULL)
                 {
                     THEORAPLAY_freeVideo(last);
+                    THEORAPLAY_pumpDecode(decoder, 5);
                     last = video;
                     if ((now - video->playms) < framems)
                         break;

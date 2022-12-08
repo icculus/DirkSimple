@@ -59,11 +59,16 @@ typedef struct THEORAPLAY_AudioPacket
 
 THEORAPLAY_Decoder *THEORAPLAY_startDecodeFile(const char *fname,
                                                const unsigned int maxframes,
-                                               THEORAPLAY_VideoFormat vidfmt);
+                                               THEORAPLAY_VideoFormat vidfmt,
+                                               const int multithreaded);
 THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
                                            const unsigned int maxframes,
-                                           THEORAPLAY_VideoFormat vidfmt);
+                                           THEORAPLAY_VideoFormat vidfmt,
+                                           const int multithreaded);
 void THEORAPLAY_stopDecode(THEORAPLAY_Decoder *decoder);
+
+// call this frequently if not multithreaded! Safe no-op if multithreaded.
+void THEORAPLAY_pumpDecode(THEORAPLAY_Decoder *decoder, const int maxframes);
 
 int THEORAPLAY_isDecoding(THEORAPLAY_Decoder *decoder);
 int THEORAPLAY_decodingError(THEORAPLAY_Decoder *decoder);

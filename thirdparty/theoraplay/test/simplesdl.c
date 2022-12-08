@@ -118,7 +118,7 @@ static void playfile(const char *fname)
 
     printf("Trying file '%s' ...\n", fname);
 
-    decoder = THEORAPLAY_startDecodeFile(fname, 30, THEORAPLAY_VIDFMT_IYUV);
+    decoder = THEORAPLAY_startDecodeFile(fname, 30, THEORAPLAY_VIDFMT_IYUV, 1);
     if (!decoder)
     {
         fprintf(stderr, "Failed to start decoding '%s'!\n", fname);
@@ -134,6 +134,7 @@ static void playfile(const char *fname)
     // wait until we have video and/or audio data, so we can set up hardware.
     while (!audio || !video)
     {
+        THEORAPLAY_pumpDecode(decoder, 5);
         if (!audio) audio = THEORAPLAY_getAudio(decoder);
         if (!video) video = THEORAPLAY_getVideo(decoder);
         SDL_Delay(10);
@@ -180,7 +181,11 @@ static void playfile(const char *fname)
 
     while (!quit && THEORAPLAY_isDecoding(decoder))
     {
-        const Uint32 now = SDL_GetTicks() - baseticks;
+        Uint32 now;
+
+        THEORAPLAY_pumpDecode(decoder, 5);
+
+        now = SDL_GetTicks() - baseticks;
 
         if (!video)
             video = THEORAPLAY_getVideo(decoder);
@@ -199,6 +204,7 @@ static void playfile(const char *fname)
                 while ((video = THEORAPLAY_getVideo(decoder)) != NULL)
                 {
                     THEORAPLAY_freeVideo(last);
+                    THEORAPLAY_pumpDecode(decoder, 5);
                     last = video;
                     if ((now - video->playms) < framems)
                         break;
