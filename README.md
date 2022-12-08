@@ -23,7 +23,7 @@ works with DAPHNE, it'll likely work here.
 
 - Daphne eventually wants a MPEG2 video file with no audio track and a
 separate Ogg Vorbis audio file that matches it. You can use
-[ffmpeg](https://ffmpeg.org/) to convert those two filesinto a single Ogg
+[ffmpeg](https://ffmpeg.org/) to convert those two files into a single Ogg
 Theora file that DirkSimple can use. Like this:
 
 ```bash
