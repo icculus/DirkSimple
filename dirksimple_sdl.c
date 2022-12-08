@@ -6,6 +6,10 @@
  *  This file written by Ryan C. Gordon.
  */
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include "SDL.h"
 
 #include "dirksimple_platform.h"
@@ -23,6 +27,9 @@ void DirkSimple_panic(const char *str)
     SDL_Log("DirkSimple PANIC: %s", str);
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "DirkSimple PANIC", str, GWindow);
     SDL_Quit();
+    #ifdef __EMSCRIPTEN__
+    emscripten_cancel_main_loop();  // this should "kill" the app.
+    #endif
     exit(1);
 }
 
@@ -148,6 +155,19 @@ void DirkSimple_cleardiscaudio(void)
     }
 }
 
+void mainloop_shutdown(void)
+{
+    DirkSimple_shutdown();
+
+    SDL_DestroyTexture(GLaserDiscTexture);
+    SDL_DestroyRenderer(GRenderer);
+    SDL_DestroyWindow(GWindow);
+
+    SDL_CloseAudioDevice(GAudioDeviceID);
+
+    SDL_Quit();
+}
+
 static void render_frame()
 {
     if (!GRenderer) {
@@ -159,13 +179,81 @@ static void render_frame()
     SDL_RenderPresent(GRenderer);
 }
 
+static uint64_t keyinputbits = 0;
+static uint64_t controllerinputbits = 0;
+
+static SDL_bool mainloop_iteration(void)
+{
+    SDL_Event e;
+
+    while (SDL_PollEvent(&e)) {
+        switch (e.type) {
+            case SDL_KEYDOWN:
+                switch (e.key.keysym.sym) {
+                    case SDLK_UP: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
+                    case SDLK_DOWN: keyinputbits |= DIRKSIMPLE_INPUT_DOWN; break;
+                    case SDLK_LEFT: keyinputbits |= DIRKSIMPLE_INPUT_LEFT; break;
+                    case SDLK_RIGHT: keyinputbits |= DIRKSIMPLE_INPUT_RIGHT; break;
+                    case SDLK_SPACE: keyinputbits |= DIRKSIMPLE_INPUT_ACTION1; break;
+                    case SDLK_a: keyinputbits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
+                    case SDLK_TAB: keyinputbits |= DIRKSIMPLE_INPUT_COINSLOT; break;
+                    case SDLK_RETURN: keyinputbits |= DIRKSIMPLE_INPUT_START; break;
+                    case SDLK_ESCAPE: return SDL_FALSE;  // !!! FIXME: remove this later.
+                }
+                break;
+
+            case SDL_KEYUP:
+                switch (e.key.keysym.sym) {
+                    case SDLK_UP: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
+                    case SDLK_DOWN: keyinputbits &= ~DIRKSIMPLE_INPUT_DOWN; break;
+                    case SDLK_LEFT: keyinputbits &= ~DIRKSIMPLE_INPUT_LEFT; break;
+                    case SDLK_RIGHT: keyinputbits &= ~DIRKSIMPLE_INPUT_RIGHT; break;
+                    case SDLK_SPACE: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION1; break;
+                    case SDLK_a: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
+                    case SDLK_TAB: keyinputbits &= ~DIRKSIMPLE_INPUT_COINSLOT; break;
+                    case SDLK_RETURN: keyinputbits &= ~DIRKSIMPLE_INPUT_START; break;
+                }
+                break;
+
+            case SDL_QUIT:
+                return SDL_FALSE;
+        }
+    }
+
+    DirkSimple_tick(SDL_GetTicks(), keyinputbits | controllerinputbits);
+    render_frame();
+
+    return SDL_TRUE;
+}
+
+#if defined(__EMSCRIPTEN__)
+static void emscripten_mainloop(void)
+{
+    if (!mainloop_iteration()) {
+        mainloop_shutdown();
+        emscripten_cancel_main_loop();  // this should "kill" the app.
+    }
+
+    // deal with going fullscreen and resizes.
+    if (GWindow != NULL) {
+        static int lastw = 0;
+        static int lasth = 0;
+        const int w = EM_ASM_INT_V({ return window.innerWidth; });
+        const int h = EM_ASM_INT_V({ return window.innerHeight; });
+        if ((w != lastw) || (h != lasth)) {
+            SDL_SetWindowSize(GWindow, w, h);
+            lastw = EM_ASM_INT_V({ return window.innerWidth; });
+            lasth = EM_ASM_INT_V({ return window.innerHeight; });
+        }
+    }
+}
+#endif
+
 int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
-    SDL_bool keep_going = SDL_TRUE;
-    uint64_t keyinputbits = 0;
-    uint64_t controllerinputbits = 0;
 
+#if 0
     if (argc != 2) {
         SDL_Log("USAGE: %s <path/to/game.ogv>", argv[0]);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "USAGE", "USAGE: dirksimple <path/to/game.ogv>", NULL);
@@ -173,6 +261,8 @@ int main(int argc, char **argv)
     }
 
     gamepath = argv[1];
+#endif
+gamepath = "lair.ogv";
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
         const char *errstr = SDL_GetError();
@@ -183,57 +273,13 @@ int main(int argc, char **argv)
 
     DirkSimple_startup(gamepath, NULL);  // !!! FIXME: add --gamename option?
 
-    while (keep_going) {
-        SDL_Event e;
+#if defined(__EMSCRIPTEN__)
+    emscripten_set_main_loop(emscripten_mainloop, 0, 1);
+#else
+    while (mainloop_iteration()) { /* spin */ }
+    mainloop_shutdown();
+#endif
 
-        while (SDL_PollEvent(&e)) {
-            switch (e.type) {
-                case SDL_KEYDOWN:
-                    switch (e.key.keysym.sym) {
-                        case SDLK_UP: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_DOWN: keyinputbits |= DIRKSIMPLE_INPUT_DOWN; break;
-                        case SDLK_LEFT: keyinputbits |= DIRKSIMPLE_INPUT_LEFT; break;
-                        case SDLK_RIGHT: keyinputbits |= DIRKSIMPLE_INPUT_RIGHT; break;
-                        case SDLK_SPACE: keyinputbits |= DIRKSIMPLE_INPUT_ACTION1; break;
-                        case SDLK_a: keyinputbits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
-                        case SDLK_TAB: keyinputbits |= DIRKSIMPLE_INPUT_COINSLOT; break;
-                        case SDLK_RETURN: keyinputbits |= DIRKSIMPLE_INPUT_START; break;
-                        case SDLK_ESCAPE: keep_going = SDL_FALSE; break;  // !!! FIXME: remove this later.
-                    }
-                    break;
-
-                case SDL_KEYUP:
-                    switch (e.key.keysym.sym) {
-                        case SDLK_UP: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
-                        case SDLK_DOWN: keyinputbits &= ~DIRKSIMPLE_INPUT_DOWN; break;
-                        case SDLK_LEFT: keyinputbits &= ~DIRKSIMPLE_INPUT_LEFT; break;
-                        case SDLK_RIGHT: keyinputbits &= ~DIRKSIMPLE_INPUT_RIGHT; break;
-                        case SDLK_SPACE: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION1; break;
-                        case SDLK_a: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
-                        case SDLK_TAB: keyinputbits &= ~DIRKSIMPLE_INPUT_COINSLOT; break;
-                        case SDLK_RETURN: keyinputbits &= ~DIRKSIMPLE_INPUT_START; break;
-                    }
-                    break;
-
-                case SDL_QUIT:
-                    keep_going = SDL_FALSE;
-                    break;
-            }
-        }
-
-        DirkSimple_tick(SDL_GetTicks64(), keyinputbits | controllerinputbits);
-        render_frame();
-    }
-
-    DirkSimple_shutdown();
-
-    SDL_DestroyTexture(GLaserDiscTexture);
-    SDL_DestroyRenderer(GRenderer);
-    SDL_DestroyWindow(GWindow);
-
-    SDL_CloseAudioDevice(GAudioDeviceID);
-
-    SDL_Quit();
     return 0;
 }
 

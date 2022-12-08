@@ -23,6 +23,12 @@
 #define DIRKSIMPLE_NORETURN
 #endif
 
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+#define DIRKSIMPLE_MULTITHREADED 0
+#else
+#define DIRKSIMPLE_MULTITHREADED 1
+#endif
+
 // We might change this later for second players, lightguns, etc. Always use the macros and not hardcoded values!
 #define DIRKSIMPLE_INPUT_UP       (1 << 0)
 #define DIRKSIMPLE_INPUT_DOWN     (1 << 1)

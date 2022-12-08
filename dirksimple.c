@@ -519,7 +519,7 @@ static void setup_movie(const char *gamepath)
     GTheoraplayIo.seek = theoraplayiobridge_seek;
     GTheoraplayIo.close = theoraplayiobridge_close;
     GTheoraplayIo.userdata = io;
-    GDecoder = THEORAPLAY_startDecode(&GTheoraplayIo, 30, THEORAPLAY_VIDFMT_IYUV);
+    GDecoder = THEORAPLAY_startDecode(&GTheoraplayIo, 30, THEORAPLAY_VIDFMT_IYUV, DIRKSIMPLE_MULTITHREADED);
     if (!GDecoder) {
         DirkSimple_panic("Failed to start movie decoding!");
     }
@@ -642,6 +642,8 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 
     if (!L) {
         DirkSimple_panic("Lua VM is missing?!");
+    } else if (!GDecoder) {
+        DirkSimple_panic("Video decoder is missing?!");
     }
 
     if (GTicksOffset == 0) {
@@ -655,9 +657,11 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 
     GTicks = monotonic_ms - GTicksOffset;
 
+    THEORAPLAY_pumpDecode(GDecoder, 5);
+
     //DirkSimple_log("Tick %u\n", (unsigned int) GTicks);
 
-    if (!GDecoder || !THEORAPLAY_isInitialized(GDecoder)) {
+    if (!THEORAPLAY_isInitialized(GDecoder)) {
         return;  // still waiting for the decoder to spin up, don't do anything yet.
     }
 

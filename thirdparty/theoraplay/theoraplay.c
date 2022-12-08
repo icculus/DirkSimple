@@ -22,6 +22,10 @@
 #define THEORAPLAY_THREAD_T    HANDLE
 #define THEORAPLAY_MUTEX_T     HANDLE
 #define sleepms(x) Sleep(x)
+#elif defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+#define THEORAPLAY_ONLY_SINGLE_THREADED 1
+#define THEORAPLAY_THREAD_T    int
+#define THEORAPLAY_MUTEX_T     int
 #else
 #include <pthread.h>
 #include <unistd.h>
@@ -29,6 +33,11 @@
 #define THEORAPLAY_THREAD_T    pthread_t
 #define THEORAPLAY_MUTEX_T     pthread_mutex_t
 #endif
+
+#ifndef THEORAPLAY_ONLY_SINGLE_THREADED
+#define THEORAPLAY_ONLY_SINGLE_THREADED 0
+#endif
+
 
 #include "theoraplay.h"
 #include "theora/theoradec.h"
@@ -171,7 +180,30 @@ typedef struct TheoraDecoder
 } TheoraDecoder;
 
 
-#ifdef _WIN32
+#if THEORAPLAY_ONLY_SINGLE_THREADED
+static inline int Thread_Create(TheoraDecoder *ctx, void *(*routine) (void*))
+{
+    ctx->worker = 0;
+    return -1;
+}
+static inline void Thread_Join(THEORAPLAY_THREAD_T thread)
+{
+}
+static inline int Mutex_Create(TheoraDecoder *ctx)
+{
+    ctx->lock = 1;
+    return 0;
+}
+static inline void Mutex_Destroy(THEORAPLAY_MUTEX_T mutex)
+{
+}
+static inline void Mutex_Lock(THEORAPLAY_MUTEX_T mutex)
+{
+}
+static inline void Mutex_Unlock(THEORAPLAY_MUTEX_T mutex)
+{
+}
+#elif defined(_WIN32)
 static inline int Thread_Create(TheoraDecoder *ctx, void *(*routine) (void*))
 {
     ctx->worker = CreateThread(
@@ -396,6 +428,7 @@ static void PrepareDecoder(TheoraDecoder *ctx)
     Mutex_Unlock(ctx->lock);
 
 cleanup:  // we will do actual cleanup when closing the decoder.
+    return;
 }
 
 // This massive function is where all the effort happens.
@@ -408,6 +441,9 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
         PrepareDecoder(ctx);
         return 0;
     } // if
+
+    if (ctx->thread_done)
+        return 0;
 
     while (!ctx->halt && !ctx->eos && (desired_frames > 0))
     {
@@ -696,8 +732,10 @@ cleanup:
     return had_new_video_frames;
 } // PumpDecoder
 
+
 static void *WorkerThread(void *_this)
 {
+#if !THEORAPLAY_ONLY_SINGLE_THREADED
     TheoraDecoder *ctx = (TheoraDecoder *) _this;
     while (!ctx->thread_done)
     {
@@ -721,6 +759,7 @@ static void *WorkerThread(void *_this)
     }
 
     //printf("Worker thread is done.\n");
+#endif
     return NULL;
 } // WorkerThread
 
@@ -791,6 +830,11 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
 {
     TheoraDecoder *ctx = NULL;
     ConvertVideoFrameFn vidcvt = NULL;
+
+    #if THEORAPLAY_ONLY_SINGLE_THREADED
+    if (multithreaded)
+        return NULL;
+    #endif
 
     switch (vidfmt)
     {
@@ -917,8 +961,7 @@ int THEORAPLAY_isDecoding(THEORAPLAY_Decoder *decoder)
     if (ctx)
     {
         Mutex_Lock(ctx->lock);
-        retval = ( ctx && (ctx->audiolist || ctx->videolist ||
-                   (ctx->thread_created && !ctx->thread_done)) );
+        retval = ( ctx && (ctx->audiolist || ctx->videolist || !ctx->thread_done) );
         Mutex_Unlock(ctx->lock);
     } // if
     return retval;
