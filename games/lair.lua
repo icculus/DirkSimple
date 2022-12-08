@@ -547,8 +547,52 @@ scenes = {
             start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 0, 459), nextsequence=nil },
         },
-    }
+    },
 
+    -- Room that crumbles on three sides and then the ceiling caves in
+    vestibule = {
+        start_dead = {
+            start_time = time_laserdisc_frame(4083),
+            timeout = { when=time_to_ms(0, 1, 966), nextsequence="enter_room", award_points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(1887),
+            timeout = { when=time_to_ms(0, 3, 998), nextsequence="fell_to_death" },
+            actions = {
+                { input="right", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="stagger", award_points=251 },
+                { input="down", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="stagger", award_points=251 },
+                { input="up", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="fell_to_death", award_points=-49 },
+                { input="left", from=time_to_ms(0, 2, 490), to=time_to_ms(0, 3, 965), nextsequence="fell_to_death", award_points=-49 },
+            }
+        },
+
+        stagger = {  -- player staggers in the rumble, room is about to collapse
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 0, 668), nextsequence="fell_to_death", award_points=-300 },
+            actions = {
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="exit_room", award_points=251 },
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="fell_to_death", award_points=-300 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="fell_to_death", award_points=-300 },
+            }
+        },
+
+        fell_to_death = {  -- player fell through floor.
+            start_time = time_laserdisc_frame(2085),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 638), nextsequence=nil }
+        },
+
+        exit_room = {  -- player reaches the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 409), nextsequence=nil },
+        },
+    }
 }
 
 -- end of lair.lua ...
