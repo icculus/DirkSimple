@@ -592,6 +592,58 @@ scenes = {
             start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 409), nextsequence=nil },
         },
+    },
+
+    -- the one with three changes to jump to the left.
+    falling_platform = {
+        start_dead = {
+            start_time = time_laserdisc_frame(14791),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(14847) + laserdisc_frame_to_ms(1),
+            timeout = { when=time_to_ms(0, 6, 881), nextsequence="crash_landing" },
+            actions = {
+                { input="left", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 5, 14), nextsequence="fell_to_death", award_points=-49 },
+                { input="left", from=time_to_ms(0, 5, 14), to=time_to_ms(0, 5, 341), nextsequence="exit_room", award_points=3255 },
+                { input="left", from=time_to_ms(0, 5, 341), to=time_to_ms(0, 5, 669), nextsequence="missed_jump", award_points=-49 },
+                { input="left", from=time_to_ms(0, 5, 702), to=time_to_ms(0, 6, 29), nextsequence="exit_room", award_points=3255 },
+                { input="left", from=time_to_ms(0, 6, 29), to=time_to_ms(0, 6, 357), nextsequence="fell_to_death", award_points=-49 },
+                { input="left", from=time_to_ms(0, 6, 357), to=time_to_ms(0, 6, 685), nextsequence="exit_room", award_points=3255 },
+                { input="right", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death", award_points=-49 },
+                { input="up", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death", award_points=-49 },
+                { input="down", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death", award_points=-49 },
+            }
+        },
+
+        crash_landing = {  -- platform crashes into the floor at the bottom of the pit.
+            start_time = time_laserdisc_frame(15226),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 3, 47), nextsequence=nil }
+        },
+
+        missed_jump = {  -- player tried the jump but missed
+            start_time = time_laserdisc_frame(15306),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 2, 195), nextsequence=nil }
+        },
+
+        fell_to_death = {  -- player fell off the platform without jumping
+            start_time = time_laserdisc_frame(15338),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 0, 819), nextsequence=nil }
+        },
+
+        exit_room = {  -- player successfully makes the jump
+            start_time = time_laserdisc_frame(15366),
+            timeout = { when=time_to_ms(0, 4, 653), nextsequence=nil },
+        },
     }
 }
 
