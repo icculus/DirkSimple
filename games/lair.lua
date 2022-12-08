@@ -514,7 +514,41 @@ scenes = {
             start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 442) + laserdisc_frame_to_ms(12), nextsequence=nil },
         },
+    },
+
+    -- Room with the wind blowing you and a diamond you shouldn't reach for.
+    wind_room = {
+        start_dead = {
+            start_time = time_laserdisc_frame(8653),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(8709),
+            timeout = { when=time_to_ms(0, 8, 159), nextsequence="sucked_in" },
+            actions = {
+                { input="right", from=time_to_ms(0, 7, 406), to=time_to_ms(0, 8, 126), nextsequence="exit_room", award_points=379 },
+                { input="up", from=time_to_ms(0, 5, 964), to=time_to_ms(0, 8, 126), nextsequence="sucked_in", award_points=-49 },
+            }
+        },
+
+        sucked_in = {  -- player sucked into hole, falls to death
+            start_time = time_laserdisc_frame(8938),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 2, 621), nextsequence=nil }
+        },
+
+        exit_room = {  -- player reaches the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 0, 459), nextsequence=nil },
+        },
     }
+
 }
 
 -- end of lair.lua ...
