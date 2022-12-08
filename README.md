@@ -26,9 +26,9 @@ separate Ogg Vorbis audio file that matches it. You can use
 [ffmpeg](https://ffmpeg.org/) to convert those two files into a single Ogg
 Theora file that DirkSimple can use. Like this:
 
-```bash
-ffmpeg -i lair.m2v -i lair.ogg -codec:v libtheora -qscale:v 7 -codec:a libvorbis -qscale:a 5 lair.ogv
-```
+  ```bash
+  ffmpeg -i lair.m2v -i lair.ogg -codec:v libtheora -qscale:v 7 -codec:a libvorbis -qscale:a 5 lair.ogv
+  ```
 
 - Make sure that Ogg Theora file is named "lair.ogv" and you're good to go.
 
