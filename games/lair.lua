@@ -475,7 +475,46 @@ scenes = {
         },
     },
 
+    -- Room with the "DRINK ME" sign.
+    alice_room = {
+        start_dead = {
+            start_time = time_laserdisc_frame(18226),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+        },
 
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(18282) + laserdisc_frame_to_ms(1),
+            timeout = { when=time_to_ms(0, 2, 64) - laserdisc_frame_to_ms(1), nextsequence="burned_to_death" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 64), nextsequence="exit_room", award_points=379 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 64), nextsequence="drinks_potion", award_points=-49 },
+                { input="down", from=time_to_ms(0, 1, 131), to=time_to_ms(0, 2, 32), nextsequence="burned_to_death", award_points=-49 },
+                { input="left", from=time_to_ms(0, 1, 131), to=time_to_ms(0, 2, 32), nextsequence="burned_to_death", award_points=-49 },
+            }
+        },
+
+        drinks_potion = {  -- player drinks potion, dies
+            start_time = time_laserdisc_frame(18378),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 4, 194), nextsequence=nil }
+        },
+
+        burned_to_death = {  -- player dies in a fire
+            start_time = time_laserdisc_frame(18486),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
+        },
+
+        exit_room = {  -- player reaches the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 442) + laserdisc_frame_to_ms(12), nextsequence=nil },
+        },
+    }
 }
 
 -- end of lair.lua ...
