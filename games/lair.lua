@@ -650,7 +650,121 @@ scenes = {
         exit_room = {  -- player successfully makes the jump
             start_time = time_laserdisc_frame(15366),
             timeout = { when=time_to_ms(0, 4, 653), nextsequence=nil },
+        }
+    },
+
+    crypt_creeps = {
+        start_dead = {
+            start_time = time_laserdisc_frame(11433),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
         },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {  -- skulls roll in
+            start_time = time_laserdisc_frame(11489),
+            timeout = { when=time_to_ms(0, 3, 244), nextsequence="eaten_by_skulls" },
+            actions = {
+                { input="up", from=time_to_ms(0, 2, 228), to=time_to_ms(0, 3, 244), nextsequence="jumped_skulls", points=495 },
+                { input="action", from=time_to_ms(0, 2, 228), to=time_to_ms(0, 3, 178), nextsequence="overpowered_by_skulls" },
+                { input="down", from=time_to_ms(0, 2, 228), to=time_to_ms(0, 3, 178), nextsequence="eaten_by_skulls" },
+                { input="right", from=time_to_ms(0, 2, 228), to=time_to_ms(0, 3, 178), nextsequence="eaten_by_skulls" },
+                { input="left", from=time_to_ms(0, 2, 228), to=time_to_ms(0, 3, 178), nextsequence="eaten_by_skulls" },
+            }
+        },
+
+        jumped_skulls = {   -- player jumped down the hall when skulls rolled in, first hand attacks
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 311), nextsequence="crushed_by_hand" },
+            actions = {
+                { input="action", from=time_to_ms(0, 0, 688), to=time_to_ms(0, 1, 278), nextsequence="attacked_first_hand", points=915 },
+                { input="up", from=time_to_ms(0, 0, 918), to=time_to_ms(0, 1, 278), nextsequence="crushed_by_hand" },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 311), nextsequence="eaten_by_skulls" },
+                { input="left", from=time_to_ms(0, 0, 668), to=time_to_ms(0, 1, 278), nextsequence="crushed_by_hand" },
+            }
+        },
+
+        attacked_first_hand = {   -- player drew sword and attacked the first skeletal hand, slime rolls in
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 2, 195), nextsequence="eaten_by_slime" },
+            actions = {
+                { input="up", from=time_to_ms(0, 1, 49), to=time_to_ms(0, 2, 195), nextsequence="jumped_slime", points=495 },
+                { input="down", from=time_to_ms(0, 1, 49), to=time_to_ms(0, 2, 163), nextsequence="eaten_by_skulls" },
+                { input="right", from=time_to_ms(0, 1, 49), to=time_to_ms(0, 2, 163), nextsequence="eaten_by_slime" },
+                { input="left", from=time_to_ms(0, 1, 49), to=time_to_ms(0, 2, 163), nextsequence="eaten_by_slime" },
+            }
+        },
+
+        jumped_slime = {   -- player jumped down the hall when black slime rolled in, second hand attacks
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 212), nextsequence="crushed_by_hand" },
+            actions = {
+                { input="action", from=time_to_ms(0, 0, 590), to=time_to_ms(0, 1, 180), nextsequence="attacked_second_hand", points=915 },
+                { input="up", from=time_to_ms(0, 0, 590), to=time_to_ms(0, 1, 147), nextsequence="crushed_by_hand" },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 212), nextsequence="eaten_by_slime" },
+                { input="right", from=time_to_ms(0, 0, 590), to=time_to_ms(0, 1, 147), nextsequence="crushed_by_hand" },
+            }
+        },
+
+        attacked_second_hand = {   -- player drew sword and attacked the second skeletal hand, more slime rolls in
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 835), nextsequence="eaten_by_slime" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0, 426), to=time_to_ms(0, 1, 835), nextsequence="enter_crypt", points=495 },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="eaten_by_slime" },
+                { input="right", from=time_to_ms(0, 0, 360), to=time_to_ms(0, 1, 835), nextsequence="eaten_by_slime" },
+            }
+        },
+
+        enter_crypt = {   -- player fled hallway, entered actual crypt
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 835), nextsequence="captured_by_ghouls" },
+            actions = {
+                { input="action", from=time_to_ms(0, 0, 688), to=time_to_ms(0, 1, 835), nextsequence="exit_room", points=495 },
+                { input="up", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="captured_by_ghouls" },
+                { input="down", from=time_to_ms(0, 0, 688), to=time_to_ms(0, 1, 835), nextsequence="captured_by_ghouls" },
+                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="captured_by_ghouls" },
+                { input="left", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="captured_by_ghouls" },
+            }
+        },
+
+        exit_room = {  -- player kills ghouls, heads through the exit
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 4, 227), nextsequence=nil },
+        },
+
+        overpowered_by_skulls = {  -- skulls got the player while drawing sword
+            start_time = time_laserdisc_frame(11881),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
+        },
+
+        eaten_by_skulls = {  -- skulls got the player
+            start_time = time_laserdisc_frame(11904),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 0, 229), nextsequence=nil }
+        },
+
+        crushed_by_hand = {  -- giant skeletal hand got the player
+            start_time = time_laserdisc_frame(11917),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 0, 623), nextsequence=nil }
+        },
+
+        eaten_by_slime = {  -- black slime got the player
+            start_time = time_laserdisc_frame(11940),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 212), nextsequence=nil }
+        },
+
+        captured_by_ghouls = {  -- ghouls got the player
+            start_time = time_laserdisc_frame(11983),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 2, 458), nextsequence=nil }
+        }
     }
 }
 
