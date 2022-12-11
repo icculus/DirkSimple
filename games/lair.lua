@@ -61,6 +61,7 @@ local starting_lives = 3
 -- SOME INITIAL SETUP STUFF
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
+local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
 
 
 -- GAME STATE
@@ -141,6 +142,12 @@ end
 
 local function choose_next_scene(is_resurrection)
     -- this is obviously going to get more complex later.
+
+    if test_scene_name ~= nil then
+        lives_left = 99
+        start_scene(test_scene_name)
+        return
+    end
 
     -- intro must be played first.
     --  (!!! FIXME: if we add back in the drawbridge, do we want this to
