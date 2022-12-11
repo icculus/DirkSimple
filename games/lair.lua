@@ -820,6 +820,104 @@ scenes = {
     -- The tomb with the skulls, slime, skeletal hands, and ghouls (reversed)
     crypt_creeps_reversed = {
         reverse_of = "crypt_creeps"
+    },
+
+    -- The flying horse machine that rides you past fires and other obstacles
+    flying_horse = {
+        start_dead = {
+            start_time = time_laserdisc_frame(9965),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {  -- Player mounts the horse, starts the wild ride, dodge first fire
+            start_time = time_laserdisc_frame(10021),
+            timeout = { when=time_to_ms(0, 4, 522), nextsequence="hit_pillar" },
+            actions = {  -- The reversed room has a different timing and control set here...!
+                -- The ROM checks for UpRight here, but also an identical entry for Right which comes to the same result.
+                { input="right", from=time_to_ms(0, 3, 801), to=time_to_ms(0, 4, 522), nextsequence="second_fire", points=495 },
+                { input="up", from=time_to_ms(0, 3, 801), to=time_to_ms(0, 4, 522), nextsequence="hit_pillar" },
+                { input="left", from=time_to_ms(0, 3, 801), to=time_to_ms(0, 4, 522), nextsequence="burned_to_death" },
+            }
+        },
+
+        second_fire = {  -- dodge second fire
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 376), nextsequence="hit_pillar" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0, 721), to=time_to_ms(0, 1, 343), nextsequence="third_fire", points=495 },
+                { input="up", from=time_to_ms(0, 0, 721), to=time_to_ms(0, 1, 343), nextsequence="hit_pillar" },
+                { input="right", from=time_to_ms(0, 0, 721), to=time_to_ms(0, 1, 343), nextsequence="burned_to_death" },
+            }
+        },
+
+        third_fire = {  -- dodge third fire
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 835), nextsequence="hit_pillar" },
+            actions = {
+                { input="right", from=time_to_ms(0, 1, 212), to=time_to_ms(0, 1, 835), nextsequence="fourth_fire", points=495 },
+                { input="up", from=time_to_ms(0, 0, 852), to=time_to_ms(0, 1, 802), nextsequence="hit_pillar" },
+                { input="left", from=time_to_ms(0, 1, 212), to=time_to_ms(0, 1, 835), nextsequence="burned_to_death" },
+            }
+        },
+
+        fourth_fire = {  -- dodge fourth fire
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 966), nextsequence="hit_pillar" },
+            actions = {
+                { input="left", from=time_to_ms(0, 1, 311), to=time_to_ms(0, 1, 966), nextsequence="brick_wall", points=495 },
+                { input="up", from=time_to_ms(0, 1, 49), to=time_to_ms(0, 1, 966), nextsequence="hit_pillar" },
+                { input="right", from=time_to_ms(0, 1, 311), to=time_to_ms(0, 1, 966), nextsequence="burned_to_death" },
+            }
+        },
+
+        brick_wall = {  -- dodge a brick wall
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 868), nextsequence="hit_brick_wall" },
+            actions = {
+                { input="left", from=time_to_ms(0, 1, 311), to=time_to_ms(0, 1, 868), nextsequence="fifth_fire", points=1326 },
+                { input="up", from=time_to_ms(0, 0, 950), to=time_to_ms(0, 1, 835), nextsequence="hit_brick_wall" },
+                { input="right", from=time_to_ms(0, 0, 950), to=time_to_ms(0, 1, 835), nextsequence="hit_brick_wall" },
+            }
+        },
+
+        fifth_fire = {  -- dodge fifth fire
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 1, 409), nextsequence="hit_pillar" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0, 721), to=time_to_ms(0, 1, 376), nextsequence="exit_room", points=495 },
+                { input="up", from=time_to_ms(0, 0, 393), to=time_to_ms(0, 1, 409), nextsequence="hit_pillar" },
+                { input="right", from=time_to_ms(0, 0, 721), to=time_to_ms(0, 1, 376), nextsequence="burned_to_death" },
+            }
+        },
+
+        exit_room = {  -- player crash lands safely, exits room.
+            start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 4, 555), nextsequence=nil },
+        },
+
+        burned_to_death = {  -- player ran into the wall of flames
+            start_time = time_laserdisc_frame(10565),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
+        },
+
+        hit_pillar = {  -- player ran into the pillar
+            start_time = time_laserdisc_frame(10453),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 1, 638), nextsequence=nil }
+        },
+
+        hit_brick_wall = {  -- player ran into the brick wall
+            start_time = time_laserdisc_frame(10501),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 2, 327), nextsequence=nil }
+        }
     }
 }
 
