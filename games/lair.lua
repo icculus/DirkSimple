@@ -157,7 +157,7 @@ local function choose_next_scene(is_resurrection)
 
     if test_scene_name ~= nil then
         lives_left = 99
-        start_scene(test_scene_name)
+        start_scene(test_scene_name, is_resurrection)
         return
     end
 
