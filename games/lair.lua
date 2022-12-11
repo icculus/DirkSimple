@@ -601,7 +601,7 @@ scenes = {
         }
     },
 
-    -- the one with three changes to jump to the left.
+    -- the one with three chances to jump to the left.
     falling_platform = {
         start_dead = {
             start_time = time_laserdisc_frame(14791),
