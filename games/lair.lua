@@ -70,6 +70,7 @@ local lives_left = 0
 local current_score = 0
 local current_scene = nil
 local current_scene_name = nil
+local current_scene_is_reversed = false
 local current_sequence = nil
 local current_ticks = 0
 local current_sequence_ticks = 0
@@ -103,10 +104,16 @@ local function start_sequence(sequencename)
     DirkSimple.log("Starting sequence '" .. sequencename .. "'")
     current_sequence = current_scene[sequencename]
     accepted_input = nil
-    if current_sequence.start_time < 0 then  -- if negative, no seek desired (just keep playing from current location)
+
+    local start_time = current_sequence.start_time
+    if current_scene_is_reversed then
+        start_time = current_sequence.reversed_start_time
+    end
+
+    if start_time < 0 then  -- if negative, no seek desired (just keep playing from current location)
         current_sequence_tick_offset = current_sequence_tick_offset + current_sequence_ticks
     else
-        DirkSimple.start_clip(current_sequence.start_time)  -- will suspend ticking until the seek completes and reset sequence tick count
+        DirkSimple.start_clip(start_time)  -- will suspend ticking until the seek completes and reset sequence tick count
         current_sequence_tick_offset = 0
     end
 end
@@ -123,6 +130,11 @@ local function start_scene(scenename, is_resurrection)
 
     current_scene_name = scenename
     current_scene = scenes[scenename]
+
+    current_scene_is_reversed = current_scene.reverse_of ~= nil
+    if current_scene_is_reversed then
+        current_scene = scenes[current_scene.reverse_of]
+    end
     start_sequence(sequencename)
 end
 
@@ -211,6 +223,13 @@ local function check_actions(inputs)
             -- ignore if not in the time window for this input.
             if (current_sequence_ticks >= v.from) and (current_sequence_ticks <= v.to) then
                 local input = v.input
+                if current_scene_is_reversed then
+                    if input == "left" then
+                        input = "right"
+                    elseif input == "right" then
+                        input = "left"
+                    end
+                end
                 if inputs.pressed[input] then  -- we got one!
                     DirkSimple.log("accepted action '" .. input .. "' at " .. tostring(current_sequence_ticks / 1000.0))
                     accepted_input = v
@@ -333,16 +352,19 @@ scenes = {
     flaming_ropes = {
         start_dead = {
             start_time = time_laserdisc_frame(3505),
+            reversed_start_time = time_laserdisc_frame(12669),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="enter_room" }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
             start_time = time_laserdisc_frame(3561),
+            reversed_start_time = time_laserdisc_frame(12725),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="platform_sliding" },
             actions = {
                 -- Player grabs rope too soon
@@ -360,6 +382,7 @@ scenes = {
 
         platform_sliding = {  -- Player hesitated, platform starts pulling back
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 2, 621), nextsequence="fall_to_death" },  -- player hesitated, platform is gone, player falls
             actions = {
                 -- Player grabs rope too soon
@@ -377,6 +400,7 @@ scenes = {
 
         rope1 = {  -- player grabbed first rope
             start_time = time_laserdisc_frame(3693),
+            reversed_start_time = time_laserdisc_frame(12857),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands" },
             actions = {
                 -- Player grabs rope too soon
@@ -394,6 +418,7 @@ scenes = {
 
         rope2 = {  -- player grabbed second rope
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", points=-679 },
             actions = {
                 -- Player grabs rope too soon
@@ -411,6 +436,7 @@ scenes = {
 
         rope3 = {  -- player grabbed third rope
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 507), nextsequence="misses_landing" },
             actions = {
                 -- Player grabs rope too soon
@@ -428,25 +454,34 @@ scenes = {
 
         exit_room = {  -- player reaches exit platform
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 49), nextsequence=nil },
         },
 
         misses_landing = {  -- player landed on exit platform, but fell backwards
             start_time = time_laserdisc_frame(3879),
+            reversed_start_time = time_laserdisc_frame(13041),
             kills_player = true,
             timeout = { when=time_to_ms(0, 1, 540), nextsequence=nil },
         },
 
         burns_hands = {  -- rope burns up to hands, making player fall
             start_time = time_laserdisc_frame(3925),
+            reversed_start_time = time_laserdisc_frame(13089),
             timeout = { when=time_to_ms(0, 1, 475), nextsequence="fall_to_death" }
         },
 
         fall_to_death = {  -- player falls into the flames
             start_time = time_laserdisc_frame(3963),
+            reversed_start_time = time_laserdisc_frame(13127),
             kills_player = true,
             timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
         }
+    },
+
+    -- Swinging ropes, burning over a fiery pit (reversed)
+    flaming_ropes_reversed = {
+        reverse_of = "flaming_ropes"
     },
 
     -- Bedroom where brick wall appears in front of you to be jumped through.
@@ -653,19 +688,23 @@ scenes = {
         }
     },
 
+    -- The tomb with the skulls, slime, skeletal hands, and ghouls
     crypt_creeps = {
         start_dead = {
             start_time = time_laserdisc_frame(11433),
+            reversed_start_time = time_laserdisc_frame(18606),
             timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {  -- skulls roll in
             start_time = time_laserdisc_frame(11489),
+            reversed_start_time = time_laserdisc_frame(18662),
             timeout = { when=time_to_ms(0, 3, 244), nextsequence="eaten_by_skulls" },
             actions = {
                 { input="up", from=time_to_ms(0, 2, 228), to=time_to_ms(0, 3, 244), nextsequence="jumped_skulls", points=495 },
@@ -678,6 +717,7 @@ scenes = {
 
         jumped_skulls = {   -- player jumped down the hall when skulls rolled in, first hand attacks
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 311), nextsequence="crushed_by_hand" },
             actions = {
                 { input="action", from=time_to_ms(0, 0, 688), to=time_to_ms(0, 1, 278), nextsequence="attacked_first_hand", points=915 },
@@ -689,6 +729,7 @@ scenes = {
 
         attacked_first_hand = {   -- player drew sword and attacked the first skeletal hand, slime rolls in
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 2, 195), nextsequence="eaten_by_slime" },
             actions = {
                 { input="up", from=time_to_ms(0, 1, 49), to=time_to_ms(0, 2, 195), nextsequence="jumped_slime", points=495 },
@@ -700,6 +741,7 @@ scenes = {
 
         jumped_slime = {   -- player jumped down the hall when black slime rolled in, second hand attacks
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 212), nextsequence="crushed_by_hand" },
             actions = {
                 { input="action", from=time_to_ms(0, 0, 590), to=time_to_ms(0, 1, 180), nextsequence="attacked_second_hand", points=915 },
@@ -711,6 +753,7 @@ scenes = {
 
         attacked_second_hand = {   -- player drew sword and attacked the second skeletal hand, more slime rolls in
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 835), nextsequence="eaten_by_slime" },
             actions = {
                 { input="left", from=time_to_ms(0, 0, 426), to=time_to_ms(0, 1, 835), nextsequence="enter_crypt", points=495 },
@@ -721,6 +764,7 @@ scenes = {
 
         enter_crypt = {   -- player fled hallway, entered actual crypt
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 835), nextsequence="captured_by_ghouls" },
             actions = {
                 { input="action", from=time_to_ms(0, 0, 688), to=time_to_ms(0, 1, 835), nextsequence="exit_room", points=495 },
@@ -733,38 +777,49 @@ scenes = {
 
         exit_room = {  -- player kills ghouls, heads through the exit
             start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 4, 227), nextsequence=nil },
         },
 
         overpowered_by_skulls = {  -- skulls got the player while drawing sword
             start_time = time_laserdisc_frame(11881),
+            reversed_start_time = time_laserdisc_frame(19054),
             kills_player = true,
             timeout = { when=time_to_ms(0, 1, 180), nextsequence=nil }
         },
 
         eaten_by_skulls = {  -- skulls got the player
             start_time = time_laserdisc_frame(11904),
+            reversed_start_time = time_laserdisc_frame(19077),
             kills_player = true,
             timeout = { when=time_to_ms(0, 0, 229), nextsequence=nil }
         },
 
         crushed_by_hand = {  -- giant skeletal hand got the player
             start_time = time_laserdisc_frame(11917),
+            reversed_start_time = time_laserdisc_frame(19090),
             kills_player = true,
             timeout = { when=time_to_ms(0, 0, 623), nextsequence=nil }
         },
 
         eaten_by_slime = {  -- black slime got the player
             start_time = time_laserdisc_frame(11940),
+            reversed_start_time = time_laserdisc_frame(19114),
             kills_player = true,
             timeout = { when=time_to_ms(0, 1, 212), nextsequence=nil }
         },
 
         captured_by_ghouls = {  -- ghouls got the player
             start_time = time_laserdisc_frame(11983),
+            reversed_start_time = time_laserdisc_frame(19150),
             kills_player = true,
             timeout = { when=time_to_ms(0, 2, 458), nextsequence=nil }
         }
+    },
+
+    -- The tomb with the skulls, slime, skeletal hands, and ghouls (reversed)
+    crypt_creeps_reversed = {
+        reverse_of = "crypt_creeps"
     }
 }
 
