@@ -245,8 +245,8 @@ local function check_timeout()
         outcome = current_sequence.timeout
     end
 
-    if outcome.award_points ~= nil then
-        current_score = current_score + outcome.award_points
+    if outcome.points ~= nil then
+        current_score = current_score + outcome.points
     end
 
     if outcome.interrupt ~= nil then
@@ -338,7 +338,7 @@ scenes = {
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
@@ -346,83 +346,83 @@ scenes = {
             timeout = { when=time_to_ms(0, 2, 228), nextsequence="platform_sliding" },
             actions = {
                 -- Player grabs rope too soon
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 245), nextsequence="fall_to_death", award_points=-49 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 245), nextsequence="fall_to_death" },
                 -- Player grabs rope correctly
-                { input="right", from=time_to_ms(0, 1, 245), to=time_to_ms(0, 2, 130), nextsequence="rope1", award_points=251 },
+                { input="right", from=time_to_ms(0, 1, 245), to=time_to_ms(0, 2, 130), nextsequence="rope1", points=251 },
                 -- Player grabs rope too late
-                { input="right", from=time_to_ms(0, 2, 130), to=time_to_ms(0, 4, 260), nextsequence="fall_to_death", award_points=-49 },
+                { input="right", from=time_to_ms(0, 2, 130), to=time_to_ms(0, 4, 260), nextsequence="fall_to_death" },
                 -- Player tries to fly
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 490), nextsequence="fall_to_death", award_points=-49 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 490), nextsequence="fall_to_death" },
                 -- Player tries to dive
-                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 490), nextsequence="fall_to_death", award_points=-49 },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 490), nextsequence="fall_to_death" },
             }
         },
 
         platform_sliding = {  -- Player hesitated, platform starts pulling back
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 2, 621), nextsequence="fall_to_death", award_points=-49 },  -- player hesitated, platform is gone, player falls
+            timeout = { when=time_to_ms(0, 2, 621), nextsequence="fall_to_death" },  -- player hesitated, platform is gone, player falls
             actions = {
                 -- Player grabs rope too soon
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-49 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death" },
                 -- Player grabs rope correctly
-                { input="right", from=time_to_ms(0, 1, 835), to=time_to_ms(0, 2, 884), nextsequence="rope1", award_points=251 },
+                { input="right", from=time_to_ms(0, 1, 835), to=time_to_ms(0, 2, 884), nextsequence="rope1", points=251 },
                 -- Player tries to flee
-                { input="left", from=time_to_ms(0, 1, 835), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death", award_points=-49 },
+                { input="left", from=time_to_ms(0, 1, 835), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death" },
                 -- Player tries to fly
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death", award_points=-49 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death" },
                 -- Player tries to dive
-                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death", award_points=-49 },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 884), nextsequence="fall_to_death" },
             }
         },
 
         rope1 = {  -- player grabbed first rope
             start_time = time_laserdisc_frame(3693),
-            timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", award_points=-300 },
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands" },
             actions = {
                 -- Player grabs rope too soon
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 81), nextsequence="fall_to_death", award_points=-300 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 81), nextsequence="fall_to_death" },
                 -- Player grabs rope correctly
-                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="rope2", award_points=379 },
+                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="rope2", points=379 },
                 -- Player tries to fly
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-300 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death" },
                 -- Player tries to dive
-                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-300 },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death" },
                 -- Player tries to flee
-                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-300 },
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death" },
             }
         },
 
         rope2 = {  -- player grabbed second rope
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", award_points=-679 },
+            timeout = { when=time_to_ms(0, 2, 228), nextsequence="burns_hands", points=-679 },
             actions = {
                 -- Player grabs rope too soon
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 81), nextsequence="fall_to_death", award_points=-679 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 81), nextsequence="fall_to_death" },
                 -- Player grabs rope correctly
-                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="rope3", award_points=495 },
+                { input="right", from=time_to_ms(0, 1, 81), to=time_to_ms(0, 1, 835), nextsequence="rope3", points=495 },
                 -- Player tries to fly
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-679 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death"  },
                 -- Player tries to dive
-                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-679 },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death" },
                 -- Player tries to flee
-                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death", award_points=-679 },
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 835), nextsequence="fall_to_death" },
             }
         },
 
         rope3 = {  -- player grabbed third rope
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 1, 507), nextsequence="misses_landing", award_points=-1174 },
+            timeout = { when=time_to_ms(0, 1, 507), nextsequence="misses_landing" },
             actions = {
                 -- Player grabs rope too soon
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 852), nextsequence="fall_to_death", award_points=-1174 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 852), nextsequence="fall_to_death" },
                 -- Player grabs rope correctly
-                { input="right", from=time_to_ms(0, 0, 852), to=time_to_ms(0, 1, 704), nextsequence="exit_room", award_points=915 },
+                { input="right", from=time_to_ms(0, 0, 852), to=time_to_ms(0, 1, 704), nextsequence="exit_room", points=915 },
                 -- Player tries to fly
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death", award_points=-1174 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death" },
                 -- Player tries to dive
-                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death", award_points=-1174 },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death" },
                 -- Player tries to flee
-                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death", award_points=-1174 },
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 769), nextsequence="fall_to_death" },
             }
         },
 
@@ -453,12 +453,12 @@ scenes = {
     bower = {
         start_dead = {
             start_time = time_laserdisc_frame(9093),
-            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
@@ -466,7 +466,7 @@ scenes = {
             timeout = { when=time_to_ms(0, 1, 147) + laserdisc_frame_to_ms(15), nextsequence="trapped_in_wall" },
             actions = {
                 -- Player jumps through the hole in the wall
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 409) + laserdisc_frame_to_ms(15), nextsequence="exit_room", award_points=379 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 1, 409) + laserdisc_frame_to_ms(15), nextsequence="exit_room", points=379 },
             }
         },
 
@@ -486,22 +486,22 @@ scenes = {
     alice_room = {
         start_dead = {
             start_time = time_laserdisc_frame(18226),
-            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
             start_time = time_laserdisc_frame(18282) + laserdisc_frame_to_ms(1),
             timeout = { when=time_to_ms(0, 2, 64) - laserdisc_frame_to_ms(1), nextsequence="burned_to_death" },
             actions = {
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 64), nextsequence="exit_room", award_points=379 },
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 64), nextsequence="drinks_potion", award_points=-49 },
-                { input="down", from=time_to_ms(0, 1, 131), to=time_to_ms(0, 2, 32), nextsequence="burned_to_death", award_points=-49 },
-                { input="left", from=time_to_ms(0, 1, 131), to=time_to_ms(0, 2, 32), nextsequence="burned_to_death", award_points=-49 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 64), nextsequence="exit_room", points=379 },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 64), nextsequence="drinks_potion" },
+                { input="down", from=time_to_ms(0, 1, 131), to=time_to_ms(0, 2, 32), nextsequence="burned_to_death" },
+                { input="left", from=time_to_ms(0, 1, 131), to=time_to_ms(0, 2, 32), nextsequence="burned_to_death" },
             }
         },
 
@@ -527,20 +527,20 @@ scenes = {
     wind_room = {
         start_dead = {
             start_time = time_laserdisc_frame(8653),
-            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
             start_time = time_laserdisc_frame(8709),
             timeout = { when=time_to_ms(0, 8, 159), nextsequence="sucked_in" },
             actions = {
-                { input="right", from=time_to_ms(0, 7, 406), to=time_to_ms(0, 8, 126), nextsequence="exit_room", award_points=379 },
-                { input="up", from=time_to_ms(0, 5, 964), to=time_to_ms(0, 8, 126), nextsequence="sucked_in", award_points=-49 },
+                { input="right", from=time_to_ms(0, 7, 406), to=time_to_ms(0, 8, 126), nextsequence="exit_room", points=379 },
+                { input="up", from=time_to_ms(0, 5, 964), to=time_to_ms(0, 8, 126), nextsequence="sucked_in" },
             }
         },
 
@@ -560,32 +560,32 @@ scenes = {
     vestibule = {
         start_dead = {
             start_time = time_laserdisc_frame(4083),
-            timeout = { when=time_to_ms(0, 1, 966), nextsequence="enter_room", award_points = 49 }
+            timeout = { when=time_to_ms(0, 1, 966), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
             start_time = time_laserdisc_frame(1887),
             timeout = { when=time_to_ms(0, 3, 998), nextsequence="fell_to_death" },
             actions = {
-                { input="right", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="stagger", award_points=251 },
-                { input="down", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="stagger", award_points=251 },
-                { input="up", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="fell_to_death", award_points=-49 },
-                { input="left", from=time_to_ms(0, 2, 490), to=time_to_ms(0, 3, 965), nextsequence="fell_to_death", award_points=-49 },
+                { input="right", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="stagger", points=251 },
+                { input="down", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="stagger", points=251 },
+                { input="up", from=time_to_ms(0, 1, 966), to=time_to_ms(0, 3, 998), nextsequence="fell_to_death" },
+                { input="left", from=time_to_ms(0, 2, 490), to=time_to_ms(0, 3, 965), nextsequence="fell_to_death" },
             }
         },
 
         stagger = {  -- player staggers in the rumble, room is about to collapse
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 0, 668), nextsequence="fell_to_death", award_points=-300 },
+            timeout = { when=time_to_ms(0, 0, 668), nextsequence="fell_to_death" },
             actions = {
-                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="exit_room", award_points=251 },
-                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="fell_to_death", award_points=-300 },
-                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="fell_to_death", award_points=-300 },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="exit_room", points=251 },
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="fell_to_death" },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 0, 950), nextsequence="fell_to_death" },
             }
         },
 
@@ -598,34 +598,34 @@ scenes = {
         exit_room = {  -- player reaches the door
             start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(0, 1, 409), nextsequence=nil },
-        },
+        }
     },
 
     -- the one with three changes to jump to the left.
     falling_platform = {
         start_dead = {
             start_time = time_laserdisc_frame(14791),
-            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", award_points = 49 }
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", award_points = 49 }
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
         },
 
         enter_room = {
             start_time = time_laserdisc_frame(14847) + laserdisc_frame_to_ms(1),
             timeout = { when=time_to_ms(0, 6, 881), nextsequence="crash_landing" },
             actions = {
-                { input="left", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 5, 14), nextsequence="fell_to_death", award_points=-49 },
-                { input="left", from=time_to_ms(0, 5, 14), to=time_to_ms(0, 5, 341), nextsequence="exit_room", award_points=3255 },
-                { input="left", from=time_to_ms(0, 5, 341), to=time_to_ms(0, 5, 669), nextsequence="missed_jump", award_points=-49 },
-                { input="left", from=time_to_ms(0, 5, 702), to=time_to_ms(0, 6, 29), nextsequence="exit_room", award_points=3255 },
-                { input="left", from=time_to_ms(0, 6, 29), to=time_to_ms(0, 6, 357), nextsequence="fell_to_death", award_points=-49 },
-                { input="left", from=time_to_ms(0, 6, 357), to=time_to_ms(0, 6, 685), nextsequence="exit_room", award_points=3255 },
-                { input="right", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death", award_points=-49 },
-                { input="up", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death", award_points=-49 },
-                { input="down", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death", award_points=-49 },
+                { input="left", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 5, 14), nextsequence="fell_to_death" },
+                { input="left", from=time_to_ms(0, 5, 14), to=time_to_ms(0, 5, 341), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 5, 341), to=time_to_ms(0, 5, 669), nextsequence="missed_jump" },
+                { input="left", from=time_to_ms(0, 5, 702), to=time_to_ms(0, 6, 29), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 6, 29), to=time_to_ms(0, 6, 357), nextsequence="fell_to_death" },
+                { input="left", from=time_to_ms(0, 6, 357), to=time_to_ms(0, 6, 685), nextsequence="exit_room", points=3255 },
+                { input="right", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death" },
+                { input="up", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death" },
+                { input="down", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 7, 209), nextsequence="fell_to_death" },
             }
         },
 
