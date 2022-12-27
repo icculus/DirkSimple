@@ -636,8 +636,8 @@ scenes = {
         }
     },
 
-    -- the one with three chances to jump to the left.
-    falling_platform = {
+    -- the one with three chances to jump.
+    falling_platform_short = {
         start_dead = {
             start_time = time_laserdisc_frame(14791),
             timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
@@ -686,6 +686,104 @@ scenes = {
             start_time = time_laserdisc_frame(15366),
             timeout = { when=time_to_ms(0, 4, 653), nextsequence=nil },
         }
+    },
+
+    -- the one with nine chances to jump.
+    falling_platform_long = {
+        start_dead = {
+            start_time = time_laserdisc_frame(14791),
+            reversed_start_time = time_laserdisc_frame(21904),
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(14847) + laserdisc_frame_to_ms(1),
+            reversed_start_time = time_laserdisc_frame(21959),
+            timeout = { when=time_to_ms(0, 6, 816), nextsequence="second_jump_set", points = 49 },
+            actions = {
+                { input="left", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 5, 14), nextsequence="fell_to_death" },
+                { input="left", from=time_to_ms(0, 5, 14), to=time_to_ms(0, 5, 341), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 5, 341), to=time_to_ms(0, 5, 669), nextsequence="fell_to_death" },
+                { input="left", from=time_to_ms(0, 5, 702), to=time_to_ms(0, 6, 29), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 6, 29), to=time_to_ms(0, 6, 357), nextsequence="missed_jump" },
+                { input="left", from=time_to_ms(0, 6, 357), to=time_to_ms(0, 6, 685), nextsequence="exit_room", points=3255 },
+                { input="right", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 6, 750), nextsequence="fell_to_death" },
+                { input="up", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 6, 750), nextsequence="fell_to_death" },
+                { input="down", from=time_to_ms(0, 2, 818), to=time_to_ms(0, 6, 750), nextsequence="fell_to_death" },
+            }
+        },
+
+        second_jump_set = {
+            start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 4, 293), nextsequence="third_jump_set", points = 1939 },
+            actions = {
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 458), nextsequence="fell_to_death" },
+                { input="right", from=time_to_ms(0, 2, 458), to=time_to_ms(0, 2, 785), nextsequence="exit_room", points=3255 },
+                { input="right", from=time_to_ms(0, 2, 785), to=time_to_ms(0, 3, 113), nextsequence="missed_jump" },
+                { input="right", from=time_to_ms(0, 3, 146), to=time_to_ms(0, 3, 473), nextsequence="exit_room", points=3255 },
+                { input="right", from=time_to_ms(0, 3, 473), to=time_to_ms(0, 3, 801), nextsequence="missed_jump" },
+                { input="right", from=time_to_ms(0, 3, 801), to=time_to_ms(0, 4, 129), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 4, 293), nextsequence="fell_to_death" },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 4, 293), nextsequence="fell_to_death" },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 4, 293), nextsequence="fell_to_death" },
+            }
+        },
+
+        third_jump_set = {
+            start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 4, 293), nextsequence="crash_landing" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 2, 458), nextsequence="missed_jump" },
+                { input="left", from=time_to_ms(0, 2, 458), to=time_to_ms(0, 2, 785), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 2, 785), to=time_to_ms(0, 3, 113), nextsequence="missed_jump" },
+                { input="left", from=time_to_ms(0, 3, 146), to=time_to_ms(0, 3, 473), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 3, 473), to=time_to_ms(0, 3, 801), nextsequence="missed_jump" },
+                { input="left", from=time_to_ms(0, 3, 801), to=time_to_ms(0, 4, 129), nextsequence="exit_room", points=3255 },
+                { input="left", from=time_to_ms(0, 4, 162), to=time_to_ms(0, 5, 571), nextsequence="fell_to_death" },
+                { input="right", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 5, 571), nextsequence="fell_to_death" },
+                { input="up", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 5, 571), nextsequence="fell_to_death" },
+                { input="down", from=time_to_ms(0, 0, 0), to=time_to_ms(0, 5, 571), nextsequence="fell_to_death" },
+            }
+        },
+
+        crash_landing = {  -- platform crashes into the floor at the bottom of the pit.
+            start_time = time_laserdisc_noseek(),
+            reversed_start_time = time_laserdisc_noseek(),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 2, 32), nextsequence=nil }
+        },
+
+        missed_jump = {  -- player tried the jump but missed
+            start_time = time_laserdisc_frame(15306),
+            reversed_start_time = time_laserdisc_frame(22418),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 2, 195), nextsequence=nil }
+        },
+
+        fell_to_death = {  -- player fell off the platform without jumping
+            start_time = time_laserdisc_frame(15338),
+            reversed_start_time = time_laserdisc_frame(22450),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 0, 819), nextsequence=nil }
+        },
+
+        exit_room = {  -- player successfully makes the jump
+            start_time = time_laserdisc_frame(15366),
+            reversed_start_time = time_laserdisc_frame(22478),
+            timeout = { when=time_to_ms(0, 4, 653) + laserdisc_frame_to_ms(10), nextsequence=nil },
+        }
+    },
+
+    falling_platform_long_reversed = {
+        reverse_of = "falling_platform_long"
     },
 
     -- The tomb with the skulls, slime, skeletal hands, and ghouls
