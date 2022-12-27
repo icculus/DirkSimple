@@ -217,8 +217,14 @@ local function check_actions(inputs)
         return true  -- ignore all input until end of sequence.
     end
 
-    if current_sequence.actions ~= nil then
-        for i,v in ipairs(current_sequence.actions) do
+
+    local actions = current_sequence.actions
+    if current_scene_is_reversed and current_sequence.reversed_actions ~= nil then
+        actions = current_sequence.reversed_actions
+    end
+
+    if actions ~= nil then
+        for i,v in ipairs(actions) do
             -- ignore if not in the time window for this input.
             if (current_sequence_ticks >= v.from) and (current_sequence_ticks <= v.to) then
                 local input = v.input
