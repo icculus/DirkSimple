@@ -113,7 +113,12 @@ local function start_sequence(sequencename)
     if start_time < 0 then  -- if negative, no seek desired (just keep playing from current location)
         current_sequence_tick_offset = current_sequence_tick_offset + current_sequence_ticks
     else
-        DirkSimple.start_clip(start_time)  -- will suspend ticking until the seek completes and reset sequence tick count
+        -- will suspend ticking until the seek completes and reset sequence tick count
+        if current_sequence.is_single_frame then
+            DirkSimple.show_single_frame(start_time)
+        else
+            DirkSimple.start_clip(start_time)
+        end
         current_sequence_tick_offset = 0
     end
 end
@@ -316,16 +321,30 @@ DirkSimple.tick = standard_tick
 scenes = {
     attract_mode = {
         start_alive = {
+            timeout = { when=0, nextsequence="attract_movie" },
+            start_time = time_laserdisc_noseek(),
+        },
+        start_dead = {
+            start_time = time_to_ms(5, 830),
+            is_single_frame = true,
+            timeout = { when=time_to_ms(3, 0), nextsequence="attract_movie" },
+        },
+        attract_movie = {
             start_time = time_to_ms(7, 0),
-            timeout = { when=time_to_ms(43, 0), nextsequence="start_alive" },
+            timeout = { when=time_to_ms(43, 0), nextsequence="insert_coins" },
             actions = {
                 -- Player hit start to start the game
                 { input="start", from=time_to_ms(0, 0), to=time_to_ms(60, 0, 0), interrupt=start_game, nextsequence=nil },
             }
         },
-        start_dead = {
-            start_time = time_laserdisc_noseek(),  -- !!! FIXME: Queue up the game over frame and pause there for a few seconds.
-            timeout = { when=0, nextsequence="start_alive" },
+        insert_coins = {
+            start_time = time_to_ms(6, 200),
+            is_single_frame = true,
+            timeout = { when=time_to_ms(5, 0), nextsequence="attract_movie" },
+            actions = {
+                -- Player hit start to start the game
+                { input="start", from=time_to_ms(0, 0), to=time_to_ms(60, 0, 0), interrupt=start_game, nextsequence=nil },
+            }
         },
     },
 

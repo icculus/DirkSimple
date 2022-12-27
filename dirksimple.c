@@ -57,6 +57,7 @@ static uint32_t GFrameMS = 0;
 static int64_t GSeekToTicksOffset = 0;
 static uint64_t GClipStartMs = 0;   // Milliseconds into video stream that starts this clip.
 static uint64_t GClipStartTicks = 0;  // GTicks when clip started playing
+static int GShowingSingleFrame = 0;
 static unsigned int GSeekGeneration = 0;
 static int GNeedInitialLuaTick = 1;
 static const THEORAPLAY_VideoFrame *GPendingVideoFrame = NULL;
@@ -328,6 +329,27 @@ void DirkSimple_debugger(void)
     luahook_DirkSimple_debugger(GLua);
 }
 
+// !!! FIXME: start_clip and show_single_frame should take a framenum, not timestamp
+static void DirkSimple_show_single_frame(uint32_t startms)
+{
+    if (GDecoder) {
+        DirkSimple_log("START SINGLE FRAME: GTicks %u, startms %u\n", (unsigned int) GTicks, (unsigned int) startms);
+        GSeekGeneration = THEORAPLAY_seek(GDecoder, startms);
+        DirkSimple_cleardiscaudio();
+        GClipStartMs = startms;
+        GClipStartTicks = 0;
+        GShowingSingleFrame = 1;
+    }
+}
+
+static int luahook_DirkSimple_show_single_frame(lua_State *L)
+{
+    const uint32_t startms = (uint32_t) lua_tonumber(L, 1);
+    DirkSimple_show_single_frame(startms);
+    return 0;
+}
+
+
 static void DirkSimple_start_clip(uint32_t startms)
 {
     if (GDecoder) {
@@ -336,6 +358,7 @@ static void DirkSimple_start_clip(uint32_t startms)
         DirkSimple_cleardiscaudio();
         GClipStartMs = startms;
         GClipStartTicks = 0;
+        GShowingSingleFrame = 0;
     }
 }
 
@@ -449,6 +472,7 @@ static void setup_lua(void)
 
     // Build DirkSimple namespace for Lua to access and fill in C bridges...
     lua_newtable(GLua);
+        set_cfunc(GLua, luahook_DirkSimple_show_single_frame, "show_single_frame");
         set_cfunc(GLua, luahook_DirkSimple_start_clip, "start_clip");
         set_cfunc(GLua, luahook_DirkSimple_log, "log");
         set_cfunc(GLua, luahook_panic, "panic");
@@ -543,6 +567,7 @@ void DirkSimple_shutdown(void)
     GTicksOffset = 0;
     GSeekToTicksOffset = 0;
     GClipStartMs = 0xFFFFFFFF;
+    GShowingSingleFrame = 0;
     GClipStartTicks = 0;
     GSeekGeneration = 0;
     GNeedInitialLuaTick = 1;
@@ -733,59 +758,65 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
     if (GPendingVideoFrame && (GClipStartTicks == 0)) {
         GClipStartTicks = GTicks;
         GSeekToTicksOffset = ((int64_t) GTicks) - ((int64_t) GClipStartMs);
-    }
-
-    while ((audio = THEORAPLAY_getAudio(GDecoder)) != NULL) {
-        if (audio->seek_generation == GSeekGeneration) {  // frame from before our latest seek, dump it.
-            const uint64_t playms = (uint64_t) (audio->playms + GSeekToTicksOffset);
-            if (playms >= GTicks) {
-                DirkSimple_discaudio(audio->samples, audio->frames);
-            }
+        if (GShowingSingleFrame) {
+            DirkSimple_discvideo(GPendingVideoFrame->pixels);
+            THEORAPLAY_freeVideo(GPendingVideoFrame);
+            GPendingVideoFrame = NULL;
         }
-        THEORAPLAY_freeAudio(audio);
     }
 
-    // Feed the next video frame when it's time.
-    if (GPendingVideoFrame) {
-        int64_t playms = ((int64_t) GPendingVideoFrame->playms) + GSeekToTicksOffset;
-        //DirkSimple_log("Consider frame->playms=%u GTicks=%u offset=%d cvt=%d\n", (unsigned int) GPendingVideoFrame->playms, (unsigned int) GTicks, (int) GSeekToTicksOffset, (int) playms);
-        if (playms <= (int64_t) GTicks) {
-            //DirkSimple_log("Play video frame (%u ms)!\n", (unsigned int) (video->playms - GSeekToTicksOffset));
-            if ( GFrameMS && ((GTicks - playms) >= GFrameMS) ) {
-                // Skip frames to catch up, but keep track of the last one
-                //  in case we catch up to a series of dupe frames, which
-                //  means we'd have to draw that final frame and then wait for
-                //  more.
-                const THEORAPLAY_VideoFrame *last = GPendingVideoFrame;
-                while ((GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder)) != NULL) {
-                    THEORAPLAY_freeVideo(last);
-                    last = GPendingVideoFrame;
-                    playms = ((int64_t) GPendingVideoFrame->playms) + GSeekToTicksOffset;
-                    //DirkSimple_log("Catchup frame %u\n", (unsigned int) playms);
-                    if ((((int64_t) GTicks) - playms) < ((int64_t) GFrameMS)) {
-                        break;
+    if (!GShowingSingleFrame) {
+        while ((audio = THEORAPLAY_getAudio(GDecoder)) != NULL) {
+            if (audio->seek_generation == GSeekGeneration) {  // frame from before our latest seek, dump it.
+                const uint64_t playms = (uint64_t) (audio->playms + GSeekToTicksOffset);
+                if (playms >= GTicks) {
+                    DirkSimple_discaudio(audio->samples, audio->frames);
+                }
+            }
+            THEORAPLAY_freeAudio(audio);
+        }
+
+        // Feed the next video frame when it's time.
+        if (GPendingVideoFrame) {
+            int64_t playms = ((int64_t) GPendingVideoFrame->playms) + GSeekToTicksOffset;
+            //DirkSimple_log("Consider frame->playms=%u GTicks=%u offset=%d cvt=%d\n", (unsigned int) GPendingVideoFrame->playms, (unsigned int) GTicks, (int) GSeekToTicksOffset, (int) playms);
+            if (playms <= (int64_t) GTicks) {
+                //DirkSimple_log("Play video frame (%u ms)!\n", (unsigned int) (video->playms - GSeekToTicksOffset));
+                if ( GFrameMS && ((GTicks - playms) >= GFrameMS) ) {
+                    // Skip frames to catch up, but keep track of the last one
+                    //  in case we catch up to a series of dupe frames, which
+                    //  means we'd have to draw that final frame and then wait for
+                    //  more.
+                    const THEORAPLAY_VideoFrame *last = GPendingVideoFrame;
+                    while ((GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder)) != NULL) {
+                        THEORAPLAY_freeVideo(last);
+                        last = GPendingVideoFrame;
+                        playms = ((int64_t) GPendingVideoFrame->playms) + GSeekToTicksOffset;
+                        //DirkSimple_log("Catchup frame %u\n", (unsigned int) playms);
+                        if ((((int64_t) GTicks) - playms) < ((int64_t) GFrameMS)) {
+                            break;
+                        }
+                    }
+
+                    if (!GPendingVideoFrame) {
+                        GPendingVideoFrame = last;
                     }
                 }
 
-                if (!GPendingVideoFrame) {
-                    GPendingVideoFrame = last;
+                if (!GPendingVideoFrame) {  // do nothing; we're far behind and out of options.
+                    static uint64_t last_warned = 0;
+                    if ((!last_warned) || ((GTicks - last_warned) > 10000)) {
+                        last_warned = GTicks;
+                        DirkSimple_log("WARNING: Video playback can't keep up!");
+                    }
+                } else {
+                    DirkSimple_discvideo(GPendingVideoFrame->pixels);
+                    THEORAPLAY_freeVideo(GPendingVideoFrame);
+                    GPendingVideoFrame = NULL;
                 }
-            }
-
-            if (!GPendingVideoFrame) {  // do nothing; we're far behind and out of options.
-                static uint64_t last_warned = 0;
-                if ((!last_warned) || ((GTicks - last_warned) > 10000)) {
-                    last_warned = GTicks;
-                    DirkSimple_log("WARNING: Video playback can't keep up!");
-                }
-            } else {
-                DirkSimple_discvideo(GPendingVideoFrame->pixels);
-                THEORAPLAY_freeVideo(GPendingVideoFrame);
-                GPendingVideoFrame = NULL;
             }
         }
     }
-
     // Call our Lua tick function if we aren't seeking...
     if (GNeedInitialLuaTick) {
         GNeedInitialLuaTick = 0;
