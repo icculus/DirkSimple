@@ -285,7 +285,7 @@ local function check_timeout()
     -- sequence and we don't want the video to move ahead in a completed sequence or progress
     -- before the actual sequence is ticking.
     if current_sequence.timeout.when == 0 then
-        check_timeout(0)
+        check_timeout()
     end
 end
 
