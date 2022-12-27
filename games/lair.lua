@@ -1028,7 +1028,7 @@ scenes = {
         exit_room = {  -- player crash lands safely, exits room.
             start_time = time_laserdisc_noseek(),
             reversed_start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(4, 555), nextsequence=nil },
+            timeout = { when=time_to_ms(5, 50), nextsequence=nil },
         },
 
         burned_to_death = {  -- player ran into the wall of flames
