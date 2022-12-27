@@ -144,12 +144,11 @@ end
 
 local function game_over(won)
     DirkSimple.log("Game over!")
-    -- !!! FIXME: show correct game over scene
-    --if (current_scene ~= nil) and (current_scene.gameover_start_time ~= nil) and (current_scene.gameover_duration ~= nil) then
-    --    play_clip_then(current_scene.gameover_start_time, current_scene.gameover_duration, start_attract_mode)
-    --else
+    if (current_scene ~= nil) and (current_scene.game_over ~= nil) then
+        start_sequence(current_scene.game_over)
+    else
         start_attract_mode(true)
-    --end
+    end
 end
 
 local function choose_next_scene(is_resurrection)
