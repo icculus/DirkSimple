@@ -535,7 +535,16 @@ static void setup_movie(const char *gamepath)
 {
     DirkSimple_Io *io = DirkSimple_openfile_read(gamepath);
     if (!io) {
-        DirkSimple_panic("Couldn't open game path!");
+        const size_t slen = strlen(gamepath) + 5;
+        char *gamepath_ext = DirkSimple_xmalloc(slen);
+        if (gamepath_ext) {
+            snprintf(gamepath_ext, slen, "%s.ogv", gamepath);
+            io = DirkSimple_openfile_read(gamepath_ext);
+            free(gamepath_ext);
+        }
+        if (!io) {
+            DirkSimple_panic("Couldn't open game path!");
+        }
     }
 
     GTheoraplayIo.read = theoraplayiobridge_read;
