@@ -62,7 +62,7 @@ local starting_lives = 3
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "tentacle_room"
+--test_scene_name = "tilting_room"
 
 
 -- GAME STATE
@@ -1259,6 +1259,73 @@ scenes = {
             start_time = time_laserdisc_frame(2933),
             kills_player = true,
             timeout = { when=time_to_ms(0, 623), nextsequence=nil }
+        },
+    },
+
+    tilting_room = {
+        start_dead = {
+            start_time = time_laserdisc_frame(20130),
+            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(20187),
+            timeout = { when=time_to_ms(4, 456), nextsequence="catches_fire" },
+            actions = {
+                { input="down", from=time_to_ms(3, 768), to=time_to_ms(4, 489), nextsequence="jumps_back", points=1939 },
+                { input="left", from=time_to_ms(2, 785), to=time_to_ms(4, 489), nextsequence="catches_fire" },
+                { input="right", from=time_to_ms(3, 768), to=time_to_ms(4, 489), nextsequence="falls_to_death" }
+            }
+        },
+
+        jumps_back = {  -- player jumps back towards the camera
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 573), nextsequence="falls_to_death" },
+            actions = {
+                { input="up", from=time_to_ms(0, 328), to=time_to_ms(0, 885), nextsequence="catches_fire" },
+                { input="up", from=time_to_ms(0, 885), to=time_to_ms(1, 540), nextsequence="jumps_forward", points=2675  },
+                { input="left", from=time_to_ms(0, 328), to=time_to_ms(1, 573), nextsequence="catches_fire" },
+                { input="down", from=time_to_ms(0, 328), to=time_to_ms(1, 573), nextsequence="falls_to_death" },
+            }
+        },
+
+        jumps_forward = {  -- player jumps forward again towards the far wall.
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 786), nextsequence="falls_to_death" },
+            actions = {
+                { input="left", from=time_to_ms(0, 492), to=time_to_ms(1, 49), nextsequence="exit_room", points=1939  },
+                { input="up", from=time_to_ms(0, 492), to=time_to_ms(1, 49), nextsequence="wrong_door" },
+                { input="down", from=time_to_ms(0, 328), to=time_to_ms(1, 49), nextsequence="falls_to_death" },
+                { input="right", from=time_to_ms(0, 328), to=time_to_ms(1, 49), nextsequence="falls_to_death" },
+            }
+        },
+
+        exit_room = {  -- player heads for the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 255), nextsequence=nil },
+        },
+
+        catches_fire = {  -- player catches fire
+            start_time = time_laserdisc_frame(20450),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        falls_to_death = {  -- player falls in pit
+            start_time = time_laserdisc_frame(20486),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        wrong_door = {  -- player jumps for the wrong door, hits gate
+            start_time = time_laserdisc_frame(20384),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 425), nextsequence=nil }
         },
     },
 }
