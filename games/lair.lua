@@ -62,6 +62,7 @@ local starting_lives = 3
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
+--test_scene_name = "giddy_goons"
 
 
 -- GAME STATE
@@ -1051,7 +1052,7 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 327), nextsequence=nil }
         }
-    }
+    },
 
     -- The flying horse machine that rides you past fires and other obstacles (reversed)
     -- THIS DOES NOT USE THE SAME INPUTS AS ITS MIRROR VERSION!
@@ -1059,6 +1060,100 @@ scenes = {
 --    },
 
 
+    -- The giddy goons!
+    giddy_goons = {
+        start_dead = {
+            start_time = time_laserdisc_frame(5627),
+            timeout = { when=time_to_ms(1, 966), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {  -- Player runs into the goons!!
+            start_time = time_laserdisc_frame(5683),
+            timeout = { when=time_to_ms(3, 146), nextsequence="knife_in_back" },
+            actions = {
+                { input="action", from=time_to_ms(2, 392), to=time_to_ms(3, 113), nextsequence="kills_first_goon", points=379 },
+                { input="up", from=time_to_ms(1, 507), to=time_to_ms(2, 392), nextsequence="fall_to_death" },
+                { input="right", from=time_to_ms(2, 392), to=time_to_ms(3, 113), nextsequence="knife_in_back" },
+                { input="left", from=time_to_ms(2, 392), to=time_to_ms(3, 113), nextsequence="swarm_of_goons" },
+            }
+        },
+
+        kills_first_goon = {  -- player kills first goon, moves towards stairs.
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence="knife_in_back" },
+            actions = {
+                -- the ROM has an "UpRight" action that matches the successful "Right" (but "Up" by itself is a fail), so we just check "Right" first so the player will pass if they're hitting both.
+                { input="right", from=time_to_ms(1, 114), to=time_to_ms(1, 835), nextsequence="climbs_stairs", points=1326 },
+                { input="up", from=time_to_ms(0, 885), to=time_to_ms(1, 802), nextsequence="fall_to_death" },
+                { input="left", from=time_to_ms(1, 114), to=time_to_ms(1, 835), nextsequence="shoves_off_edge" },
+                { input="action", from=time_to_ms(1, 114), to=time_to_ms(1, 835), nextsequence="shoves_off_edge" },
+            }
+        },
+
+        climbs_stairs = {  -- Player climbs the stairs, meets more resistance
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 163), nextsequence="swarm_of_goons" },
+            actions = {
+                { input="action", from=time_to_ms(1, 475), to=time_to_ms(2, 130), nextsequence="kill_upper_goons", points=3255 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 130), nextsequence="kill_upper_goons", points=3255 },
+                { input="up", from=time_to_ms(1, 475), to=time_to_ms(2, 130), nextsequence="fight_off_one_before_swarm" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 163), nextsequence="fight_off_one_before_swarm" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 163), nextsequence="fall_to_death" },
+            }
+        },
+
+        kill_upper_goons = {  -- Player kills the goons at the top of the stairs.
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 606), nextsequence="exit_room" },
+            actions = {
+                -- The ROM has an "UpLeft" action here, but it matches its separate "Up" and "Left" entries.
+                { input="up", from=time_to_ms(0, 852), to=time_to_ms(1, 540), nextsequence="exit_room" },
+                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 540), nextsequence="exit_room" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 606), nextsequence="fight_off_one_before_swarm" },
+                { input="action", from=time_to_ms(0, 786), to=time_to_ms(1, 573), nextsequence="fight_off_one_before_swarm" },
+            }
+        },
+
+        exit_room = {  -- player heads for the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence=nil },
+        },
+
+        knife_in_back = {  -- player gets a knife in the back
+            start_time = time_laserdisc_frame(6039),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 835), nextsequence=nil }
+        },
+
+        shoves_off_edge = {  -- goons push player off edge
+            start_time = time_laserdisc_frame(6091),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 720), nextsequence=nil }
+        },
+
+        fall_to_death = {  -- player falls down into pit
+            start_time = time_laserdisc_frame(6163),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        fight_off_one_before_swarm = {  -- Player kills one, then swarm takes him down.
+            start_time = time_laserdisc_frame(5947),
+            kills_player = true,
+            timeout = { when=time_to_ms(3, 375), nextsequence=nil }
+        },
+
+        swarm_of_goons = {  -- giddy goons swarm dirk.
+            start_time = time_laserdisc_frame(6015),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        }
+    }
 }
 
 -- end of lair.lua ...
