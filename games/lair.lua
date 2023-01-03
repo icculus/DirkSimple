@@ -62,7 +62,7 @@ local starting_lives = 3
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "giddy_goons"
+--test_scene_name = "tentacle_room"
 
 
 -- GAME STATE
@@ -1153,7 +1153,114 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(0, 655), nextsequence=nil }
         }
-    }
+    },
+
+    -- Green tentacles flood in to the room.
+    tentacle_room = {
+        start_dead = {
+            start_time = time_laserdisc_frame(2297),
+            timeout = { when=time_to_ms(1, 966), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(2353),
+            timeout = { when=time_to_ms(3, 965), nextsequence="left_tentacle_grabs" },
+            actions = {
+                { input="action", from=time_to_ms(2, 687), to=time_to_ms(3, 965), nextsequence="kills_first_tentacle", points=49 }
+            }
+        },
+
+        kills_first_tentacle = {  -- player slashes first tentacle
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 359), nextsequence="squeeze_to_death" },
+            actions = {
+                { input="up", from=time_to_ms(1, 409), to=time_to_ms(2, 327), nextsequence="jump_to_weapon_rack", points=379 }
+            }
+        },
+
+        jump_to_weapon_rack = {  -- player jumps to weapon rack on far wall
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 901), nextsequence="squeeze_to_death" },
+            actions = {
+                { input="right", from=time_to_ms(1, 180), to=time_to_ms(1, 933), nextsequence="jump_to_door", points=495 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 901), nextsequence="squeeze_to_death" },
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(1, 901), nextsequence="squeeze_to_death" },
+                { input="left", from=time_to_ms(1, 180), to=time_to_ms(1, 933), nextsequence="squeeze_to_death" },
+            }
+        },
+
+        jump_to_door = {  -- player jumps to door far wall
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 442), nextsequence="squeeze_to_death_by_door" },
+            actions = {
+                -- ROM has "DownRight" with identical "Down" and "Right" entries, so this is fine.
+                { input="down", from=time_to_ms(0, 492), to=time_to_ms(1, 409), nextsequence="jump_to_stairs", points=915 },
+                { input="right", from=time_to_ms(0, 492), to=time_to_ms(1, 409), nextsequence="jump_to_stairs", points=915 },
+                { input="up", from=time_to_ms(0, 492), to=time_to_ms(1, 409), nextsequence="squeeze_to_death_by_door" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 442), nextsequence="squeeze_to_death" },
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(1, 475), nextsequence="squeeze_to_death" },
+            }
+        },
+
+        jump_to_stairs = {  -- player jumps to base of staircase, starts to climb
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence="two_front_war" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 966), nextsequence="squeeze_to_death" },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="jump_to_table", points=1326 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="two_front_war" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="squeeze_to_death" },
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="two_front_war" },
+            }
+        },
+
+        jump_to_table = {  -- player jumps back down the stairs to the table
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 228), nextsequence="squeeze_to_death" },
+            actions = {
+                -- ROM has "UpRight" with identical "Up" and "Right" entries, so this is fine.
+                { input="up", from=time_to_ms(0, 360), to=time_to_ms(2, 195), nextsequence="exit_room", points=1939 },
+                { input="right", from=time_to_ms(0, 360), to=time_to_ms(2, 195), nextsequence="exit_room", points=1939 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 228), nextsequence="squeeze_to_death" },
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(2, 228), nextsequence="squeeze_to_death" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 228), nextsequence="squeeze_to_death" },
+            }
+        },
+
+        exit_room = {  -- player heads for the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 28), nextsequence=nil },
+        },
+
+        left_tentacle_grabs = {  -- player gets grabbed by first tentacle in the room.
+            start_time = time_laserdisc_frame(2729),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 621), nextsequence=nil }
+        },
+
+        squeeze_to_death = {  -- tentacles wrap around player in close-up and squeeze him to death
+            start_time = time_laserdisc_frame(2801),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        two_front_war = {  -- player slashes tentacle on the right, but left tentacle sneaks up on him
+            start_time = time_laserdisc_frame(2849),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 621), nextsequence=nil }
+        },
+
+        squeeze_to_death_by_door = {  -- tentacles wrap around player in close-up and squeeze him to death, door in background.
+            start_time = time_laserdisc_frame(2933),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 623), nextsequence=nil }
+        },
+    },
 }
 
 -- end of lair.lua ...
