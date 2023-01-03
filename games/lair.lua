@@ -444,7 +444,7 @@ scenes = {
         rope2 = {  -- player grabbed second rope
             start_time = time_laserdisc_noseek(),
             reversed_start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 228), nextsequence="burns_hands", points=-679 },
+            timeout = { when=time_to_ms(2, 228), nextsequence="burns_hands" },
             actions = {
                 -- Player grabs rope too soon
                 { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 81), nextsequence="fall_to_death" },
