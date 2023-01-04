@@ -62,7 +62,7 @@ local starting_lives = 3
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "tilting_room"
+--test_scene_name = "throne_room"
 
 
 -- GAME STATE
@@ -1326,6 +1326,85 @@ scenes = {
             start_time = time_laserdisc_frame(20384),
             kills_player = true,
             timeout = { when=time_to_ms(2, 425), nextsequence=nil }
+        },
+    },
+
+    throne_room = {
+        start_dead = {
+            start_time = time_laserdisc_frame(20618),
+            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {  -- player's sword and helmut are pulled to magnet in middle of room, floor starts to electrify.
+            start_time = time_laserdisc_frame(20674) + laserdisc_frame_to_ms(1),
+            timeout = { when=time_to_ms(2, 753), nextsequence="electrified_floor" },
+            actions = {
+                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="first_jump", points=1326 },
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(3, 834), nextsequence="electrified_floor" },
+                { input="down", from=time_to_ms(1, 606), to=time_to_ms(3, 834), nextsequence="electrified_floor" },
+                { input="left", from=time_to_ms(1, 606), to=time_to_ms(3, 834), nextsequence="electrified_floor" },
+            }
+        },
+
+        first_jump = {  -- player jumps away from electrified floor
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 688), nextsequence="electrified_floor" },
+            actions = {
+                -- The ROM has "UpRight" here that matches "Up" and "Right", so we're good to go here.
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 688), nextsequence="second_jump", points=3255 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 688), nextsequence="second_jump", points=3255 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 688), nextsequence="electrified_floor" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(0, 688), nextsequence="electrified_floor" },
+            }
+        },
+
+        second_jump = {  -- player jumps away from still-moving electrified floor, again.
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 885), nextsequence="electrified_floor" },
+            actions = {
+                { input="right", from=time_to_ms(0, 131), to=time_to_ms(0, 885), nextsequence="on_throne", points=2675 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 885), nextsequence="electrified_sword" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 885), nextsequence="electrified_floor" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(0, 885), nextsequence="electrified_floor" },
+            }
+        },
+
+        on_throne = {  -- player jumps on throne, throne rotates around to secret room
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 293), nextsequence="electrified_throne" },
+            actions = {
+                { input="right", from=time_to_ms(3, 408), to=time_to_ms(4, 358), nextsequence="exit_room", points=1939 },
+                { input="left", from=time_to_ms(3, 408), to=time_to_ms(4, 358), nextsequence="electrified_floor" },
+                { input="left", from=time_to_ms(3, 408), to=time_to_ms(4, 96), nextsequence="electrified_floor" },
+            }
+        },
+
+        exit_room = {  -- player heads for the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 980), nextsequence=nil },
+        },
+
+        electrified_sword = {   -- player grabs sword, gets zapped
+            start_time = time_laserdisc_frame(20928),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 654), nextsequence=nil }
+        },
+
+        electrified_floor = {  -- player touched wrong part of floor, gets zapped
+            start_time = time_laserdisc_frame(21000),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 918), nextsequence=nil }
+        },
+
+        electrified_throne = {  -- player doesn't leave throne, gets zapped.
+            start_time = time_laserdisc_frame(21030),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 376), nextsequence=nil }
         },
     },
 }
