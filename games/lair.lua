@@ -62,7 +62,7 @@ local starting_lives = 3
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "throne_room"
+--test_scene_name = "underground_river"
 
 
 -- GAME STATE
@@ -1405,6 +1405,215 @@ scenes = {
             start_time = time_laserdisc_frame(21030),
             kills_player = true,
             timeout = { when=time_to_ms(1, 376), nextsequence=nil }
+        },
+    },
+
+    underground_river = {
+        start_dead = {
+            start_time = time_laserdisc_frame(22682),
+            timeout = { when=time_to_ms(2, 032), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {  -- player is walking along, falls through floor into barrel
+            start_time = time_laserdisc_frame(22738),
+            timeout = { when=time_to_ms(2, 654), nextsequence="first_boulders" }
+        },
+
+        -- the arcade skips the "YE BOULDERS" intro footage here--hence the laserdisc seek--presumably to shorten this pretty-long scene.
+        first_boulders = {  -- the first part of YE BOULDERS sequence
+            start_time = time_laserdisc_frame(22936),
+            timeout = { when=time_to_ms(1, 16), nextsequence="boulders_crash" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="second_boulders", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="boulders_crash" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="boulders_crash" },
+            }
+        },
+
+        second_boulders = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 933), nextsequence="boulders_crash2" },
+            actions = {
+                { input="right", from=time_to_ms(0, 950), to=time_to_ms(1, 901), nextsequence="third_boulders", points=379 },
+                { input="up", from=time_to_ms(0, 950), to=time_to_ms(1, 901), nextsequence="boulders_crash2" },
+                { input="left", from=time_to_ms(0, 950), to=time_to_ms(1, 901), nextsequence="boulders_crash2" },
+            }
+        },
+
+        third_boulders = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 32), nextsequence="boulders_crash3" },
+            actions = {
+                { input="left", from=time_to_ms(1, 49), to=time_to_ms(1, 999), nextsequence="fourth_boulders", points=379 },
+                { input="up", from=time_to_ms(1, 49), to=time_to_ms(1, 999), nextsequence="boulders_crash3" },
+                { input="right", from=time_to_ms(1, 49), to=time_to_ms(1, 999), nextsequence="boulders_crash3" },
+            }
+        },
+
+        fourth_boulders = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="boulders_crash4" },
+            actions = {
+                { input="right", from=time_to_ms(0, 950), to=time_to_ms(1, 966), nextsequence="first_rapids", points=379 },
+                { input="up", from=time_to_ms(0, 950), to=time_to_ms(1, 966), nextsequence="boulders_crash4" },
+                { input="left", from=time_to_ms(0, 950), to=time_to_ms(1, 966), nextsequence="boulders_crash4" },
+            }
+        },
+
+        first_rapids = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(5, 210), nextsequence="rapids_crash" },
+            actions = {
+                { input="up", from=time_to_ms(3, 932), to=time_to_ms(4, 522), nextsequence="rapids_crash" },
+                { input="up", from=time_to_ms(4, 522), to=time_to_ms(5, 145), nextsequence="second_rapids", points=495 },
+                { input="right", from=time_to_ms(3, 736), to=time_to_ms(4, 555), nextsequence="second_rapids", points=495 },
+                { input="right", from=time_to_ms(4, 555), to=time_to_ms(5, 145), nextsequence="rapids_crash" },
+                { input="left", from=time_to_ms(4, 391), to=time_to_ms(5, 177), nextsequence="rapids_crash" },
+            }
+        },
+
+        second_rapids = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 523), nextsequence="rapids_crash" },
+            actions = {
+                { input="up", from=time_to_ms(1, 212), to=time_to_ms(1, 835), nextsequence="rapids_crash" },
+                { input="up", from=time_to_ms(1, 835), to=time_to_ms(2, 490), nextsequence="third_rapids", points=495 },
+                { input="right", from=time_to_ms(1, 212), to=time_to_ms(2, 613), nextsequence="rapids_crash" },
+                { input="left", from=time_to_ms(1, 81), to=time_to_ms(1, 901), nextsequence="third_rapids", points=495 },
+                { input="left", from=time_to_ms(1, 901), to=time_to_ms(2, 490), nextsequence="rapids_crash" },
+            }
+        },
+
+        third_rapids = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 490), nextsequence="rapids_crash" },
+            actions = {
+                { input="up", from=time_to_ms(1, 311), to=time_to_ms(1, 802), nextsequence="rapids_crash" },
+                { input="up", from=time_to_ms(1, 802), to=time_to_ms(2, 458), nextsequence="fourth_rapids", points=495 },
+                { input="right", from=time_to_ms(1, 16), to=time_to_ms(1, 868), nextsequence="fourth_rapids", points=495 },
+                { input="right", from=time_to_ms(1, 868), to=time_to_ms(2, 458), nextsequence="rapids_crash" },
+                { input="left", from=time_to_ms(1, 147), to=time_to_ms(2, 490), nextsequence="rapids_crash" },
+            }
+        },
+
+        fourth_rapids = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 818), nextsequence="rapids_crash" },
+            actions = {
+                { input="up", from=time_to_ms(1, 343), to=time_to_ms(2, 163), nextsequence="rapids_crash" },
+                { input="up", from=time_to_ms(2, 163), to=time_to_ms(2, 785), nextsequence="first_whirlpools", points=495 },
+                { input="right", from=time_to_ms(1, 606), to=time_to_ms(2, 818), nextsequence="rapids_crash" },
+                { input="left", from=time_to_ms(1, 343), to=time_to_ms(2, 163), nextsequence="first_whirlpools", points=495 },
+                { input="left", from=time_to_ms(2, 163), to=time_to_ms(2, 785), nextsequence="rapids_crash" },
+            }
+        },
+
+        first_whirlpools = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(5, 505), nextsequence="whirlpools_crash" },
+            actions = {
+                -- !!! FIXME: The ROM has an "UpRight" entry that matches "Right" for success, but "Up" has the same timing and is a fail!
+                { input="right", from=time_to_ms(3, 834), to=time_to_ms(5, 472), nextsequence="second_whirlpools", points=251 },
+                { input="up", from=time_to_ms(3, 834), to=time_to_ms(5, 472), nextsequence="whirlpools_crash" },
+                { input="left", from=time_to_ms(3, 834), to=time_to_ms(5, 472), nextsequence="whirlpools_crash" },
+            }
+        },
+
+        second_whirlpools = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence="whirlpools_crash" },
+            actions = {
+                -- !!! FIXME: The ROM has an "UpLeft" entry that matches "Left" for success, but "Up" has the same timing and is a fail!
+                { input="left", from=time_to_ms(1, 409), to=time_to_ms(2, 720), nextsequence="third_whirlpools", points=251 },
+                { input="up", from=time_to_ms(1, 409), to=time_to_ms(2, 720), nextsequence="whirlpools_crash" },
+                { input="right", from=time_to_ms(1, 409), to=time_to_ms(2, 720), nextsequence="whirlpools_crash" },
+            }
+        },
+
+        third_whirlpools = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 490), nextsequence="whirlpools_crash" },
+            actions = {
+                -- !!! FIXME: The ROM has an "UpRight" entry that matches "Right" for success, but "Up" has the same timing and is a fail!
+                { input="right", from=time_to_ms(1, 343), to=time_to_ms(2, 490), nextsequence="fourth_whirlpools", points=251 },
+                { input="up", from=time_to_ms(1, 343), to=time_to_ms(2, 490), nextsequence="whirlpools_crash" },
+                { input="left", from=time_to_ms(1, 343), to=time_to_ms(2, 490), nextsequence="whirlpools_crash" },
+            }
+        },
+
+        fourth_whirlpools = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence="whirlpools_crash" },
+            actions = {
+                -- !!! FIXME: The ROM has an "UpLeft" entry that matches "Left" for success, but "Up" has the same timing and is a fail!
+                { input="left", from=time_to_ms(1, 442), to=time_to_ms(2, 720), nextsequence="bounce_to_chain", points=251 },
+                { input="up", from=time_to_ms(1, 442), to=time_to_ms(2, 720), nextsequence="whirlpools_crash" },
+                { input="right", from=time_to_ms(1, 442), to=time_to_ms(2, 720), nextsequence="whirlpools_crash" },
+            }
+        },
+
+        bounce_to_chain = {  -- player bounces out of boat, to a chain he must grab
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(5, 177), nextsequence="miss_chain" },
+            actions = {
+                -- The ROM has an "UpRight" entry that matches "Right"  and "Up", so we're okay here
+                { input="up", from=time_to_ms(3, 867), to=time_to_ms(5, 145), nextsequence="exit_room", points=495 },
+                { input="down", from=time_to_ms(3, 867), to=time_to_ms(5, 145), nextsequence="miss_chain" },
+                { input="right", from=time_to_ms(3, 867), to=time_to_ms(5, 145), nextsequence="exit_room", points=495 },
+                { input="left", from=time_to_ms(3, 867), to=time_to_ms(5, 145), nextsequence="miss_chain" },
+            }
+        },
+
+        exit_room = {  -- player heads for the door
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 980), nextsequence=nil },
+        },
+
+        boulders_crash = {
+            start_time = time_laserdisc_frame(23938),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+        },
+
+        boulders_crash2 = {
+            start_time = time_laserdisc_frame(23962),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+        },
+
+        boulders_crash3 = {
+            start_time = time_laserdisc_frame(23986),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+        },
+
+        boulders_crash4 = {
+            start_time = time_laserdisc_frame(24010),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+        },
+
+        rapids_crash = {
+            start_time = time_laserdisc_frame(24034),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+        whirlpools_crash = {
+            start_time = time_laserdisc_frame(24094),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 294), nextsequence=nil }
+        },
+
+        miss_chain = {
+            start_time = time_laserdisc_frame(24187),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 737), nextsequence=nil }
         },
     },
 }
