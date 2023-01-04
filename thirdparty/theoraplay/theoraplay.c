@@ -454,6 +454,7 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
             unsigned long targetms;
             long seekpos;
             long lo, hi;
+            int found = 0;
 
             if (!ctx->io->seek)
                 goto cleanup;  // seeking unsupported.
@@ -525,7 +526,7 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
                         } // else
 
                         if ((ms < targetms) && ((targetms - ms) >= 500) && ((targetms - ms) <= 1000))   // !!! FIXME: tweak this number?
-                            hi = lo;  // found something close enough to the target!
+                            found = 1;  // found something close enough to the target!
                         else  // adjust binary search position and try again.
                         {
                             const long newpos = (lo / 2) + (hi / 2);
@@ -537,6 +538,9 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
                         break;
                     } // if
                 } // while
+
+                if (found)
+                    break;
 
                 const long newseekpos = (lo / 2) + (hi / 2);
                 if (seekpos == newseekpos)
