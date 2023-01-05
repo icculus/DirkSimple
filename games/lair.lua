@@ -62,7 +62,7 @@ local starting_lives = 3
 local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "underground_river"
+--test_scene_name = "rolling_balls"
 
 
 -- GAME STATE
@@ -1614,6 +1614,105 @@ scenes = {
             start_time = time_laserdisc_frame(24187),
             kills_player = true,
             timeout = { when=time_to_ms(1, 737), nextsequence=nil }
+        },
+    },
+
+    rolling_balls = {
+        start_dead = {
+            start_time = time_laserdisc_frame(26042),
+            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+        },
+
+        enter_room = {  -- Player has reached the yellow segment of the tunnel, big black balls starts chasing
+            start_time = time_laserdisc_frame(26098) + laserdisc_frame_to_ms(1),
+            timeout = { when=time_to_ms(5, 964), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="down", from=time_to_ms(4, 882), to=time_to_ms(5, 145), nextsequence="small_ball_crushes" },
+                { input="down", from=time_to_ms(5, 145), to=time_to_ms(5, 931), nextsequence="red_ball", points=251 },
+                { input="up", from=time_to_ms(5, 177), to=time_to_ms(5, 964), nextsequence="big_ball_crushes" },
+            }
+        },
+
+        red_ball = { -- Player has reached the red segment of the tunnel
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 868), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="down", from=time_to_ms(0, 852), to=time_to_ms(1, 81), nextsequence="small_ball_crushes" },
+                { input="down", from=time_to_ms(1, 81), to=time_to_ms(1, 835), nextsequence="blue_ball", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 868), nextsequence="big_ball_crushes" },
+            }
+        },
+
+        blue_ball = {  -- Player has reached the blue segment of the tunnel
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="down", from=time_to_ms(0, 885), to=time_to_ms(1, 212), nextsequence="small_ball_crushes" },
+                { input="down", from=time_to_ms(1, 212), to=time_to_ms(1, 933), nextsequence="green_ball", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 966), nextsequence="big_ball_crushes" },
+            }
+        },
+
+        green_ball = {  -- Player has reached the green segment of the tunnel
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="down", from=time_to_ms(0, 885), to=time_to_ms(1, 147), nextsequence="small_ball_crushes" },
+                { input="down", from=time_to_ms(1, 147), to=time_to_ms(1, 933), nextsequence="orange_ball", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 966), nextsequence="big_ball_crushes" },
+            }
+        },
+
+        orange_ball = {  -- Player has reached the orange segment of the tunnel
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="down", from=time_to_ms(0, 885), to=time_to_ms(1, 147), nextsequence="small_ball_crushes" },
+                { input="down", from=time_to_ms(1, 147), to=time_to_ms(1, 933), nextsequence="purple_ball", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 966), nextsequence="big_ball_crushes" },
+            }
+        },
+
+        purple_ball = {  -- Player has reached the purple segment of the tunnel
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 901), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="down", from=time_to_ms(0, 885), to=time_to_ms(1, 114), nextsequence="small_ball_crushes" },
+                { input="down", from=time_to_ms(1, 114), to=time_to_ms(1, 868), nextsequence="pit_in_ground", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 901), nextsequence="big_ball_crushes" },
+            }
+        },
+
+        pit_in_ground = {  -- There's a hole in the ground at the end of the tunnel! Jump it!
+            -- !!! FIXME: RomSpinner reported bogus data for this, so check these timings.
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 901), nextsequence="big_ball_crushes" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 414), nextsequence="exit_room", points=379 },
+            }
+        },
+
+        exit_room = {  -- player heads for the door
+            -- !!! FIXME: RomSpinner reported bogus data for this, so check these timings.
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 980), nextsequence=nil },
+        },
+
+        small_ball_crushes = {  -- player gets sideswiped by a smaller, colorful ball
+            start_time = time_laserdisc_frame(26613),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        big_ball_crushes = {  -- player gets bowled over by the big black ball
+            start_time = time_laserdisc_frame(26596),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 820), nextsequence=nil }
         },
     },
 }
