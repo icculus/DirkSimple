@@ -1715,6 +1715,2807 @@ scenes = {
             timeout = { when=time_to_ms(0, 820), nextsequence=nil }
         },
     },
+
+    bubbling_cauldron = {
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(5123),
+            timeout = { when=time_to_ms(2, 753), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq3", points=2191 },
+                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+            }
+        },
+
+        start_dead = {
+            start_time = time_laserdisc_frame(5067),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(5123),
+            timeout = { when=time_to_ms(2, 753), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq3", points=2191 },
+                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 523), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq4", points=3255 },
+                { input="up", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
+                { input="down", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 835), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
+                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 409), nextsequence="seq9" },
+            actions = {
+                { input="down", from=time_to_ms(0, 557), to=time_to_ms(1, 376), nextsequence="seq5", points=3255 },
+                { input="downright", from=time_to_ms(0, 557), to=time_to_ms(1, 376), nextsequence="seq5", points=3255 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 737), nextsequence="seq10" },
+            actions = {
+                { input="action", from=time_to_ms(0, 655), to=time_to_ms(1, 737), nextsequence="seq6", points=2191 },
+                { input="up", from=time_to_ms(0, 655), to=time_to_ms(1, 737), nextsequence="seq10" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 262), nextsequence="seq10" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 949), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(1, 802), to=time_to_ms(2, 916), nextsequence="seq7", points=1326 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq9" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 557), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(5423),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(5459),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(5513),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 885), nextsequence=nil }
+        },
+
+    },
+
+    ["Black Knight on Horse"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(25480),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(25536),
+            timeout = { when=time_to_ms(3, 539), nextsequence="seq7" },
+            actions = {
+                { input="left", from=time_to_ms(2, 687), to=time_to_ms(3, 506), nextsequence="seq3", points=1939 },
+                { input="right", from=time_to_ms(3, 146), to=time_to_ms(3, 539), nextsequence="seq6" },
+                { input="up", from=time_to_ms(2, 687), to=time_to_ms(3, 572), nextsequence="seq7" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(25536),
+            timeout = { when=time_to_ms(3, 539), nextsequence="seq7" },
+            actions = {
+                { input="left", from=time_to_ms(2, 687), to=time_to_ms(3, 506), nextsequence="seq3", points=1939 },
+                { input="right", from=time_to_ms(3, 146), to=time_to_ms(3, 539), nextsequence="seq6" },
+                { input="up", from=time_to_ms(2, 687), to=time_to_ms(3, 572), nextsequence="seq7" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 867), nextsequence="seq9" },
+            actions = {
+                { input="left", from=time_to_ms(3, 113), to=time_to_ms(3, 867), nextsequence="seq4", points=1939 },
+                { input="up", from=time_to_ms(3, 113), to=time_to_ms(3, 801), nextsequence="seq9" },
+                { input="right", from=time_to_ms(3, 473), to=time_to_ms(6, 849), nextsequence="seq6" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 244), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(2, 458), to=time_to_ms(3, 211), nextsequence="seq5", points=2675 },
+                { input="left", from=time_to_ms(2, 458), to=time_to_ms(3, 178), nextsequence="seq6" },
+                { input="up", from=time_to_ms(2, 458), to=time_to_ms(3, 178), nextsequence="seq9" },
+                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 687), nextsequence="seq6" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 868), nextsequence=nil }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_frame(25850),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(25898),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 163), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(25918),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 343), nextsequence=nil }
+        },
+
+    },
+
+
+    ["Bubbling Cauldron"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(5067),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(5123),
+            timeout = { when=time_to_ms(2, 753), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq3", points=2191 },
+                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(5123),
+            timeout = { when=time_to_ms(2, 753), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq3", points=2191 },
+                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 523), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq4", points=3255 },
+                { input="up", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
+                { input="down", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 835), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
+                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 409), nextsequence="seq9" },
+            actions = {
+                { input="down", from=time_to_ms(0, 557), to=time_to_ms(1, 376), nextsequence="seq5", points=3255 },
+                { input="downright", from=time_to_ms(0, 557), to=time_to_ms(1, 376), nextsequence="seq5", points=3255 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 737), nextsequence="seq10" },
+            actions = {
+                { input="action", from=time_to_ms(0, 655), to=time_to_ms(1, 737), nextsequence="seq6", points=2191 },
+                { input="up", from=time_to_ms(0, 655), to=time_to_ms(1, 737), nextsequence="seq10" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 262), nextsequence="seq10" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 949), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(1, 802), to=time_to_ms(2, 916), nextsequence="seq7", points=1326 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq9" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 557), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(5423),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(5459),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(5513),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 885), nextsequence=nil }
+        },
+
+    },
+
+
+    ["Catwalk Bats"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(12133),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(12190),
+            timeout = { when=time_to_ms(2, 687), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 687), nextsequence="seq3", points=915 },
+                { input="down", from=time_to_ms(2, 64), to=time_to_ms(2, 687), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 687), nextsequence="seq9" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(12190),
+            timeout = { when=time_to_ms(2, 687), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 687), nextsequence="seq3", points=915 },
+                { input="down", from=time_to_ms(2, 64), to=time_to_ms(2, 687), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 687), nextsequence="seq9" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 147), nextsequence="seq9" },
+            actions = {
+                { input="upleft", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq4", points=915 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq4", points=915 },
+                { input="left", from=time_to_ms(0, 950), to=time_to_ms(2, 97), nextsequence="seq4", points=915 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq9" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 490), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(1, 737), to=time_to_ms(2, 458), nextsequence="seq5", points=2675 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq9" },
+                { input="up", from=time_to_ms(1, 737), to=time_to_ms(2, 458), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(0, 360), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 328), to=time_to_ms(2, 785), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 475), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(0, 360), to=time_to_ms(1, 442), nextsequence="seq6", points=915 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 49), nextsequence="seq9" },
+                { input="upright", from=time_to_ms(0, 360), to=time_to_ms(1, 409), nextsequence="seq6", points=915 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 442), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 212), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(0, 885), to=time_to_ms(1, 442), nextsequence="seq7", points=3551 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 475), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 475), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 475), nextsequence="seq9" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(12537),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(12477),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+    },
+
+    ["Crypt Creeps (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(18606),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(18662),
+            timeout = { when=time_to_ms(3, 473), nextsequence="seq10" },
+            actions = {
+                { input="up", from=time_to_ms(2, 458), to=time_to_ms(3, 473), nextsequence="seq3", points=495 },
+                { input="action", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq9" },
+                { input="down", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq10" },
+                { input="right", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq10" },
+                { input="left", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq10" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(18662),
+            timeout = { when=time_to_ms(3, 473), nextsequence="seq10" },
+            actions = {
+                { input="up", from=time_to_ms(2, 458), to=time_to_ms(3, 473), nextsequence="seq3", points=495 },
+                { input="action", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq9" },
+                { input="down", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq10" },
+                { input="right", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq10" },
+                { input="left", from=time_to_ms(2, 458), to=time_to_ms(3, 408), nextsequence="seq10" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 918), nextsequence="seq11" },
+            actions = {
+                { input="action", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq4", points=2191 },
+                { input="up", from=time_to_ms(0, 557), to=time_to_ms(0, 918), nextsequence="seq11" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 278), nextsequence="seq10" },
+                { input="right", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq11" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 228), nextsequence="seq12" },
+            actions = {
+                { input="up", from=time_to_ms(1, 147), to=time_to_ms(2, 228), nextsequence="seq5", points=495 },
+                { input="down", from=time_to_ms(1, 147), to=time_to_ms(2, 261), nextsequence="seq10" },
+                { input="right", from=time_to_ms(1, 147), to=time_to_ms(2, 228), nextsequence="seq12" },
+                { input="left", from=time_to_ms(1, 147), to=time_to_ms(2, 228), nextsequence="seq12" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 147), nextsequence="seq11" },
+            actions = {
+                { input="action", from=time_to_ms(0, 688), to=time_to_ms(1, 114), nextsequence="seq6", points=2191 },
+                { input="up", from=time_to_ms(0, 688), to=time_to_ms(1, 114), nextsequence="seq11" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 180), nextsequence="seq12" },
+                { input="left", from=time_to_ms(0, 688), to=time_to_ms(1, 114), nextsequence="seq11" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence="seq12" },
+            actions = {
+                { input="right", from=time_to_ms(0, 492), to=time_to_ms(1, 835), nextsequence="seq7", points=495 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq12" },
+                { input="left", from=time_to_ms(0, 492), to=time_to_ms(2, 327), nextsequence="seq12" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence="seq13" },
+            actions = {
+                { input="action", from=time_to_ms(0, 754), to=time_to_ms(1, 835), nextsequence="seq8", points=495 },
+                { input="right", from=time_to_ms(0, 754), to=time_to_ms(1, 835), nextsequence="seq13" },
+                { input="left", from=time_to_ms(0, 754), to=time_to_ms(1, 835), nextsequence="seq13" },
+                { input="down", from=time_to_ms(0, 754), to=time_to_ms(1, 835), nextsequence="seq13" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 162), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(19054),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(19077),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 229), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(19090),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 590), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(19114),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq13 = {
+            start_time = time_laserdisc_frame(19150),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 458), nextsequence=nil }
+        },
+
+    },
+
+    ["Electric Cage - Geyser"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(26723),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(26778),
+            timeout = { when=time_to_ms(2, 916), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 557), to=time_to_ms(2, 916), nextsequence="seq3", points=915 },
+                { input="down", from=time_to_ms(2, 490), to=time_to_ms(2, 916), nextsequence="seq7" },
+                { input="right", from=time_to_ms(2, 327), to=time_to_ms(2, 916), nextsequence="seq7" },
+                { input="left", from=time_to_ms(2, 327), to=time_to_ms(2, 916), nextsequence="seq7" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(26778),
+            timeout = { when=time_to_ms(2, 916), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 557), to=time_to_ms(2, 916), nextsequence="seq3", points=915 },
+                { input="down", from=time_to_ms(2, 490), to=time_to_ms(2, 916), nextsequence="seq7" },
+                { input="right", from=time_to_ms(2, 327), to=time_to_ms(2, 916), nextsequence="seq7" },
+                { input="left", from=time_to_ms(2, 327), to=time_to_ms(2, 916), nextsequence="seq7" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 507), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 393), nextsequence="seq4", points=1326 },
+                { input="up", from=time_to_ms(0, 393), to=time_to_ms(0, 623), nextsequence="seq6" },
+                { input="up", from=time_to_ms(0, 623), to=time_to_ms(1, 49), nextsequence="seq4", points=1326 },
+                { input="up", from=time_to_ms(1, 81), to=time_to_ms(1, 311), nextsequence="seq6" },
+                { input="up", from=time_to_ms(1, 311), to=time_to_ms(1, 769), nextsequence="seq4", points=1326 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 769), nextsequence="seq7" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 769), nextsequence="seq7" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 769), nextsequence="seq7" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_frame(26893),
+            timeout = { when=time_to_ms(5, 374), nextsequence="seq8" },
+            actions = {
+                { input="left", from=time_to_ms(3, 113), to=time_to_ms(3, 506), nextsequence="seq5", points=2191 },
+                { input="left", from=time_to_ms(3, 506), to=time_to_ms(3, 998), nextsequence="seq8" },
+                { input="left", from=time_to_ms(3, 998), to=time_to_ms(4, 391), nextsequence="seq5", points=2191 },
+                { input="left", from=time_to_ms(4, 424), to=time_to_ms(4, 915), nextsequence="seq8" },
+                { input="left", from=time_to_ms(4, 915), to=time_to_ms(5, 341), nextsequence="seq5", points=2191 },
+                { input="right", from=time_to_ms(1, 933), to=time_to_ms(5, 341), nextsequence="seq7" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_frame(27025),
+            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_frame(27050),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(27085),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(27122),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+    },
+
+    ["Falling Platform - 9 Levels (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(21904),
+            timeout = { when=time_to_ms(2, 294), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(21959),
+            timeout = { when=time_to_ms(9, 241), nextsequence="seq3", points=124 },
+            actions = {
+                { input="right", from=time_to_ms(2, 785), to=time_to_ms(5, 14), nextsequence="seq6" },
+                { input="right", from=time_to_ms(5, 14), to=time_to_ms(5, 341), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(5, 374), to=time_to_ms(5, 702), nextsequence="seq8" },
+                { input="right", from=time_to_ms(5, 702), to=time_to_ms(6, 29), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(6, 29), to=time_to_ms(6, 357), nextsequence="seq8" },
+                { input="right", from=time_to_ms(6, 390), to=time_to_ms(6, 717), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(6, 717), to=time_to_ms(9, 208), nextsequence="seq6" },
+                { input="left", from=time_to_ms(2, 785), to=time_to_ms(4, 915), nextsequence="seq6" },
+                { input="left", from=time_to_ms(4, 915), to=time_to_ms(6, 750), nextsequence="seq8" },
+                { input="left", from=time_to_ms(6, 783), to=time_to_ms(9, 208), nextsequence="seq6" },
+                { input="up", from=time_to_ms(2, 785), to=time_to_ms(4, 915), nextsequence="seq6" },
+                { input="up", from=time_to_ms(4, 915), to=time_to_ms(6, 750), nextsequence="seq8" },
+                { input="up", from=time_to_ms(6, 783), to=time_to_ms(9, 208), nextsequence="seq6" },
+                { input="down", from=time_to_ms(2, 785), to=time_to_ms(4, 915), nextsequence="seq6" },
+                { input="down", from=time_to_ms(4, 915), to=time_to_ms(6, 750), nextsequence="seq8" },
+                { input="down", from=time_to_ms(6, 783), to=time_to_ms(9, 208), nextsequence="seq6" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(21959),
+            timeout = { when=time_to_ms(9, 241), nextsequence="seq3", points=124 },
+            actions = {
+                { input="right", from=time_to_ms(2, 785), to=time_to_ms(5, 14), nextsequence="seq6" },
+                { input="right", from=time_to_ms(5, 14), to=time_to_ms(5, 341), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(5, 374), to=time_to_ms(5, 702), nextsequence="seq8" },
+                { input="right", from=time_to_ms(5, 702), to=time_to_ms(6, 29), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(6, 29), to=time_to_ms(6, 357), nextsequence="seq8" },
+                { input="right", from=time_to_ms(6, 390), to=time_to_ms(6, 717), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(6, 717), to=time_to_ms(9, 208), nextsequence="seq6" },
+                { input="left", from=time_to_ms(2, 785), to=time_to_ms(4, 915), nextsequence="seq6" },
+                { input="left", from=time_to_ms(4, 915), to=time_to_ms(6, 750), nextsequence="seq8" },
+                { input="left", from=time_to_ms(6, 783), to=time_to_ms(9, 208), nextsequence="seq6" },
+                { input="up", from=time_to_ms(2, 785), to=time_to_ms(4, 915), nextsequence="seq6" },
+                { input="up", from=time_to_ms(4, 915), to=time_to_ms(6, 750), nextsequence="seq8" },
+                { input="up", from=time_to_ms(6, 783), to=time_to_ms(9, 208), nextsequence="seq6" },
+                { input="down", from=time_to_ms(2, 785), to=time_to_ms(4, 915), nextsequence="seq6" },
+                { input="down", from=time_to_ms(4, 915), to=time_to_ms(6, 750), nextsequence="seq8" },
+                { input="down", from=time_to_ms(6, 783), to=time_to_ms(9, 208), nextsequence="seq6" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 802), nextsequence="seq4", points=2191 },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 360), nextsequence="seq7", points=3255 },
+                { input="left", from=time_to_ms(0, 360), to=time_to_ms(0, 688), nextsequence="seq8" },
+                { input="left", from=time_to_ms(0, 688), to=time_to_ms(1, 16), nextsequence="seq7", points=3255 },
+                { input="left", from=time_to_ms(1, 49), to=time_to_ms(1, 376), nextsequence="seq8" },
+                { input="left", from=time_to_ms(1, 376), to=time_to_ms(1, 704), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 802), nextsequence="seq8" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 802), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 802), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(5, 702), nextsequence="seq5" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 523), nextsequence="seq6" },
+                { input="right", from=time_to_ms(2, 523), to=time_to_ms(2, 851), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(2, 851), to=time_to_ms(3, 178), nextsequence="seq8" },
+                { input="right", from=time_to_ms(3, 211), to=time_to_ms(3, 539), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(3, 539), to=time_to_ms(3, 867), nextsequence="seq8" },
+                { input="right", from=time_to_ms(3, 867), to=time_to_ms(4, 194), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(4, 227), to=time_to_ms(4, 719), nextsequence="seq8" },
+                { input="right", from=time_to_ms(4, 719), to=time_to_ms(5, 669), nextsequence="seq6" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq6" },
+                { input="left", from=time_to_ms(2, 949), to=time_to_ms(4, 719), nextsequence="seq8" },
+                { input="left", from=time_to_ms(4, 719), to=time_to_ms(5, 636), nextsequence="seq6" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq6" },
+                { input="up", from=time_to_ms(2, 949), to=time_to_ms(4, 719), nextsequence="seq8" },
+                { input="up", from=time_to_ms(4, 719), to=time_to_ms(5, 636), nextsequence="seq6" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq6" },
+                { input="down", from=time_to_ms(2, 949), to=time_to_ms(4, 719), nextsequence="seq8" },
+                { input="down", from=time_to_ms(4, 719), to=time_to_ms(5, 636), nextsequence="seq6" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_frame(22450),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 819), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(22478),
+            timeout = { when=time_to_ms(4, 653), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(22418),
+            timeout = { when=time_to_ms(0, 754), nextsequence="seq6" }
+        },
+
+    },
+
+    ["Flaming Ropes (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(12669),
+            timeout = { when=time_to_ms(2, 228), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(12725),
+            timeout = { when=time_to_ms(2, 523), nextsequence="seq10" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 245), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 245), to=time_to_ms(2, 130), nextsequence="seq3", points=379 },
+                { input="left", from=time_to_ms(2, 130), to=time_to_ms(4, 260), nextsequence="seq9" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq9" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(12725),
+            timeout = { when=time_to_ms(2, 523), nextsequence="seq10" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 245), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 245), to=time_to_ms(2, 130), nextsequence="seq3", points=379 },
+                { input="left", from=time_to_ms(2, 130), to=time_to_ms(4, 260), nextsequence="seq9" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq9" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_frame(12857),
+            timeout = { when=time_to_ms(1, 573), nextsequence="seq8" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 114), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 114), to=time_to_ms(1, 835), nextsequence="seq4", points=495 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 573), nextsequence="seq8" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 81), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 81), to=time_to_ms(1, 835), nextsequence="seq5" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 475), nextsequence="seq7" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 852), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 704), nextsequence="seq6" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 49), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(13041),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 475), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(13089),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 753), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(13127),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 49), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 621), nextsequence="seq9" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 835), to=time_to_ms(2, 884), nextsequence="seq3", points=379 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 884), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 884), nextsequence="seq9" },
+            }
+        },
+
+    },
+
+    ["Flattening Staircase"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(6283),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(6375),
+            timeout = { when=time_to_ms(2, 425), nextsequence="seq7" },
+            actions = {
+                { input="left", from=time_to_ms(2, 32), to=time_to_ms(2, 753), nextsequence="seq3", points=495 },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(6375),
+            timeout = { when=time_to_ms(2, 425), nextsequence="seq7" },
+            actions = {
+                { input="left", from=time_to_ms(2, 32), to=time_to_ms(2, 753), nextsequence="seq3", points=495 },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 228), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(1, 475), to=time_to_ms(2, 195), nextsequence="seq4", points=1939 },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 507), nextsequence="seq5", points=915 },
+            actions = {
+                { input="left", from=time_to_ms(0, 754), to=time_to_ms(1, 475), nextsequence="seq5", points=915 },
+                { input="upleft", from=time_to_ms(0, 754), to=time_to_ms(1, 475), nextsequence="seq5", points=915 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 507), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 507), nextsequence="seq8" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 211), nextsequence="seq7" },
+            actions = {
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(3, 178), nextsequence="seq6", points=1326 },
+                { input="right", from=time_to_ms(1, 966), to=time_to_ms(3, 178), nextsequence="seq9" },
+                { input="up", from=time_to_ms(1, 966), to=time_to_ms(3, 178), nextsequence="seq9" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 278), nextsequence="seq11" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 114), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(6647),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(6695),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(6731),
+            kills_player = true,
+            timeout = { when=time_to_ms(3, 637), nextsequence=nil }
+        },
+
+        -- !!! FIXME: this was corrupt data in RomSpinner, go figure this one out.
+        seq11 = {
+            start_time = time_laserdisc_frame(6731),
+            kills_player = true,
+            timeout = { when=time_to_ms(3, 637), nextsequence=nil }
+        },
+
+    },
+
+    ["Flying Horse Barding (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(16488),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(16544),
+            timeout = { when=time_to_ms(4, 522), nextsequence="seq9" },
+            actions = {
+                { input="upleft", from=time_to_ms(3, 441), to=time_to_ms(3, 768), nextsequence="seq9" },
+                { input="upleft", from=time_to_ms(3, 768), to=time_to_ms(4, 489), nextsequence="seq3", points=915 },
+                { input="left", from=time_to_ms(3, 441), to=time_to_ms(3, 768), nextsequence="seq9" },
+                { input="left", from=time_to_ms(3, 768), to=time_to_ms(4, 489), nextsequence="seq3", points=915 },
+                { input="up", from=time_to_ms(3, 801), to=time_to_ms(4, 489), nextsequence="seq9" },
+                { input="right", from=time_to_ms(3, 441), to=time_to_ms(3, 768), nextsequence="seq9" },
+                { input="right", from=time_to_ms(3, 768), to=time_to_ms(4, 456), nextsequence="seq11" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(16544),
+            timeout = { when=time_to_ms(4, 522), nextsequence="seq9" },
+            actions = {
+                { input="upleft", from=time_to_ms(3, 441), to=time_to_ms(3, 768), nextsequence="seq9" },
+                { input="upleft", from=time_to_ms(3, 768), to=time_to_ms(4, 489), nextsequence="seq3", points=915 },
+                { input="left", from=time_to_ms(3, 441), to=time_to_ms(3, 768), nextsequence="seq9" },
+                { input="left", from=time_to_ms(3, 768), to=time_to_ms(4, 489), nextsequence="seq3", points=915 },
+                { input="up", from=time_to_ms(3, 801), to=time_to_ms(4, 489), nextsequence="seq9" },
+                { input="right", from=time_to_ms(3, 441), to=time_to_ms(3, 768), nextsequence="seq9" },
+                { input="right", from=time_to_ms(3, 768), to=time_to_ms(4, 456), nextsequence="seq11" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 278), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 721), to=time_to_ms(1, 245), nextsequence="seq4", points=915 },
+                { input="up", from=time_to_ms(0, 721), to=time_to_ms(1, 278), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 721), to=time_to_ms(1, 278), nextsequence="seq11" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq9" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 311), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 311), to=time_to_ms(1, 966), nextsequence="seq5", points=495 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 311), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 311), to=time_to_ms(1, 966), nextsequence="seq11" },
+                { input="up", from=time_to_ms(0, 852), to=time_to_ms(1, 966), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 311), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 311), to=time_to_ms(1, 966), nextsequence="seq6", points=495 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 311), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 311), to=time_to_ms(1, 966), nextsequence="seq11" },
+                { input="up", from=time_to_ms(1, 49), to=time_to_ms(1, 966), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 802), nextsequence="seq10" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 245), nextsequence="seq9" },
+                { input="right", from=time_to_ms(1, 245), to=time_to_ms(1, 802), nextsequence="seq7", points=1939 },
+                { input="up", from=time_to_ms(0, 950), to=time_to_ms(1, 769), nextsequence="seq10" },
+                { input="left", from=time_to_ms(0, 950), to=time_to_ms(1, 769), nextsequence="seq10" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 475), nextsequence="seq9" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 786), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 786), to=time_to_ms(1, 442), nextsequence="seq8", points=495 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 786), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 786), to=time_to_ms(1, 442), nextsequence="seq11" },
+                { input="up", from=time_to_ms(0, 393), to=time_to_ms(1, 475), nextsequence="seq9" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 555), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(16976),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 606), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(17024),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(17088),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+    },
+
+    ["Giant Bat"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(14231),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(14327),
+            timeout = { when=time_to_ms(1, 16), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="seq3", points=1326 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="seq10" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(14327),
+            timeout = { when=time_to_ms(1, 16), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="seq3", points=1326 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 16), nextsequence="seq10" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 409), nextsequence="seq10" },
+            actions = {
+                { input="left", from=time_to_ms(0, 819), to=time_to_ms(1, 376), nextsequence="seq4", points=2191 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq10" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 359), nextsequence="seq9" },
+            actions = {
+                { input="upleft", from=time_to_ms(1, 704), to=time_to_ms(2, 327), nextsequence="seq5", points=1326 },
+                { input="up", from=time_to_ms(1, 704), to=time_to_ms(2, 327), nextsequence="seq5", points=1326 },
+                { input="left", from=time_to_ms(1, 704), to=time_to_ms(2, 327), nextsequence="seq5", points=1326 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 359), nextsequence="seq10" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 359), nextsequence="seq8" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 359), nextsequence="seq11" },
+            actions = {
+                { input="action", from=time_to_ms(1, 737), to=time_to_ms(2, 327), nextsequence="seq6", points=3551 },
+                { input="down", from=time_to_ms(0, 590), to=time_to_ms(1, 147), nextsequence="seq10" },
+                { input="left", from=time_to_ms(1, 737), to=time_to_ms(2, 327), nextsequence="seq11" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 442), nextsequence="seq7", points=49 }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 114), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(14611),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(14659),
+            timeout = { when=time_to_ms(0, 754), nextsequence="seq10" }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(14679),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 754), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(14575),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+    },
+
+    ["Grim Reaper"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(7829),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(8004),
+            timeout = { when=time_to_ms(5, 800), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 573), nextsequence="seq7" },
+                { input="up", from=time_to_ms(1, 573), to=time_to_ms(1, 933), nextsequence="seq3", points=4026 },
+                { input="up", from=time_to_ms(1, 933), to=time_to_ms(3, 47), nextsequence="seq7" },
+                { input="up", from=time_to_ms(3, 47), to=time_to_ms(3, 408), nextsequence="seq3", points=4026 },
+                { input="up", from=time_to_ms(3, 408), to=time_to_ms(4, 522), nextsequence="seq7" },
+                { input="up", from=time_to_ms(4, 555), to=time_to_ms(4, 915), nextsequence="seq3", points=4026 },
+                { input="up", from=time_to_ms(4, 915), to=time_to_ms(6, 29), nextsequence="seq7" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(6, 95), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(6, 95), nextsequence="seq9" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(8004),
+            timeout = { when=time_to_ms(5, 800), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 573), nextsequence="seq7" },
+                { input="up", from=time_to_ms(1, 573), to=time_to_ms(1, 933), nextsequence="seq3", points=4026 },
+                { input="up", from=time_to_ms(1, 933), to=time_to_ms(3, 47), nextsequence="seq7" },
+                { input="up", from=time_to_ms(3, 47), to=time_to_ms(3, 408), nextsequence="seq3", points=4026 },
+                { input="up", from=time_to_ms(3, 408), to=time_to_ms(4, 522), nextsequence="seq7" },
+                { input="up", from=time_to_ms(4, 555), to=time_to_ms(4, 915), nextsequence="seq3", points=4026 },
+                { input="up", from=time_to_ms(4, 915), to=time_to_ms(6, 29), nextsequence="seq7" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(6, 95), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(6, 95), nextsequence="seq9" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_frame(8151),
+            timeout = { when=time_to_ms(3, 604), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(2, 982), to=time_to_ms(3, 572), nextsequence="seq4", points=2191 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(3, 572), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(3, 473), nextsequence="seq9" },
+                { input="down", from=time_to_ms(3, 244), to=time_to_ms(3, 604), nextsequence="seq9" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 916), nextsequence="seq9" },
+            actions = {
+                { input="down", from=time_to_ms(1, 573), to=time_to_ms(2, 916), nextsequence="seq5", points=1326 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 916), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 916), nextsequence="seq9" },
+                { input="left", from=time_to_ms(2, 261), to=time_to_ms(2, 916), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 982), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(1, 475), to=time_to_ms(2, 982), nextsequence="seq6", points=915 },
+                { input="down", from=time_to_ms(1, 671), to=time_to_ms(2, 982), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 982), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 982), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 164), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(8395),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 901), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(8475),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 97), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(8533),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+    },
+
+    ["Grim Reaper (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(19306),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(19520),
+            timeout = { when=time_to_ms(4, 227), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq7" },
+                { input="up", from=time_to_ms(0, 721), to=time_to_ms(1, 16), nextsequence="seq3", points=4750 },
+                { input="up", from=time_to_ms(1, 16), to=time_to_ms(2, 195), nextsequence="seq7" },
+                { input="up", from=time_to_ms(2, 228), to=time_to_ms(2, 523), nextsequence="seq3", points=4750 },
+                { input="up", from=time_to_ms(2, 523), to=time_to_ms(3, 703), nextsequence="seq7" },
+                { input="up", from=time_to_ms(3, 703), to=time_to_ms(3, 998), nextsequence="seq3", points=4750 },
+                { input="up", from=time_to_ms(3, 998), to=time_to_ms(4, 391), nextsequence="seq7" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(4, 489), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(4, 489), nextsequence="seq9" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(19520),
+            timeout = { when=time_to_ms(4, 227), nextsequence="seq7" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq7" },
+                { input="up", from=time_to_ms(0, 721), to=time_to_ms(1, 16), nextsequence="seq3", points=4750 },
+                { input="up", from=time_to_ms(1, 16), to=time_to_ms(2, 195), nextsequence="seq7" },
+                { input="up", from=time_to_ms(2, 228), to=time_to_ms(2, 523), nextsequence="seq3", points=4750 },
+                { input="up", from=time_to_ms(2, 523), to=time_to_ms(3, 703), nextsequence="seq7" },
+                { input="up", from=time_to_ms(3, 703), to=time_to_ms(3, 998), nextsequence="seq3", points=4750 },
+                { input="up", from=time_to_ms(3, 998), to=time_to_ms(4, 391), nextsequence="seq7" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(4, 489), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(4, 489), nextsequence="seq9" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_frame(19628),
+            timeout = { when=time_to_ms(3, 604), nextsequence="seq8" },
+            actions = {
+                { input="action", from=time_to_ms(3, 47), to=time_to_ms(3, 604), nextsequence="seq4", points=2191 },
+                { input="down", from=time_to_ms(3, 47), to=time_to_ms(3, 637), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="seq9" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(3, 604), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 982), nextsequence="seq9" },
+            actions = {
+                { input="down", from=time_to_ms(2, 163), to=time_to_ms(2, 982), nextsequence="seq5", points=1326 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 982), nextsequence="seq9" },
+                { input="right", from=time_to_ms(2, 163), to=time_to_ms(2, 982), nextsequence="seq9" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 982), nextsequence="seq9" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 589), nextsequence="seq9" },
+            actions = {
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(2, 556), nextsequence="seq6", points=915 },
+                { input="down", from=time_to_ms(1, 606), to=time_to_ms(3, 15), nextsequence="seq9" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(3, 47), nextsequence="seq9" },
+                { input="left", from=time_to_ms(1, 606), to=time_to_ms(3, 15), nextsequence="seq9" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 492), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(19872),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 901), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(19950),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(20010),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+    },
+
+    ["Lizard King"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(17208),
+            timeout = { when=time_to_ms(1, 933), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(17264),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq15" },
+            actions = {
+                { input="left", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq3", points=1939 },
+                { input="up", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq3", points=1939 },
+                { input="upleft", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq3", points=1939 },
+                { input="down", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq17" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 163), nextsequence="seq16" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(17264),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq15" },
+            actions = {
+                { input="left", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq3", points=1939 },
+                { input="up", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq3", points=1939 },
+                { input="upleft", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq3", points=1939 },
+                { input="down", from=time_to_ms(0, 459), to=time_to_ms(2, 130), nextsequence="seq17" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 163), nextsequence="seq16" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 456), nextsequence="seq17" },
+            actions = {
+                { input="right", from=time_to_ms(3, 572), to=time_to_ms(4, 424), nextsequence="seq4", points=1326 },
+                { input="left", from=time_to_ms(3, 572), to=time_to_ms(4, 424), nextsequence="seq16" },
+                { input="down", from=time_to_ms(3, 572), to=time_to_ms(4, 424), nextsequence="seq15" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 506), nextsequence="seq17" },
+            actions = {
+                { input="right", from=time_to_ms(2, 654), to=time_to_ms(3, 473), nextsequence="seq5", points=1326 },
+                { input="left", from=time_to_ms(2, 654), to=time_to_ms(3, 473), nextsequence="seq16" },
+                { input="down", from=time_to_ms(2, 654), to=time_to_ms(3, 473), nextsequence="seq15" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 97), nextsequence="seq17" },
+            actions = {
+                { input="right", from=time_to_ms(1, 212), to=time_to_ms(2, 64), nextsequence="seq6", points=1326 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq16" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq15" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 817), nextsequence="seq17" },
+            actions = {
+                { input="right", from=time_to_ms(3, 834), to=time_to_ms(4, 784), nextsequence="seq7", points=1326 },
+                { input="left", from=time_to_ms(3, 834), to=time_to_ms(4, 784), nextsequence="seq16" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(4, 817), nextsequence="seq15" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq17" },
+            actions = {
+                { input="right", from=time_to_ms(1, 409), to=time_to_ms(2, 130), nextsequence="seq8", points=2191 },
+                { input="left", from=time_to_ms(1, 409), to=time_to_ms(2, 130), nextsequence="seq16" },
+                { input="down", from=time_to_ms(1, 409), to=time_to_ms(2, 130), nextsequence="seq15" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 228), nextsequence="seq17" },
+            actions = {
+                { input="up", from=time_to_ms(0, 459), to=time_to_ms(2, 195), nextsequence="seq9", points=3255 },
+                { input="action", from=time_to_ms(0, 459), to=time_to_ms(2, 195), nextsequence="seq9", points=3255 },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 573), nextsequence="seq15" },
+            actions = {
+                { input="action", from=time_to_ms(0, 819), to=time_to_ms(1, 540), nextsequence="seq10" },
+                { input="down", from=time_to_ms(0, 819), to=time_to_ms(1, 540), nextsequence="seq15" },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 950), nextsequence="seq11" },
+            actions = {
+                { input="action", from=time_to_ms(0, 328), to=time_to_ms(0, 950), nextsequence="seq11" },
+                { input="down", from=time_to_ms(0, 328), to=time_to_ms(0, 950), nextsequence="seq11" },
+            }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 16), nextsequence="seq12" },
+            actions = {
+                { input="action", from=time_to_ms(0, 164), to=time_to_ms(0, 983), nextsequence="seq12" },
+            }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 918), nextsequence="seq13" },
+            actions = {
+                { input="action", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq13" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 918), nextsequence="seq17" },
+                { input="down", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq13" },
+                { input="left", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq15" },
+            }
+        },
+
+        seq13 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 114), nextsequence="seq14" },
+            actions = {
+                { input="action", from=time_to_ms(0, 557), to=time_to_ms(1, 81), nextsequence="seq14" },
+            }
+        },
+
+        seq14 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 719), nextsequence=nil }
+        },
+
+        seq15 = {
+            start_time = time_laserdisc_frame(18036),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq16 = {
+            start_time = time_laserdisc_frame(18060),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 982), nextsequence=nil }
+        },
+
+        seq17 = {
+            start_time = time_laserdisc_frame(18082),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 130), nextsequence=nil }
+        },
+
+    },
+
+    ["Mudmen"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(24322),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(24378),
+            timeout = { when=time_to_ms(5, 964), nextsequence="seq15" },
+            actions = {
+                { input="action", from=time_to_ms(3, 965), to=time_to_ms(5, 931), nextsequence="seq3", points=1326 },
+                { input="up", from=time_to_ms(4, 260), to=time_to_ms(5, 931), nextsequence="seq13" },
+                { input="down", from=time_to_ms(3, 539), to=time_to_ms(5, 833), nextsequence="seq14" },
+                { input="down", from=time_to_ms(5, 833), to=time_to_ms(5, 931), nextsequence="seq15" },
+                { input="right", from=time_to_ms(3, 965), to=time_to_ms(5, 931), nextsequence="seq15" },
+                { input="left", from=time_to_ms(3, 965), to=time_to_ms(5, 931), nextsequence="seq15" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(24378),
+            timeout = { when=time_to_ms(5, 964), nextsequence="seq15" },
+            actions = {
+                { input="action", from=time_to_ms(3, 965), to=time_to_ms(5, 931), nextsequence="seq3", points=1326 },
+                { input="up", from=time_to_ms(4, 260), to=time_to_ms(5, 931), nextsequence="seq13" },
+                { input="down", from=time_to_ms(3, 539), to=time_to_ms(5, 833), nextsequence="seq14" },
+                { input="down", from=time_to_ms(5, 833), to=time_to_ms(5, 931), nextsequence="seq15" },
+                { input="right", from=time_to_ms(3, 965), to=time_to_ms(5, 931), nextsequence="seq15" },
+                { input="left", from=time_to_ms(3, 965), to=time_to_ms(5, 931), nextsequence="seq15" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 703), nextsequence="seq4", points=1326 },
+            actions = {
+                { input="right", from=time_to_ms(2, 720), to=time_to_ms(3, 670), nextsequence="seq15" },
+                { input="down", from=time_to_ms(2, 720), to=time_to_ms(3, 670), nextsequence="seq15" },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="seq15" },
+                { input="up", from=time_to_ms(2, 720), to=time_to_ms(3, 670), nextsequence="seq4", points=1326 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(3, 703), nextsequence="seq15" },
+                { input="action", from=time_to_ms(0, 0), to=time_to_ms(3, 703), nextsequence="seq15" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 606), nextsequence="seq15" },
+            actions = {
+                { input="up", from=time_to_ms(0, 295), to=time_to_ms(1, 606), nextsequence="seq5", points=2191 },
+                { input="upleft", from=time_to_ms(0, 295), to=time_to_ms(1, 606), nextsequence="seq5", points=2191 },
+                { input="action", from=time_to_ms(0, 295), to=time_to_ms(1, 573), nextsequence="seq15" },
+                { input="left", from=time_to_ms(0, 295), to=time_to_ms(1, 573), nextsequence="seq12" },
+                { input="right", from=time_to_ms(0, 295), to=time_to_ms(1, 573), nextsequence="seq14" },
+                { input="down", from=time_to_ms(0, 295), to=time_to_ms(1, 573), nextsequence="seq15" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 540), nextsequence="seq15" },
+            actions = {
+                { input="up", from=time_to_ms(1, 16), to=time_to_ms(1, 540), nextsequence="seq6", points=2675 },
+                { input="right", from=time_to_ms(1, 16), to=time_to_ms(1, 540), nextsequence="seq6", points=2675 },
+                { input="upright", from=time_to_ms(1, 16), to=time_to_ms(1, 540), nextsequence="seq6", points=2675 },
+                { input="down", from=time_to_ms(1, 16), to=time_to_ms(1, 540), nextsequence="seq15" },
+                { input="left", from=time_to_ms(1, 16), to=time_to_ms(1, 540), nextsequence="seq14" },
+                { input="action", from=time_to_ms(1, 16), to=time_to_ms(1, 540), nextsequence="seq15" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 933), nextsequence="seq15" },
+            actions = {
+                { input="up", from=time_to_ms(0, 852), to=time_to_ms(1, 933), nextsequence="seq7", points=1326 },
+                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 933), nextsequence="seq12" },
+                { input="down", from=time_to_ms(0, 852), to=time_to_ms(1, 933), nextsequence="seq13" },
+                { input="right", from=time_to_ms(1, 278), to=time_to_ms(1, 933), nextsequence="seq15" },
+                { input="action", from=time_to_ms(1, 278), to=time_to_ms(1, 933), nextsequence="seq15" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 638), nextsequence="seq15" },
+            actions = {
+                { input="up", from=time_to_ms(0, 655), to=time_to_ms(1, 606), nextsequence="seq8", points=1326 },
+                { input="left", from=time_to_ms(0, 655), to=time_to_ms(1, 573), nextsequence="seq12" },
+                { input="right", from=time_to_ms(0, 655), to=time_to_ms(1, 573), nextsequence="seq14" },
+                { input="down", from=time_to_ms(0, 655), to=time_to_ms(1, 573), nextsequence="seq15" },
+                { input="action", from=time_to_ms(0, 655), to=time_to_ms(1, 573), nextsequence="seq15" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 654), nextsequence="seq16" },
+            actions = {
+                { input="upleft", from=time_to_ms(1, 475), to=time_to_ms(1, 933), nextsequence="seq16" },
+                { input="upleft", from=time_to_ms(1, 933), to=time_to_ms(2, 621), nextsequence="seq9", points=1326 },
+                { input="up", from=time_to_ms(1, 475), to=time_to_ms(1, 933), nextsequence="seq16" },
+                { input="up", from=time_to_ms(1, 933), to=time_to_ms(2, 621), nextsequence="seq9", points=1326 },
+                { input="left", from=time_to_ms(1, 475), to=time_to_ms(2, 621), nextsequence="seq16" },
+                { input="right", from=time_to_ms(1, 475), to=time_to_ms(2, 621), nextsequence="seq16" },
+                { input="down", from=time_to_ms(1, 475), to=time_to_ms(2, 621), nextsequence="seq15" },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence="seq15" },
+            actions = {
+                { input="up", from=time_to_ms(1, 114), to=time_to_ms(2, 720), nextsequence="seq10", points=1326 },
+                { input="right", from=time_to_ms(1, 114), to=time_to_ms(2, 753), nextsequence="seq16" },
+                { input="left", from=time_to_ms(1, 114), to=time_to_ms(2, 753), nextsequence="seq16" },
+                { input="down", from=time_to_ms(1, 114), to=time_to_ms(2, 753), nextsequence="seq15" },
+                { input="action", from=time_to_ms(1, 114), to=time_to_ms(2, 753), nextsequence="seq15" },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(4, 391), nextsequence="seq15" },
+            actions = {
+                { input="up", from=time_to_ms(2, 818), to=time_to_ms(4, 686), nextsequence="seq11", points=1326 },
+                { input="right", from=time_to_ms(2, 818), to=time_to_ms(4, 686), nextsequence="seq11", points=1326 },
+                { input="down", from=time_to_ms(2, 818), to=time_to_ms(3, 998), nextsequence="seq15" },
+                { input="down", from=time_to_ms(3, 998), to=time_to_ms(7, 897), nextsequence="seq14" },
+                { input="left", from=time_to_ms(3, 998), to=time_to_ms(7, 897), nextsequence="seq15" },
+                { input="action", from=time_to_ms(3, 310), to=time_to_ms(7, 209), nextsequence="seq15" },
+            }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(25194),
+            kills_player = true,
+            timeout = { when=time_to_ms(4, 96), nextsequence=nil }
+        },
+
+        seq13 = {
+            start_time = time_laserdisc_frame(25098),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq14 = {
+            start_time = time_laserdisc_frame(25360),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq15 = {
+            start_time = time_laserdisc_frame(25300),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+        seq16 = {
+            start_time = time_laserdisc_frame(25146),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+    },
+
+    ["Pool of Water"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(4083),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(4139),
+            timeout = { when=time_to_ms(1, 868), nextsequence="seq14" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq3", points=1326 },
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+                { input="down", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+                { input="right", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(4139),
+            timeout = { when=time_to_ms(1, 868), nextsequence="seq14" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq3", points=1326 },
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+                { input="down", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+                { input="right", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 64), nextsequence="seq12" },
+            actions = {
+                { input="up", from=time_to_ms(0, 885), to=time_to_ms(2, 32), nextsequence="seq4", points=1939 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 64), nextsequence="seq14" },
+                { input="left", from=time_to_ms(0, 885), to=time_to_ms(2, 32), nextsequence="seq12" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 458), nextsequence="seq14" },
+            actions = {
+                { input="right", from=time_to_ms(1, 81), to=time_to_ms(2, 458), nextsequence="seq5", points=2191 },
+                { input="left", from=time_to_ms(1, 507), to=time_to_ms(2, 425), nextsequence="seq14" },
+                { input="up", from=time_to_ms(1, 81), to=time_to_ms(2, 458), nextsequence="seq14" },
+                { input="down", from=time_to_ms(1, 343), to=time_to_ms(2, 458), nextsequence="seq14" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence="seq14" },
+            actions = {
+                { input="up", from=time_to_ms(0, 492), to=time_to_ms(1, 769), nextsequence="seq6", points=2675 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq14" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq14" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq14" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 130), nextsequence="seq15" },
+            actions = {
+                { input="left", from=time_to_ms(0, 655), to=time_to_ms(2, 97), nextsequence="seq7", points=3255 },
+                { input="right", from=time_to_ms(1, 114), to=time_to_ms(2, 130), nextsequence="seq15" },
+                { input="action", from=time_to_ms(1, 114), to=time_to_ms(2, 130), nextsequence="seq15" },
+                { input="up", from=time_to_ms(1, 114), to=time_to_ms(2, 130), nextsequence="seq15" },
+                { input="down", from=time_to_ms(1, 114), to=time_to_ms(2, 130), nextsequence="seq15" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 933), nextsequence="seq16" },
+            actions = {
+                { input="up", from=time_to_ms(1, 245), to=time_to_ms(1, 933), nextsequence="seq8", points=3551 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 933), nextsequence="seq15" },
+                { input="left", from=time_to_ms(1, 245), to=time_to_ms(1, 933), nextsequence="seq16" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 933), nextsequence="seq14" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 244), nextsequence="seq17" },
+            actions = {
+                { input="action", from=time_to_ms(2, 490), to=time_to_ms(3, 211), nextsequence="seq9", points=4026 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(3, 244), nextsequence="seq14" },
+                { input="left", from=time_to_ms(2, 490), to=time_to_ms(3, 211), nextsequence="seq17" },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 540), nextsequence="seq14" },
+            actions = {
+                { input="right", from=time_to_ms(0, 721), to=time_to_ms(1, 475), nextsequence="seq10", points=5000 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 540), nextsequence="seq14" },
+                { input="left", from=time_to_ms(0, 885), to=time_to_ms(1, 507), nextsequence="seq14" },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 97), nextsequence="seq18" },
+            actions = {
+                { input="up", from=time_to_ms(0, 754), to=time_to_ms(2, 64), nextsequence="seq11", points=4750 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq14" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq14" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq15" },
+            }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(4639),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq14 = {
+            start_time = time_laserdisc_frame(4711),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq15 = {
+            start_time = time_laserdisc_frame(4759),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 949), nextsequence=nil }
+        },
+
+        seq16 = {
+            start_time = time_laserdisc_frame(4839),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq17 = {
+            start_time = time_laserdisc_frame(4875),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq18 = {
+            start_time = time_laserdisc_frame(4923),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+    },
+
+    ["Pool of Water (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(13247),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(13303),
+            timeout = { when=time_to_ms(1, 868), nextsequence="seq14" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 868), nextsequence="seq3", points=1939 },
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+                { input="left", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(13303),
+            timeout = { when=time_to_ms(1, 868), nextsequence="seq14" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 868), nextsequence="seq3", points=1939 },
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+                { input="left", from=time_to_ms(1, 606), to=time_to_ms(1, 999), nextsequence="seq14" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 64), nextsequence="seq12" },
+            actions = {
+                { input="up", from=time_to_ms(0, 885), to=time_to_ms(2, 32), nextsequence="seq4", points=2191 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 64), nextsequence="seq14" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq14" },
+            actions = {
+                { input="left", from=time_to_ms(1, 81), to=time_to_ms(2, 425), nextsequence="seq5", points=2675 },
+                { input="right", from=time_to_ms(1, 507), to=time_to_ms(2, 392), nextsequence="seq14" },
+                { input="up", from=time_to_ms(1, 81), to=time_to_ms(2, 425), nextsequence="seq14" },
+                { input="down", from=time_to_ms(1, 81), to=time_to_ms(2, 425), nextsequence="seq14" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 737), nextsequence="seq14" },
+            actions = {
+                { input="up", from=time_to_ms(0, 492), to=time_to_ms(1, 737), nextsequence="seq6", points=3255 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq14" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq14" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq14" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 97), nextsequence="seq15" },
+            actions = {
+                { input="right", from=time_to_ms(0, 655), to=time_to_ms(2, 64), nextsequence="seq7", points=3551 },
+                { input="left", from=time_to_ms(1, 114), to=time_to_ms(2, 130), nextsequence="seq15" },
+                { input="up", from=time_to_ms(1, 81), to=time_to_ms(2, 97), nextsequence="seq15" },
+                { input="down", from=time_to_ms(1, 81), to=time_to_ms(2, 97), nextsequence="seq15" },
+                { input="action", from=time_to_ms(1, 81), to=time_to_ms(2, 97), nextsequence="seq15" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 933), nextsequence="seq16" },
+            actions = {
+                { input="up", from=time_to_ms(1, 212), to=time_to_ms(1, 933), nextsequence="seq8", points=4026 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 933), nextsequence="seq15" },
+                { input="right", from=time_to_ms(1, 212), to=time_to_ms(1, 901), nextsequence="seq16" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 933), nextsequence="seq14" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 244), nextsequence="seq17" },
+            actions = {
+                { input="action", from=time_to_ms(2, 490), to=time_to_ms(3, 211), nextsequence="seq9", points=4026 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(3, 342), nextsequence="seq14" },
+                { input="right", from=time_to_ms(2, 490), to=time_to_ms(3, 310), nextsequence="seq17" },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 540), nextsequence="seq14" },
+            actions = {
+                { input="left", from=time_to_ms(0, 721), to=time_to_ms(1, 507), nextsequence="seq10", points=5000 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 311), nextsequence="seq14" },
+                { input="right", from=time_to_ms(0, 885), to=time_to_ms(1, 507), nextsequence="seq14" },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 97), nextsequence="seq18" },
+            actions = {
+                { input="up", from=time_to_ms(0, 754), to=time_to_ms(2, 64), nextsequence="seq11", points=4750 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq14" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq14" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 97), nextsequence="seq15" },
+            }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(13803),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq14 = {
+            start_time = time_laserdisc_frame(13875),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq15 = {
+            start_time = time_laserdisc_frame(13923),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 916), nextsequence=nil }
+        },
+
+        seq16 = {
+            start_time = time_laserdisc_frame(14003),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq17 = {
+            start_time = time_laserdisc_frame(14039),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq18 = {
+            start_time = time_laserdisc_frame(14087),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+    },
+
+    ["Robot Knight on Checkered Floor"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(10685),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(10741),
+            timeout = { when=time_to_ms(4, 293), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(2, 884), to=time_to_ms(4, 260), nextsequence="seq3", points=1939 },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(10741),
+            timeout = { when=time_to_ms(4, 293), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(2, 884), to=time_to_ms(4, 260), nextsequence="seq3", points=1939 },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 311), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(0, 426), to=time_to_ms(1, 278), nextsequence="seq4", points=1939 },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 540), nextsequence="seq11" },
+            actions = {
+                { input="up", from=time_to_ms(0, 950), to=time_to_ms(1, 507), nextsequence="seq5", points=2191 },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(1, 147), to=time_to_ms(2, 163), nextsequence="seq6", points=1939 },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 130), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(1, 212), to=time_to_ms(2, 97), nextsequence="seq7", points=1939 },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 49), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(0, 393), to=time_to_ms(1, 16), nextsequence="seq8", points=1939 },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 754), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(0, 197), to=time_to_ms(0, 754), nextsequence="seq9", points=4026 },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 687), nextsequence="seq12" },
+            actions = {
+                { input="up", from=time_to_ms(1, 606), to=time_to_ms(2, 687), nextsequence="seq12" },
+                { input="action", from=time_to_ms(1, 606), to=time_to_ms(2, 687), nextsequence="seq10", points=2191 },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 441), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(11269),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(11317),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 16), nextsequence=nil }
+        },
+
+    },
+
+    ["Robot Knight on Checkered Floor (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(21156),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(21212),
+            timeout = { when=time_to_ms(4, 391), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(3, 473), to=time_to_ms(4, 358), nextsequence="seq3", points=2191 },
+                { input="up", from=time_to_ms(3, 473), to=time_to_ms(7, 766), nextsequence="seq11" },
+                { input="down", from=time_to_ms(3, 473), to=time_to_ms(4, 358), nextsequence="seq11" },
+                { input="right", from=time_to_ms(3, 473), to=time_to_ms(4, 358), nextsequence="seq11" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(21212),
+            timeout = { when=time_to_ms(4, 391), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(3, 473), to=time_to_ms(4, 358), nextsequence="seq3", points=2191 },
+                { input="up", from=time_to_ms(3, 473), to=time_to_ms(7, 766), nextsequence="seq11" },
+                { input="down", from=time_to_ms(3, 473), to=time_to_ms(4, 358), nextsequence="seq11" },
+                { input="right", from=time_to_ms(3, 473), to=time_to_ms(4, 358), nextsequence="seq11" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 311), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(0, 557), to=time_to_ms(1, 278), nextsequence="seq4", points=2191 },
+                { input="up", from=time_to_ms(0, 557), to=time_to_ms(1, 278), nextsequence="seq11" },
+                { input="down", from=time_to_ms(0, 557), to=time_to_ms(1, 278), nextsequence="seq11" },
+                { input="left", from=time_to_ms(0, 557), to=time_to_ms(1, 278), nextsequence="seq11" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 606), nextsequence="seq11" },
+            actions = {
+                { input="up", from=time_to_ms(0, 950), to=time_to_ms(1, 573), nextsequence="seq5", points=2675 },
+                { input="down", from=time_to_ms(0, 950), to=time_to_ms(1, 573), nextsequence="seq11" },
+                { input="right", from=time_to_ms(0, 950), to=time_to_ms(1, 573), nextsequence="seq11" },
+                { input="left", from=time_to_ms(0, 950), to=time_to_ms(1, 573), nextsequence="seq11" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(1, 245), to=time_to_ms(2, 130), nextsequence="seq6", points=2191 },
+                { input="up", from=time_to_ms(1, 245), to=time_to_ms(2, 130), nextsequence="seq11" },
+                { input="down", from=time_to_ms(1, 245), to=time_to_ms(2, 130), nextsequence="seq11" },
+                { input="left", from=time_to_ms(1, 245), to=time_to_ms(2, 130), nextsequence="seq11" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 130), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(1, 212), to=time_to_ms(2, 97), nextsequence="seq7", points=2191 },
+                { input="up", from=time_to_ms(1, 212), to=time_to_ms(2, 97), nextsequence="seq11" },
+                { input="down", from=time_to_ms(1, 212), to=time_to_ms(2, 97), nextsequence="seq11" },
+                { input="right", from=time_to_ms(1, 212), to=time_to_ms(2, 97), nextsequence="seq11" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 49), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(0, 393), to=time_to_ms(1, 16), nextsequence="seq8", points=2191 },
+                { input="up", from=time_to_ms(0, 393), to=time_to_ms(1, 16), nextsequence="seq11" },
+                { input="down", from=time_to_ms(0, 393), to=time_to_ms(1, 16), nextsequence="seq11" },
+                { input="left", from=time_to_ms(0, 393), to=time_to_ms(1, 16), nextsequence="seq11" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 754), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(0, 197), to=time_to_ms(0, 754), nextsequence="seq9", points=4750 },
+                { input="up", from=time_to_ms(0, 197), to=time_to_ms(0, 754), nextsequence="seq11" },
+                { input="right", from=time_to_ms(0, 197), to=time_to_ms(0, 754), nextsequence="seq11" },
+                { input="down", from=time_to_ms(0, 197), to=time_to_ms(0, 754), nextsequence="seq11" },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence="seq12" },
+            actions = {
+                { input="up", from=time_to_ms(1, 835), to=time_to_ms(2, 687), nextsequence="seq12" },
+                { input="action", from=time_to_ms(1, 835), to=time_to_ms(2, 687), nextsequence="seq10", points=2675 },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 441), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(21740),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(21788),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 16), nextsequence=nil }
+        },
+
+    },
+
+    ["Room of Fire - Bench Covers Exit"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(9473),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(9529),
+            timeout = { when=time_to_ms(3, 539), nextsequence="seq8" },
+            actions = {
+                { input="right", from=time_to_ms(2, 884), to=time_to_ms(3, 506), nextsequence="seq3", points=915 },
+                { input="left", from=time_to_ms(2, 884), to=time_to_ms(3, 473), nextsequence="seq8" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(9529),
+            timeout = { when=time_to_ms(3, 539), nextsequence="seq8" },
+            actions = {
+                { input="right", from=time_to_ms(2, 884), to=time_to_ms(3, 506), nextsequence="seq3", points=915 },
+                { input="left", from=time_to_ms(2, 884), to=time_to_ms(3, 473), nextsequence="seq8" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 163), nextsequence="seq8" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 328), nextsequence="seq7" },
+                { input="up", from=time_to_ms(1, 147), to=time_to_ms(2, 97), nextsequence="seq4", points=1326 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 328), nextsequence="seq7" },
+                { input="left", from=time_to_ms(1, 147), to=time_to_ms(2, 97), nextsequence="seq4", points=1326 },
+                { input="down", from=time_to_ms(1, 147), to=time_to_ms(2, 195), nextsequence="seq8" },
+                { input="right", from=time_to_ms(1, 147), to=time_to_ms(2, 195), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 966), nextsequence="seq8" },
+            actions = {
+                { input="left", from=time_to_ms(0, 655), to=time_to_ms(1, 966), nextsequence="seq5", points=915 },
+                { input="up", from=time_to_ms(0, 655), to=time_to_ms(1, 966), nextsequence="seq7" },
+                { input="down", from=time_to_ms(0, 655), to=time_to_ms(1, 966), nextsequence="seq5", points=915 },
+                { input="downleft", from=time_to_ms(0, 655), to=time_to_ms(1, 966), nextsequence="seq5", points=915 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 966), nextsequence="seq7" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 638), nextsequence="seq8" },
+            actions = {
+                { input="left", from=time_to_ms(0, 197), to=time_to_ms(1, 638), nextsequence="seq6", points=1326 },
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 638), nextsequence="seq7" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 638), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 638), nextsequence="seq8" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(9821),
+            timeout = { when=time_to_ms(1, 180), nextsequence="seq8" }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(9857),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+    },
+
+    ["Smithee"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(6911),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(6994),
+            timeout = { when=time_to_ms(3, 113), nextsequence="seq9" },
+            actions = {
+                { input="action", from=time_to_ms(2, 228), to=time_to_ms(3, 80), nextsequence="seq3", points=915 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="up", from=time_to_ms(1, 507), to=time_to_ms(3, 178), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 654), nextsequence="seq8" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(6994),
+            timeout = { when=time_to_ms(3, 113), nextsequence="seq9" },
+            actions = {
+                { input="action", from=time_to_ms(2, 228), to=time_to_ms(3, 80), nextsequence="seq3", points=915 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="up", from=time_to_ms(1, 507), to=time_to_ms(3, 178), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 654), nextsequence="seq8" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 490), nextsequence="seq10" },
+            actions = {
+                { input="action", from=time_to_ms(1, 933), to=time_to_ms(2, 458), nextsequence="seq4", points=1939 },
+                { input="up", from=time_to_ms(1, 147), to=time_to_ms(2, 425), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq8" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 720), nextsequence="seq11" },
+            actions = {
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 950), nextsequence="seq8" },
+                { input="left", from=time_to_ms(0, 950), to=time_to_ms(2, 687), nextsequence="seq5", points=1326 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 720), nextsequence="seq8" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence="seq12" },
+            actions = {
+                { input="action", from=time_to_ms(1, 49), to=time_to_ms(1, 835), nextsequence="seq6", points=1326 },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(6, 259), nextsequence="seq13" },
+            actions = {
+                { input="action", from=time_to_ms(5, 210), to=time_to_ms(6, 259), nextsequence="seq7", points=915 },
+                { input="right", from=time_to_ms(5, 210), to=time_to_ms(6, 259), nextsequence="seq13" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 736), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(7489),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(7525),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(7549),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(7623),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 754), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(7649),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq13 = {
+            start_time = time_laserdisc_frame(7681),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+        },
+
+    },
+
+    ["Smithee (Mirrored)"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(15570),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(15653),
+            timeout = { when=time_to_ms(3, 178), nextsequence="seq9" },
+            actions = {
+                { input="action", from=time_to_ms(1, 475), to=time_to_ms(2, 195), nextsequence="seq9" },
+                { input="action", from=time_to_ms(2, 195), to=time_to_ms(3, 113), nextsequence="seq3", points=1326 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="up", from=time_to_ms(1, 507), to=time_to_ms(3, 178), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 654), nextsequence="seq8" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(15653),
+            timeout = { when=time_to_ms(3, 178), nextsequence="seq9" },
+            actions = {
+                { input="action", from=time_to_ms(1, 475), to=time_to_ms(2, 195), nextsequence="seq9" },
+                { input="action", from=time_to_ms(2, 195), to=time_to_ms(3, 113), nextsequence="seq3", points=1326 },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(3, 113), nextsequence="seq8" },
+                { input="up", from=time_to_ms(1, 507), to=time_to_ms(3, 178), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 654), nextsequence="seq8" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 490), nextsequence="seq10" },
+            actions = {
+                { input="action", from=time_to_ms(0, 852), to=time_to_ms(1, 933), nextsequence="seq10" },
+                { input="action", from=time_to_ms(1, 933), to=time_to_ms(2, 458), nextsequence="seq4", points=2191 },
+                { input="up", from=time_to_ms(1, 147), to=time_to_ms(2, 425), nextsequence="seq8" },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 147), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq8" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 490), nextsequence="seq8" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 753), nextsequence="seq11" },
+            actions = {
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 950), nextsequence="seq8" },
+                { input="right", from=time_to_ms(0, 950), to=time_to_ms(2, 720), nextsequence="seq5", points=1326 },
+                { input="down", from=time_to_ms(0, 0), to=time_to_ms(2, 753), nextsequence="seq8" },
+                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 753), nextsequence="seq8" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 802), nextsequence="seq12" },
+            actions = {
+                { input="action", from=time_to_ms(0, 229), to=time_to_ms(0, 983), nextsequence="seq12" },
+                { input="action", from=time_to_ms(0, 983), to=time_to_ms(1, 802), nextsequence="seq6", points=1326 },
+                { input="up", from=time_to_ms(1, 49), to=time_to_ms(1, 868), nextsequence="seq12" },
+                { input="down", from=time_to_ms(1, 49), to=time_to_ms(1, 868), nextsequence="seq12" },
+                { input="left", from=time_to_ms(1, 49), to=time_to_ms(1, 868), nextsequence="seq12" },
+                { input="right", from=time_to_ms(1, 49), to=time_to_ms(1, 868), nextsequence="seq12" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(6, 226), nextsequence="seq13" },
+            actions = {
+                { input="action", from=time_to_ms(5, 177), to=time_to_ms(6, 226), nextsequence="seq7", points=915 },
+                { input="right", from=time_to_ms(5, 210), to=time_to_ms(6, 259), nextsequence="seq13" },
+                { input="left", from=time_to_ms(5, 210), to=time_to_ms(6, 259), nextsequence="seq13" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 736), nextsequence=nil }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_frame(16148),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_frame(16184),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_frame(16208),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_frame(16282),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 754), nextsequence=nil }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_frame(16308),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq13 = {
+            start_time = time_laserdisc_frame(16341),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+        },
+
+    },
+
+    ["Snake Room"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(3041),
+            timeout = { when=time_to_ms(1, 933), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(3097),
+            timeout = { when=time_to_ms(2, 720), nextsequence="seq7" },
+            actions = {
+                { input="action", from=time_to_ms(1, 966), to=time_to_ms(2, 687), nextsequence="seq3", points=495 },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 687), nextsequence="seq7" },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(3097),
+            timeout = { when=time_to_ms(2, 720), nextsequence="seq7" },
+            actions = {
+                { input="action", from=time_to_ms(1, 966), to=time_to_ms(2, 687), nextsequence="seq3", points=495 },
+                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 687), nextsequence="seq7" },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 671), nextsequence="seq7" },
+            actions = {
+                { input="action", from=time_to_ms(0, 918), to=time_to_ms(1, 638), nextsequence="seq4", points=2675 },
+                { input="right", from=time_to_ms(0, 918), to=time_to_ms(1, 638), nextsequence="seq7" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 835), nextsequence="seq9", points=49 },
+            actions = {
+                { input="action", from=time_to_ms(1, 49), to=time_to_ms(1, 868), nextsequence="seq9", points=49 },
+                { input="left", from=time_to_ms(1, 16), to=time_to_ms(1, 835), nextsequence="seq7" },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 884), nextsequence=nil }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_frame(3349),
+            timeout = { when=time_to_ms(1, 671), nextsequence="seq7" }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_frame(3397),
+            kills_player = true,
+            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(0, 721), nextsequence="seq6" },
+            actions = {
+                { input="up", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq5", points=1939 },
+                { input="upright", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq5", points=1939 },
+                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq5", points=1939 },
+            }
+        },
+
+    },
+
+    ["The Dragon's Lair"] = {
+        start_dead = {
+            start_time = time_laserdisc_frame(28882),
+            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+        },
+
+        start_alive = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=0, nextsequence="enter_room", points = 49 }
+         },
+
+        enter_room = {
+            start_time = time_laserdisc_frame(28938),
+            timeout = { when=time_to_ms(4, 882), nextsequence="seq19" },
+            actions = {
+                { input="left", from=time_to_ms(3, 932), to=time_to_ms(4, 850), nextsequence="seq3", points=1326 },
+            }
+        },
+
+        seq2 = {
+            start_time = time_laserdisc_frame(28938),
+            timeout = { when=time_to_ms(4, 882), nextsequence="seq19" },
+            actions = {
+                { input="left", from=time_to_ms(3, 932), to=time_to_ms(4, 850), nextsequence="seq3", points=1326 },
+            }
+        },
+
+        seq3 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(11, 207), nextsequence="seq19" },
+            actions = {
+                { input="left", from=time_to_ms(10, 584), to=time_to_ms(11, 141), nextsequence="seq4", points=1939 },
+                { input="up", from=time_to_ms(10, 584), to=time_to_ms(11, 141), nextsequence="seq19" },
+                { input="right", from=time_to_ms(10, 584), to=time_to_ms(11, 141), nextsequence="seq19" },
+                { input="action", from=time_to_ms(10, 584), to=time_to_ms(11, 141), nextsequence="seq19" },
+            }
+        },
+
+        seq4 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(8, 618), nextsequence="seq19" },
+            actions = {
+                { input="left", from=time_to_ms(6, 980), to=time_to_ms(8, 585), nextsequence="seq5", points=1326 },
+            }
+        },
+
+        seq5 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(22, 872), nextsequence="seq14" },
+            actions = {
+                { input="downleft", from=time_to_ms(22, 20), to=time_to_ms(22, 807), nextsequence="seq6", points=2191 },
+                { input="left", from=time_to_ms(22, 20), to=time_to_ms(22, 807), nextsequence="seq6", points=2191 },
+                { input="down", from=time_to_ms(22, 20), to=time_to_ms(22, 807), nextsequence="seq6", points=2191 },
+                { input="action", from=time_to_ms(22, 20), to=time_to_ms(22, 807), nextsequence="seq14" },
+            }
+        },
+
+        seq6 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(7, 406), nextsequence="seq17" },
+            actions = {
+                { input="up", from=time_to_ms(6, 554), to=time_to_ms(7, 373), nextsequence="seq16" },
+                { input="down", from=time_to_ms(6, 554), to=time_to_ms(7, 373), nextsequence="seq7", points=2191 },
+                { input="right", from=time_to_ms(6, 554), to=time_to_ms(7, 373), nextsequence="seq17" },
+                { input="left", from=time_to_ms(6, 554), to=time_to_ms(7, 373), nextsequence="seq7", points=2191 },
+                { input="downleft", from=time_to_ms(6, 554), to=time_to_ms(7, 373), nextsequence="seq7", points=2191 },
+                { input="action", from=time_to_ms(6, 554), to=time_to_ms(7, 373), nextsequence="seq17" },
+            }
+        },
+
+        seq7 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(5, 341), nextsequence="seq19" },
+            actions = {
+                { input="down", from=time_to_ms(4, 653), to=time_to_ms(5, 308), nextsequence="seq19" },
+                { input="right", from=time_to_ms(4, 653), to=time_to_ms(5, 308), nextsequence="seq8", points=3255 },
+                { input="left", from=time_to_ms(4, 653), to=time_to_ms(5, 308), nextsequence="seq19" },
+            }
+        },
+
+        seq8 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 670), nextsequence="seq19" },
+            actions = {
+                { input="right", from=time_to_ms(2, 654), to=time_to_ms(3, 670), nextsequence="seq9", points=2191 },
+                { input="up", from=time_to_ms(2, 654), to=time_to_ms(3, 670), nextsequence="seq9", points=2191 },
+                { input="upright", from=time_to_ms(2, 654), to=time_to_ms(3, 670), nextsequence="seq9", points=2191 },
+            }
+        },
+
+        seq9 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(1, 475), nextsequence="seq15" },
+            actions = {
+                { input="action", from=time_to_ms(0, 393), to=time_to_ms(1, 475), nextsequence="seq10", points=3551 },
+                { input="right", from=time_to_ms(0, 393), to=time_to_ms(1, 475), nextsequence="seq10", points=3551 },
+            }
+        },
+
+        seq10 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 768), nextsequence="seq16" },
+            actions = {
+                { input="action", from=time_to_ms(2, 687), to=time_to_ms(3, 768), nextsequence="seq11", points=4026 },
+                { input="up", from=time_to_ms(2, 687), to=time_to_ms(3, 768), nextsequence="seq16" },
+                { input="down", from=time_to_ms(2, 687), to=time_to_ms(3, 768), nextsequence="seq16" },
+                { input="right", from=time_to_ms(2, 687), to=time_to_ms(3, 768), nextsequence="seq16" },
+                { input="left", from=time_to_ms(2, 687), to=time_to_ms(3, 768), nextsequence="seq16" },
+            }
+        },
+
+        seq11 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(3, 899), nextsequence="seq18" },
+            actions = {
+                { input="left", from=time_to_ms(2, 425), to=time_to_ms(3, 899), nextsequence="seq12", points=4750 },
+                { input="up", from=time_to_ms(2, 425), to=time_to_ms(3, 899), nextsequence="seq12", points=4750 },
+                { input="upleft", from=time_to_ms(2, 425), to=time_to_ms(3, 899), nextsequence="seq12", points=4750 },
+                { input="right", from=time_to_ms(2, 425), to=time_to_ms(3, 899), nextsequence="seq18" },
+            }
+        },
+
+        seq12 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(2, 228), nextsequence="seq16" },
+            actions = {
+                { input="action", from=time_to_ms(1, 114), to=time_to_ms(2, 228), nextsequence="seq13", points=5000 },
+            }
+        },
+
+        -- !!! FIXME: this was corrupted data in RomSpinner, look into this.
+        seq13 = {
+            start_time = time_laserdisc_noseek(),
+            timeout = { when=time_to_ms(10, 0), nextsequence=nil }
+        },
+
+        seq14 = {
+            start_time = time_laserdisc_frame(31238),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+        seq15 = {
+            start_time = time_laserdisc_frame(31298),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+        },
+
+        seq16 = {
+            start_time = time_laserdisc_frame(31354),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 376), nextsequence=nil }
+        },
+
+        seq17 = {
+            start_time = time_laserdisc_frame(31394),
+            kills_player = true,
+            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+        },
+
+        seq18 = {
+            start_time = time_laserdisc_frame(31454),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+
+        seq19 = {
+            start_time = time_laserdisc_noseek(),
+            kills_player = true,
+            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+        },
+    }
+
 }
 
 -- end of lair.lua ...
