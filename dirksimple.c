@@ -61,7 +61,7 @@ static int GShowingSingleFrame = 0;
 static unsigned int GSeekGeneration = 0;
 static int GNeedInitialLuaTick = 1;
 static const THEORAPLAY_VideoFrame *GPendingVideoFrame = NULL;
-
+static uint8_t *GBlankScreen = NULL;
 
 static void out_of_memory(void)
 {
@@ -334,6 +334,7 @@ static void DirkSimple_show_single_frame(uint32_t startms)
 {
     if (GDecoder) {
         DirkSimple_log("START SINGLE FRAME: GTicks %u, startms %u\n", (unsigned int) GTicks, (unsigned int) startms);
+        DirkSimple_discvideo(GBlankScreen);
         GSeekGeneration = THEORAPLAY_seek(GDecoder, startms);
         DirkSimple_cleardiscaudio();
         GClipStartMs = startms;
@@ -354,6 +355,7 @@ static void DirkSimple_start_clip(uint32_t startms)
 {
     if (GDecoder) {
         DirkSimple_log("START CLIP: GTicks %u, startms %u\n", (unsigned int) GTicks, (unsigned int) startms);
+        DirkSimple_discvideo(GBlankScreen);
         GSeekGeneration = THEORAPLAY_seek(GDecoder, startms);
         DirkSimple_cleardiscaudio();
         GClipStartMs = startms;
@@ -588,6 +590,8 @@ void DirkSimple_shutdown(void)
     GGameName = NULL;
     free(GGamePath);
     GGamePath = NULL;
+    free(GBlankScreen);
+    GBlankScreen = NULL;
     if (GLua) {
         lua_close(GLua);
         GLua = NULL;
@@ -728,8 +732,14 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 
         GFrameMS = (video->fps == 0.0) ? 0 : ((uint32_t) (1000.0 / video->fps));
 
+        GBlankScreen = (uint8_t *) DirkSimple_xmalloc((video->width * video->height) + ((video->width * video->height) / 2));
+        memset(GBlankScreen, 0, video->width * video->height);
+        memset(GBlankScreen + (video->width * video->height), 128, (video->width * video->height) / 2);
+
         GDiscoveredVideoFormat = 1;
         DirkSimple_videoformat(gametitle, video->width, video->height);
+        DirkSimple_discvideo(GBlankScreen);  // just initialize it to black to start.
+
         free(gametitle);
         THEORAPLAY_freeVideo(video);  // dump this, the game is going to seek at startup anyhow.
     }
