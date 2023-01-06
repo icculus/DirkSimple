@@ -12,24 +12,18 @@ local starting_lives = 3
 
 
 -- SOME INITIAL SETUP STUFF
-local standard_tick = nil   -- gets set up later in this file.
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "rolling_balls"
+--test_scene_name = "smithee"
 
 
 -- GAME STATE
-
 local lives_left = 0
 local current_score = 0
-local current_scene = nil
-local current_scene_name = nil
-local current_sequence = nil
 local current_ticks = 0
-local current_sequence_ticks = 0
-local current_sequence_tick_offset = 0
 local accepted_input = nil
 local scene_manager = nil
+
 
 -- FUNCTIONS
 
@@ -55,20 +49,20 @@ end
 
 local function start_sequence(sequencename)
     DirkSimple.log("Starting sequence '" .. sequencename .. "'")
-    current_sequence = current_scene[sequencename]
+    scene_manager.current_sequence = scene_manager.current_scene[sequencename]
     accepted_input = nil
 
-    local start_time = current_sequence.start_time
+    local start_time = scene_manager.current_sequence.start_time
     if start_time < 0 then  -- if negative, no seek desired (just keep playing from current location)
-        current_sequence_tick_offset = current_sequence_tick_offset + current_sequence_ticks
+        scene_manager.current_sequence_tick_offset = scene_manager.current_sequence_tick_offset + scene_manager.current_sequence_ticks
     else
         -- will suspend ticking until the seek completes and reset sequence tick count
-        if current_sequence.is_single_frame then
+        if scene_manager.current_sequence.is_single_frame then
             DirkSimple.show_single_frame(start_time)
         else
             DirkSimple.start_clip(start_time)
         end
-        current_sequence_tick_offset = 0
+        scene_manager.current_sequence_tick_offset = 0
     end
 end
 
@@ -82,8 +76,8 @@ local function start_scene(scenename, is_resurrection)
         sequencename = "start_alive"
     end
 
-    current_scene_name = scenename
-    current_scene = scenes[scenename]
+    scene_manager.current_scene_name = scenename
+    scene_manager.current_scene = scenes[scenename]
     start_sequence(sequencename)
 end
 
@@ -93,59 +87,133 @@ end
 
 local function game_over(won)
     DirkSimple.log("Game over!")
-    if (current_scene ~= nil) and (current_scene.game_over ~= nil) then
-        start_sequence(current_scene.game_over)
+    if (scene_manager.current_scene ~= nil) and (scene_manager.current_scene.game_over ~= nil) then
+        start_sequence(scene_manager.current_scene.game_over)
     else
         start_attract_mode(true)
     end
 end
 
 local function choose_next_scene(is_resurrection)
-    -- this is obviously going to get more complex later.
-
     if test_scene_name ~= nil then
         lives_left = 99
         start_scene(test_scene_name, is_resurrection)
         return
     end
 
-    -- intro must be played first.
-    --  (!!! FIXME: if we add back in the drawbridge, do we want this to
-    --  require it be _completed_ first?
-    if scene_manager["introduction"] == 0 then
-        start_scene("introduction", is_resurrection)
-        return
-    end
+    -- Mark current scene as a success or failure.
+    if scene_manager.current_scene ~= nil then
+        -- Intro just needs to be marked as done.
+        if scene_manager.current_scene_name == "introduction" then
+            scene_manager.completed_introduction = true
 
-    local eligible = {}
-    for name,completed in pairs(scene_manager) do
-        if completed == 0 and name ~= current_scene_name then
-            eligible[#eligible+1] = name
+        -- have we been through all the scenes except the_dragons_lair? You have to go back and survive the ones you previously failed.
+        elseif scene_manager.rerunning_failures then
+            -- beat the scene? Take it out of the failed list.
+            if not is_resurrection then
+                for i = 1, scene_manager.total_failed-1, 1 do
+                    scene_manager.failed[i] = scene_manager.failed[i + 1]
+                end
+                scene_manager.failed[scene_manager.total_failed] = nil
+                scene_manager.total_failed = scene_manager.total_failed - 1
+            end
+
+            if scene_manager.total_failed == 0 then
+                scene_manager.rerunning_failures = false
+            end
+
+        else
+            if is_resurrection then
+                if scene_manager.total_failed < 8 then   -- the arcade version only queues up to 8 failed levels, which is only a limit if you have it set to infinite lives.
+                    scene_manager.total_failed = scene_manager.total_failed + 1
+                    scene_manager.failed[scene_manager.total_failed] = scene_manager.current_scene_name
+                end
+            end
+
+            -- bump to the next row (or, if at the end of the rows, bump to the next cycle).
+            scene_manager.current_row = scene_manager.current_row + 1
+            if scene_manager.current_row > #scene_manager.rows then
+                scene_manager.current_row = 1
+                if scene_manager.current_cycle < #scene_manager.rows[1] then
+                    scene_manager.current_cycle = scene_manager.current_cycle + 1
+                end
+            end
         end
     end
 
-    if #eligible == 0 then   -- have we completed all the scenes?
-        game_over(true)
+    -- intro must be played first.
+    --  (!!! FIXME: if we add back in the drawbridge, do we want this to require it be _completed_ first?
+    if not scene_manager.completed_introduction then
+        start_scene("introduction", is_resurrection)
+
+    -- If rerunning failures, always pick the start of the list to play next.
+    -- This means that if you fail during the rerunning phase, you _must_ retry that room immediately.
+    elseif (scene_manager.rerunning_failures) and (scene_manager.total_failed > 0) then
+        start_scene(scene_manager.failed[1], is_resurrection)
+
+    -- did we beat the game?
+    elseif (not is_resurrection) and (scene_manager.current_scene_name == "the_dragons_lair") then
+        game_over(true)  -- you beat the game!
+
+    -- The normal scene choosing logic for everything else.
     else
-        start_scene(eligible[(current_ticks % #eligible) + 1], is_resurrection)
+        -- if we're at the last row of the cycle, there are special rules: you _must_ play
+        --  falling_platform_long in the first cycle, falling_platform_long_reverse in the
+        --  second, and the_dragons_lair third (and that, only once all other levels are survived).
+        if scene_manager.current_row == #scene_manager.rows then
+            -- are we at the final level? Make sure everything else was beaten before we let the player in.
+            if (scene_manager.current_cycle == #scene_manager.rows[scene_manager.current_row]) and (scene_manager.total_failed > 0) then
+                scene_manager.rerunning_failures = true
+                start_scene(scene_manager.failed[1], is_resurrection)
+            else
+                start_scene(scene_manager.rows[scene_manager.current_row][scene_manager.current_cycle], is_resurrection)
+            end
+        else
+            -- choose from scenes in the current row that have not been run before.
+            local eligible = {}
+            local eligible_columns = {}
+            for i,name in ipairs(scene_manager.rows[scene_manager.current_row]) do
+                if not scene_manager.chosen[scene_manager.current_row][i] then
+                    eligible[#eligible+1] = name
+                    eligible_columns[#eligible_columns+1] = i;
+                end
+            end
+
+            local choice = (current_ticks % #eligible) + 1
+            scene_manager.chosen[scene_manager.current_row][eligible_columns[choice]] = true
+            start_scene(eligible[choice], is_resurrection)
+        end
     end
 end
 
 local function setup_scene_manager()
-    -- this is obviously going to get more complex later.
-    scene_manager = {}
-    for name,scene in pairs(scenes) do
-        if name ~= 'attract_mode' then  -- don't put attract mode in the game's scene list.
-           scene_manager[name] = 0
+DirkSimple.log("SETUP SCENE MANAGER")
+    scene_manager.initialized = true
+    scene_manager.completed_introduction = false
+    scene_manager.current_scene = nil
+    scene_manager.current_scene_name = nil
+    scene_manager.current_sequence = nil
+    scene_manager.current_sequence_ticks = 0
+    scene_manager.current_sequence_tick_offset = 0
+    scene_manager.current_row = 1
+    scene_manager.current_cycle = 1
+    scene_manager.chosen = {}
+    scene_manager.total_failed = 0
+    scene_manager.failed = {}
+
+    for i,v in ipairs(scene_manager.rows) do
+        scene_manager.chosen[i] = {}
+        for j,v2 in ipairs(v) do
+            scene_manager.chosen[i][j] = false
         end
     end
 end
 
 local function start_game()
     DirkSimple.log("Start game!")
+    setup_scene_manager()
     lives_left = starting_lives
     current_score = 0
-    setup_scene_manager()
     choose_next_scene(false)
 end
 
@@ -167,14 +235,14 @@ local function check_actions(inputs)
     end
 
 
-    local actions = current_sequence.actions
+    local actions = scene_manager.current_sequence.actions
     if actions ~= nil then
         for i,v in ipairs(actions) do
             -- ignore if not in the time window for this input.
-            if (current_sequence_ticks >= v.from) and (current_sequence_ticks <= v.to) then
+            if (scene_manager.current_sequence_ticks >= v.from) and (scene_manager.current_sequence_ticks <= v.to) then
                 local input = v.input
                 if inputs.pressed[input] then  -- we got one!
-                    DirkSimple.log("accepted action '" .. input .. "' at " .. tostring(current_sequence_ticks / 1000.0))
+                    DirkSimple.log("accepted action '" .. input .. "' at " .. tostring(scene_manager.current_sequence_ticks / 1000.0))
                     accepted_input = v
                     return true
                 end
@@ -188,7 +256,7 @@ end
 
 local function check_timeout()
     local done_with_sequence = false
-    if current_sequence_ticks >= current_sequence.timeout.when then  -- whole sequence has run to completion.
+    if scene_manager.current_sequence_ticks >= scene_manager.current_sequence.timeout.when then  -- whole sequence has run to completion.
         done_with_sequence = true
     elseif (accepted_input ~= nil) and accepted_input.interrupt ~= nil then  -- If interrupting, forego the timeout.
         done_with_sequence = true
@@ -204,7 +272,7 @@ local function check_timeout()
     if accepted_input ~= nil then
         outcome = accepted_input
     else
-        outcome = current_sequence.timeout
+        outcome = scene_manager.current_sequence.timeout
     end
 
     if outcome.points ~= nil then
@@ -216,10 +284,9 @@ local function check_timeout()
     elseif outcome.nextsequence ~= nil then  -- end of scene?
         start_sequence(outcome.nextsequence)
     else
-        if current_sequence.kills_player then
+        if scene_manager.current_sequence.kills_player then
             kill_player()  -- will update state, start new scene.
         else
-            scene_manager[current_scene_name] = scene_manager[current_scene_name] + 1
             choose_next_scene(false)
         end
     end
@@ -228,29 +295,32 @@ local function check_timeout()
     -- waiting for the next tick, since it's just trying to set up some state before an actual
     -- sequence and we don't want the video to move ahead in a completed sequence or progress
     -- before the actual sequence is ticking.
-    if current_sequence.timeout.when == 0 then
+    if scene_manager.current_sequence.timeout.when == 0 then
         check_timeout()
     end
 end
 
-standard_tick = function(ticks, sequenceticks, inputs)
+DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
-    current_sequence_ticks = sequenceticks - current_sequence_tick_offset
-    --DirkSimple.log("LUA TICK(ticks=" .. tostring(current_ticks) .. ", sequenceticks=" .. tostring(current_sequence_ticks) .. ")")
-    if current_sequence == nil then
+
+    if not scene_manager.initialized then
+        setup_scene_manager()
+    end
+
+    scene_manager.current_sequence_ticks = sequenceticks - scene_manager.current_sequence_tick_offset
+    --DirkSimple.log("LUA TICK(ticks=" .. tostring(current_ticks) .. ", sequenceticks=" .. tostring(scene_manager.current_sequence_ticks) .. ")")
+
+    if scene_manager.current_sequence == nil then
         start_attract_mode(false)
     end
+
     check_actions(inputs)   -- check inputs before timeout, in case an input came through at the last possible moment, even if we're over time.
     check_timeout()
 end
 
--- Start with standard_tick, but other things might override it later.
-DirkSimple.tick = standard_tick
-
-
 
 -- The scene table!
--- http://www.dragons-lair-project.com/games/related/sequence.asp
+-- http://www.dragons-lair-project.com/games/related/walkthru/lair/easy.asp
 scenes = {
     attract_mode = {
         start_alive = {
@@ -1582,111 +1652,7 @@ scenes = {
         },
     },
 
-    bubbling_cauldron = {
-        start_alive = {
-            start_time = time_laserdisc_noseek(),
-            timeout = { when=0, nextsequence="enter_room", points = 49 }
-         },
-
-        enter_room = {
-            start_time = time_laserdisc_frame(5123),
-            timeout = { when=time_to_ms(2, 753), nextsequence="seq9" },
-            actions = {
-                { input="up", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq3", points=2191 },
-                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
-                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
-                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
-            }
-        },
-
-        start_dead = {
-            start_time = time_laserdisc_frame(5067),
-            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
-        },
-
-        seq2 = {
-            start_time = time_laserdisc_frame(5123),
-            timeout = { when=time_to_ms(2, 753), nextsequence="seq9" },
-            actions = {
-                { input="up", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq3", points=2191 },
-                { input="down", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
-                { input="right", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
-                { input="left", from=time_to_ms(1, 966), to=time_to_ms(2, 720), nextsequence="seq9" },
-            }
-        },
-
-        seq3 = {
-            start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 523), nextsequence="seq8" },
-            actions = {
-                { input="action", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq4", points=3255 },
-                { input="up", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
-                { input="down", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq9" },
-                { input="right", from=time_to_ms(1, 835), to=time_to_ms(2, 720), nextsequence="seq9" },
-                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
-                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
-            }
-        },
-
-        seq4 = {
-            start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 409), nextsequence="seq9" },
-            actions = {
-                { input="down", from=time_to_ms(0, 557), to=time_to_ms(1, 376), nextsequence="seq5", points=3255 },
-                { input="downright", from=time_to_ms(0, 557), to=time_to_ms(1, 376), nextsequence="seq5", points=3255 },
-                { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
-                { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
-                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 409), nextsequence="seq9" },
-            }
-        },
-
-        seq5 = {
-            start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 737), nextsequence="seq10" },
-            actions = {
-                { input="action", from=time_to_ms(0, 655), to=time_to_ms(1, 737), nextsequence="seq6", points=2191 },
-                { input="up", from=time_to_ms(0, 655), to=time_to_ms(1, 737), nextsequence="seq10" },
-                { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 262), nextsequence="seq10" },
-                { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
-            }
-        },
-
-        seq6 = {
-            start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 949), nextsequence="seq9" },
-            actions = {
-                { input="right", from=time_to_ms(1, 802), to=time_to_ms(2, 916), nextsequence="seq7", points=1326 },
-                { input="up", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq9" },
-                { input="left", from=time_to_ms(0, 0), to=time_to_ms(2, 949), nextsequence="seq9" },
-            }
-        },
-
-        seq7 = {
-            start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 557), nextsequence=nil }
-        },
-
-        seq8 = {
-            start_time = time_laserdisc_frame(5423),
-            kills_player = true,
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
-        },
-
-        seq9 = {
-            start_time = time_laserdisc_frame(5459),
-            kills_player = true,
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
-        },
-
-        seq10 = {
-            start_time = time_laserdisc_frame(5513),
-            kills_player = true,
-            timeout = { when=time_to_ms(0, 885), nextsequence=nil }
-        },
-
-    },
-
-    ["Black Knight on Horse"] = {
+    black_knight = {
         start_dead = {
             start_time = time_laserdisc_frame(25480),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -1760,11 +1726,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 343), nextsequence=nil }
         },
-
     },
 
-
-    ["Bubbling Cauldron"] = {
+    bubbling_cauldron = {
         start_dead = {
             start_time = time_laserdisc_frame(5067),
             timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
@@ -1868,8 +1832,7 @@ scenes = {
 
     },
 
-
-    ["Catwalk Bats"] = {
+    catwalk_bats = {
         start_dead = {
             start_time = time_laserdisc_frame(12133),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -1963,10 +1926,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 195), nextsequence=nil }
         },
-
     },
 
-    ["Crypt Creeps (Mirrored)"] = {
+    crypt_creeps_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(18606),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -2089,10 +2051,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 458), nextsequence=nil }
         },
-
     },
 
-    ["Electric Cage - Geyser"] = {
+    electric_cage_and_geyser = {
         start_dead = {
             start_time = time_laserdisc_frame(26723),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -2175,10 +2136,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 180), nextsequence=nil }
         },
-
     },
 
-    ["Falling Platform - 9 Levels (Mirrored)"] = {
+    falling_platform_long_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(21904),
             timeout = { when=time_to_ms(2, 294), nextsequence="seq2", points=49 }
@@ -2298,7 +2258,7 @@ scenes = {
 
     },
 
-    ["Flaming Ropes (Mirrored)"] = {
+    flaming_ropes_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(12669),
             timeout = { when=time_to_ms(2, 228), nextsequence="seq2", points=49 }
@@ -2405,7 +2365,7 @@ scenes = {
 
     },
 
-    ["Flattening Staircase"] = {
+    flattening_staircase = {
         start_dead = {
             start_time = time_laserdisc_frame(6283),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -2494,7 +2454,7 @@ scenes = {
 
     },
 
-    ["Flying Horse Barding (Mirrored)"] = {
+    flying_horse_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(16488),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -2614,10 +2574,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 180), nextsequence=nil }
         },
-
     },
 
-    ["Giant Bat"] = {
+    giant_bat = {
         start_dead = {
             start_time = time_laserdisc_frame(14231),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -2709,10 +2668,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 180), nextsequence=nil }
         },
-
     },
 
-    ["Grim Reaper"] = {
+    grim_reaper = {
         start_dead = {
             start_time = time_laserdisc_frame(7829),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -2810,10 +2768,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 180), nextsequence=nil }
         },
-
     },
 
-    ["Grim Reaper (Mirrored)"] = {
+    grim_reaper_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(19306),
             timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
@@ -2912,10 +2869,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 147), nextsequence=nil }
         },
-
     },
 
-    ["Lizard King"] = {
+    lizard_king = {
         start_dead = {
             start_time = time_laserdisc_frame(17208),
             timeout = { when=time_to_ms(1, 933), nextsequence="seq2", points=49 }
@@ -3076,10 +3032,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 130), nextsequence=nil }
         },
-
     },
 
-    ["Mudmen"] = {
+    mudmen = {
         start_dead = {
             start_time = time_laserdisc_frame(24322),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -3252,10 +3207,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 671), nextsequence=nil }
         },
-
     },
 
-    ["Pool of Water"] = {
+    yellow_brick_road = {
         start_dead = {
             start_time = time_laserdisc_frame(4083),
             timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
@@ -3414,10 +3368,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 195), nextsequence=nil }
         },
-
     },
 
-    ["Pool of Water (Mirrored)"] = {
+    yellow_brick_road_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(13247),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -3573,10 +3526,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 195), nextsequence=nil }
         },
-
     },
 
-    ["Robot Knight on Checkered Floor"] = {
+    robot_knight = {
         start_dead = {
             start_time = time_laserdisc_frame(10685),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -3676,10 +3628,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 16), nextsequence=nil }
         },
-
     },
 
-    ["Robot Knight on Checkered Floor (Mirrored)"] = {
+    robot_knight_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(21156),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -3803,10 +3754,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(1, 16), nextsequence=nil }
         },
-
     },
 
-    ["Room of Fire - Bench Covers Exit"] = {
+    fire_room = {
         start_dead = {
             start_time = time_laserdisc_frame(9473),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -3886,10 +3836,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(0, 655), nextsequence=nil }
         },
-
     },
 
-    ["Smithee"] = {
+    smithee = {
         start_dead = {
             start_time = time_laserdisc_frame(6911),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -4004,10 +3953,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 327), nextsequence=nil }
         },
-
     },
 
-    ["Smithee (Mirrored)"] = {
+    smithee_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(15570),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -4131,10 +4079,9 @@ scenes = {
             kills_player = true,
             timeout = { when=time_to_ms(2, 327), nextsequence=nil }
         },
-
     },
 
-    ["Snake Room"] = {
+    snake_room = {
         start_dead = {
             start_time = time_laserdisc_frame(3041),
             timeout = { when=time_to_ms(1, 933), nextsequence="seq2", points=49 }
@@ -4206,10 +4153,9 @@ scenes = {
                 { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 721), nextsequence="seq5", points=1939 },
             }
         },
-
     },
 
-    ["The Dragon's Lair"] = {
+    the_dragons_lair = {
         start_dead = {
             start_time = time_laserdisc_frame(28882),
             timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
@@ -4381,7 +4327,25 @@ scenes = {
             timeout = { when=time_to_ms(1, 638), nextsequence=nil }
         },
     }
+}
 
+
+-- http://www.dragons-lair-project.com/games/related/sequence.asp
+scene_manager = {
+    -- there are thirteen rows of three scenes each.
+    rows = {
+        { 'flaming_ropes', 'flaming_ropes_reversed', 'bower' },
+        { 'flying_horse', 'flying_horse_reversed', 'alice_room' },
+        { 'crypt_creeps', 'crypt_creeps_reversed', 'underground_river' },
+        { 'falling_platform_short', 'falling_platform_short', 'vestibule' },
+        { 'rolling_balls', 'electric_cage_and_geyser', 'black_knight' },
+        { 'smithee', 'smithee_reversed', 'wind_room' },
+        { 'tentacle_room', 'snake_room', 'bubbling_cauldron' },
+        { 'flattening_stairs', 'giddy_goons', 'fire_room' },
+        { 'yellow_brick_road', 'yellow_brick_road_reversed', 'giant_bat' },
+        { 'throne_room', 'tilting_room', 'mudmen' },
+        { 'falling_platform_long', 'falling_platform_long_reversed', 'the_dragons_lair' }
+    }
 }
 
 -- end of lair.lua ...
