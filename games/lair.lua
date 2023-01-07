@@ -18,9 +18,11 @@ local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
 
 
 -- GAME STATE
+local infinite_lives = false
 local lives_left = 0
 local current_score = 0
 local current_ticks = 0
+local current_inputs = nil
 local accepted_input = nil
 local scene_manager = nil
 
@@ -96,7 +98,7 @@ end
 
 local function choose_next_scene(is_resurrection)
     if test_scene_name ~= nil then
-        lives_left = 99
+        infinite_lives = true
         start_scene(test_scene_name, is_resurrection)
         return
     end
@@ -214,14 +216,24 @@ local function start_game()
     setup_scene_manager()
     lives_left = starting_lives
     current_score = 0
+
+    -- Did you know this gives you infinite lives on any Dragon's Lair arcade
+    -- cabinet, regardless of dip switch settings? Would have been nice to
+    -- know when this cost a dollar per run!
+    infinite_lives = (current_inputs.held["up"] and current_inputs.held["left"])
+
     choose_next_scene(false)
 end
 
 local function kill_player()
-    if lives_left > 0 then
+    if infinite_lives then
+        lives_left = starting_lives
+    elseif lives_left > 0 then
         lives_left = lives_left - 1
     end
+
     DirkSimple.log("Killing player (lives now left=" .. lives_left .. ")")
+
     if lives_left == 0 then
         game_over(false)
     else
@@ -233,7 +245,6 @@ local function check_actions(inputs)
     if accepted_input ~= nil then
         return true  -- ignore all input until end of sequence.
     end
-
 
     local actions = scene_manager.current_sequence.actions
     if actions ~= nil then
@@ -304,6 +315,7 @@ end
 
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
+    current_inputs = inputs
 
     if not scene_manager.initialized then
         setup_scene_manager()
