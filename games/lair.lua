@@ -260,6 +260,8 @@ local function check_timeout()
         done_with_sequence = true
     elseif (accepted_input ~= nil) and accepted_input.interrupt ~= nil then  -- If interrupting, forego the timeout.
         done_with_sequence = true
+    elseif (accepted_input ~= nil) and (accepted_input.nextsequence ~= nil) and (scene_manager.current_scene[accepted_input.nextsequence].start_time ~= time_laserdisc_noseek()) then  -- If action leads to a laserdisc seek, forego the timeout.
+        done_with_sequence = true
     end
 
     if not done_with_sequence then
