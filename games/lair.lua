@@ -4355,7 +4355,7 @@ scene_manager = {
         { 'rolling_balls', 'electric_cage_and_geyser', 'black_knight' },
         { 'smithee', 'smithee_reversed', 'wind_room' },
         { 'tentacle_room', 'snake_room', 'bubbling_cauldron' },
-        { 'flattening_stairs', 'giddy_goons', 'fire_room' },
+        { 'flattening_staircase', 'giddy_goons', 'fire_room' },
         { 'yellow_brick_road', 'yellow_brick_road_reversed', 'giant_bat' },
         { 'throne_room', 'tilting_room', 'mudmen' },
         { 'falling_platform_long', 'falling_platform_long_reversed', 'the_dragons_lair' }
