@@ -4353,6 +4353,7 @@ scene_manager = {
         { 'crypt_creeps', 'crypt_creeps_reversed', 'underground_river' },
         { 'falling_platform_short', 'falling_platform_short', 'vestibule' },
         { 'rolling_balls', 'electric_cage_and_geyser', 'black_knight' },
+        { 'grim_reaper', 'grim_reaper_reversed', 'lizard_king' },
         { 'smithee', 'smithee_reversed', 'wind_room' },
         { 'tentacle_room', 'snake_room', 'bubbling_cauldron' },
         { 'flattening_staircase', 'giddy_goons', 'fire_room' },
