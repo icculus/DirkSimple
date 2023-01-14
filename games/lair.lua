@@ -14,7 +14,8 @@ local starting_lives = 3
 -- SOME INITIAL SETUP STUFF
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "crypt_creeps_reversed"
+--test_scene_name = "bower"
+local edit_rooms = true
 
 -- GAME STATE
 local infinite_lives = false
@@ -247,6 +248,10 @@ local function check_actions(inputs)
     local actions = scene_manager.current_sequence.actions
     if actions ~= nil then
         for i,v in ipairs(actions) do
+if v.points ~= nil then
+    accepted_input = v
+    return true
+end
             -- ignore if not in the time window for this input.
             if (scene_manager.current_sequence_ticks >= v.from) and (scene_manager.current_sequence_ticks <= v.to) then
                 local input = v.input
@@ -311,9 +316,128 @@ local function check_timeout()
     end
 end
 
+-- this is kinda hacky, but I wanted to be able to step frame-by-frame to find the actual timeout of a sequence, which
+-- is apparently underestimated by the ROM data table (to give it time to transmit a new seek command to the player?)
+local function gen_tick_editor()
+    local one_frame_ms = laserdisc_frame_to_ms(1)
+    local half_frame_ms = laserdisc_frame_to_ms(1)
+    local ten_frame_ms = laserdisc_frame_to_ms(10)
+    local editing_scene_name = nil
+    local editing_scene = nil
+    local editing_sequence_name = nil
+    local editing_sequence = nil
+    local editing_ms = 0
+    local editing_scene_idx = 0
+    local start_ms = 0
+    local scenelist = {}
+    local sequencelist = {}
+
+    for i,row in ipairs(scene_manager.rows) do
+        for j,name in ipairs(row) do
+            scenelist[#scenelist+1] = name
+        end
+    end
+
+    local next_sequence = nil
+    next_sequence = function()
+        editing_scene_idx = editing_scene_idx + 1
+        editing_scene_name = scenelist[editing_scene_idx]
+        if editing_scene_name == nil then
+            return nil  -- ran out of new things
+        end
+        editing_scene = scenes[editing_scene_name]
+        editing_sequence_name = 'start_alive'
+        editing_sequence = editing_scene[editing_sequence_name]
+
+        start_ms = editing_sequence.start_time
+        while editing_sequence.timeout.nextsequence ~= nil do
+DirkSimple.log("Looking at " .. editing_scene_name .. "." .. editing_sequence_name)
+            if editing_sequence.start_time ~= nil and editing_sequence.start_time ~= -1 then
+                start_ms = editing_sequence.start_time
+            end
+
+            local actions = editing_sequence.actions
+            if actions == nil then
+                start_ms = start_ms + editing_sequence.timeout.when
+                editing_sequence_name = editing_sequence.timeout.nextsequence
+                editing_sequence = editing_scene[editing_sequence_name]
+            else
+                for i,v in ipairs(actions) do
+                    if v.points ~= nil then
+                        start_ms = start_ms + editing_sequence.timeout.when
+                        editing_sequence_name = v.nextsequence
+                        editing_sequence = editing_scene[editing_sequence_name]
+                        break
+                    end
+                end
+            end
+        end
+
+        DirkSimple.log("Landed at possible exit room " .. editing_scene_name .. "." .. editing_sequence_name .. " with a start time of " .. start_ms .. "ms")
+
+        editing_ms = start_ms + editing_sequence.timeout.when
+        editing_ms = (editing_ms - (editing_ms % one_frame_ms)) + half_frame_ms
+        DirkSimple.log("Now editing " .. editing_scene_name .. "." .. editing_sequence_name .. ", starting at " .. editing_ms .. "ms")
+        DirkSimple.show_single_frame(editing_ms)
+
+        return editing_sequence_name, editing_sequence
+    end
+
+    next_sequence()
+
+    return function()
+        if editing_sequence_name == nil then
+            DirkSimple.log("Ran out of scenes to edit!")
+            edit_rooms = false  -- we ran out of stuff, turn off the editor.
+            return
+        end
+
+        if current_inputs.pressed["left"] then
+            editing_ms = editing_ms - one_frame_ms
+            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["right"] then
+            editing_ms = editing_ms + one_frame_ms
+            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["down"] then
+            editing_ms = editing_ms - ten_frame_ms
+            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["up"] then
+            editing_ms = editing_ms + ten_frame_ms
+            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["action"] then
+            local timeout = editing_ms - start_ms
+            local secs = (timeout / 1000)
+            local ms = (timeout % 1000)
+            secs = secs - (secs % 1)
+            ms = ms - (ms % 1)
+            secs = string.format("%.0f", secs)
+            ms = string.format("%.0f", ms)
+            DirkSimple.log("TIMEOUT for " .. editing_scene_name .. "." .. editing_sequence_name .. " is " .. timeout .. "   --   time_to_ms(" .. secs .. ", " .. ms .. ")")
+            DirkSimple.log("************ Moving on to next sequence! ************");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            next_sequence()
+        end
+    end
+end
+
+local tick_editor = nil
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
     current_inputs = inputs
+
+    if edit_rooms then
+        if tick_editor == nil then
+            tick_editor = gen_tick_editor()
+        end
+        tick_editor()
+        return
+    end
 
     if not scene_manager.initialized then
         setup_scene_manager()
@@ -486,7 +610,7 @@ scenes = {
 
         exit_room = {  -- player reaches exit platform
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 84), nextsequence=nil },
+            timeout = { when=time_to_ms(0, 792), nextsequence=nil },
         },
 
         misses_landing = {  -- player landed on exit platform, but fell backwards
@@ -610,7 +734,7 @@ scenes = {
 
         exit_room = {  -- player reaches the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 459), nextsequence=nil },
+            timeout = { when=time_to_ms(0, 557), nextsequence=nil },
         },
     },
 
@@ -655,7 +779,7 @@ scenes = {
 
         exit_room = {  -- player reaches the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 409), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 922), nextsequence=nil },
         }
     },
 
@@ -877,7 +1001,7 @@ scenes = {
 
         exit_room = {  -- player kills ghouls, heads through the exit
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(4, 227), nextsequence=nil },
+            timeout = { when=time_to_ms(4, 257), nextsequence=nil },
         },
 
         overpowered_by_skulls = {  -- skulls got the player while drawing sword
@@ -986,7 +1110,7 @@ scenes = {
 
         exit_room = {  -- player crash lands safely, exits room.
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(5, 50), nextsequence=nil },
+            timeout = { when=time_to_ms(5, 41), nextsequence=nil },
         },
 
         burned_to_death = {  -- player ran into the wall of flames
@@ -1055,13 +1179,15 @@ scenes = {
             }
         },
 
+        -- the original ROM gives no points for passing this sequence, probably because you can do nothing and win on autopilot.
+        -- Interestingly, Digital Leisure's current version on Steam doesn't have goons to kill at the top of the stairs, either. Not sure what happened there.
         kill_upper_goons = {  -- Player kills the goons at the top of the stairs.
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 606), nextsequence="exit_room" },
+            timeout = { when=time_to_ms(1, 606), nextsequence="exit_room", points=0 },
             actions = {
                 -- The ROM has an "UpLeft" action here, but it matches its separate "Up" and "Left" entries.
-                { input="up", from=time_to_ms(0, 852), to=time_to_ms(1, 540), nextsequence="exit_room" },
-                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 540), nextsequence="exit_room" },
+                { input="up", from=time_to_ms(0, 852), to=time_to_ms(1, 540), nextsequence="exit_room", points=0 },
+                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 540), nextsequence="exit_room", points=0 },
                 { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 606), nextsequence="fight_off_one_before_swarm" },
                 { input="action", from=time_to_ms(0, 786), to=time_to_ms(1, 573), nextsequence="fight_off_one_before_swarm" },
             }
@@ -1069,7 +1195,7 @@ scenes = {
 
         exit_room = {  -- player heads for the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 835), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 842), nextsequence=nil },
         },
 
         knife_in_back = {  -- player gets a knife in the back
@@ -1182,7 +1308,7 @@ scenes = {
 
         exit_room = {  -- player heads for the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 28), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 66), nextsequence=nil },
         },
 
         left_tentacle_grabs = {  -- player gets grabbed by first tentacle in the room.
@@ -1255,7 +1381,7 @@ scenes = {
 
         exit_room = {  -- player heads for the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 255), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 400), nextsequence=nil },
         },
 
         catches_fire = {  -- player catches fire
@@ -1334,7 +1460,7 @@ scenes = {
 
         exit_room = {  -- player heads for the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 980), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 932), nextsequence=nil },
         },
 
         electrified_sword = {   -- player grabs sword, gets zapped
@@ -1519,7 +1645,7 @@ scenes = {
 
         exit_room = {  -- player heads for the door
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 980), nextsequence=nil },
+            timeout = { when=time_to_ms(3, 65), nextsequence=nil },
         },
 
         boulders_crash = {
@@ -1646,9 +1772,8 @@ scenes = {
         },
 
         exit_room = {  -- player heads for the door
-            -- !!! FIXME: RomSpinner reported bogus data for this, so check these timings.
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 980), nextsequence=nil },
+            timeout = { when=time_to_ms(2, 320), nextsequence=nil },
         },
 
         small_ball_crushes = {  -- player gets sideswiped by a smaller, colorful ball
@@ -1718,7 +1843,7 @@ scenes = {
 
         seq5 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 868), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 445), nextsequence=nil }
         },
 
         seq6 = {
@@ -1821,7 +1946,7 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 557), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 140), nextsequence=nil }
         },
 
         seq8 = {
@@ -1924,7 +2049,7 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 958), nextsequence=nil }
         },
 
         seq8 = {
@@ -2031,7 +2156,7 @@ scenes = {
 
         seq8 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(4, 162), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 453), nextsequence=nil }
         },
 
         seq9 = {
@@ -2128,7 +2253,7 @@ scenes = {
 
         seq5 = {
             start_time = time_laserdisc_frame(27025),
-            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 714), nextsequence=nil }
         },
 
         seq6 = {
@@ -2322,7 +2447,7 @@ scenes = {
             timeout = { when=time_to_ms(1, 573), nextsequence="seq8" },
             actions = {
                 { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 81), nextsequence="seq9" },
-                { input="left", from=time_to_ms(1, 81), to=time_to_ms(1, 835), nextsequence="seq5" },
+                { input="left", from=time_to_ms(1, 81), to=time_to_ms(1, 835), nextsequence="seq5", points=0 },  -- I assume this is a bug in the original ROM, but this correct move gets you no points!
                 { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
                 { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
                 { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 835), nextsequence="seq9" },
@@ -2334,7 +2459,7 @@ scenes = {
             timeout = { when=time_to_ms(1, 501), nextsequence="seq7" },
             actions = {
                 { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 852), nextsequence="seq9" },
-                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 704), nextsequence="seq6" },
+                { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 704), nextsequence="seq6", points=0 },  -- I assume this is a bug in the original ROM, but this correct move gets you no points!
                 { input="up", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
                 { input="down", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
                 { input="right", from=time_to_ms(0, 0), to=time_to_ms(1, 737), nextsequence="seq9" },
@@ -2343,7 +2468,7 @@ scenes = {
 
         seq6 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 49), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 57), nextsequence=nil }
         },
 
         seq7 = {
@@ -2436,7 +2561,7 @@ scenes = {
 
         seq6 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 114), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 14), nextsequence=nil }
         },
 
         seq7 = {
@@ -2566,7 +2691,7 @@ scenes = {
 
         seq8 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(4, 555), nextsequence=nil }
+            timeout = { when=time_to_ms(5, 8), nextsequence=nil },
         },
 
         seq9 = {
@@ -2655,7 +2780,7 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 114), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 757), nextsequence=nil }
         },
 
         seq8 = {
@@ -2760,7 +2885,7 @@ scenes = {
 
         seq6 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 164), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 673), nextsequence=nil }
         },
 
         seq7 = {
@@ -2861,7 +2986,7 @@ scenes = {
 
         seq6 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 492), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 875), nextsequence=nil }
         },
 
         seq7 = {
@@ -2977,54 +3102,57 @@ scenes = {
             }
         },
 
+        -- once you recover your sword and attack, no more points are awarded in this level in the original ROM,
+        --  probably because after this sequence there are still right and wrong moves, but just not touching
+        --  anything will let you survive the level on autopilot.
         seq9 = {
             start_time = time_laserdisc_noseek(),
             timeout = { when=time_to_ms(1, 573), nextsequence="seq15" },
             actions = {
-                { input="action", from=time_to_ms(0, 819), to=time_to_ms(1, 540), nextsequence="seq10" },
+                { input="action", from=time_to_ms(0, 819), to=time_to_ms(1, 540), nextsequence="seq10", points=0 },
                 { input="down", from=time_to_ms(0, 819), to=time_to_ms(1, 540), nextsequence="seq15" },
             }
         },
 
         seq10 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 950), nextsequence="seq11" },
+            timeout = { when=time_to_ms(0, 950), nextsequence="seq11", points=0 },
             actions = {
-                { input="action", from=time_to_ms(0, 328), to=time_to_ms(0, 950), nextsequence="seq11" },
-                { input="down", from=time_to_ms(0, 328), to=time_to_ms(0, 950), nextsequence="seq11" },
+                { input="action", from=time_to_ms(0, 328), to=time_to_ms(0, 950), nextsequence="seq11", points=0 },
+                { input="down", from=time_to_ms(0, 328), to=time_to_ms(0, 950), nextsequence="seq11", points=0 },
             }
         },
 
         seq11 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 16), nextsequence="seq12" },
+            timeout = { when=time_to_ms(1, 16), nextsequence="seq12", points=0 },
             actions = {
-                { input="action", from=time_to_ms(0, 164), to=time_to_ms(0, 983), nextsequence="seq12" },
+                { input="action", from=time_to_ms(0, 164), to=time_to_ms(0, 983), nextsequence="seq12", points=0 },
             }
         },
 
         seq12 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(0, 918), nextsequence="seq13" },
+            timeout = { when=time_to_ms(0, 918), nextsequence="seq13", points=0 },
             actions = {
-                { input="action", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq13" },
+                { input="action", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq13", points=0 },
                 { input="right", from=time_to_ms(0, 0), to=time_to_ms(0, 918), nextsequence="seq17" },
-                { input="down", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq13" },
+                { input="down", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq13", points=0 },
                 { input="left", from=time_to_ms(0, 492), to=time_to_ms(0, 918), nextsequence="seq15" },
             }
         },
 
         seq13 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 114), nextsequence="seq14" },
+            timeout = { when=time_to_ms(1, 114), nextsequence="seq14", points=0 },
             actions = {
-                { input="action", from=time_to_ms(0, 557), to=time_to_ms(1, 81), nextsequence="seq14" },
+                { input="action", from=time_to_ms(0, 557), to=time_to_ms(1, 81), nextsequence="seq14", points=0 },
             }
         },
 
         seq14 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(4, 719), nextsequence=nil }
+            timeout = { when=time_to_ms(5, 238), nextsequence=nil }
         },
 
         seq15 = {
@@ -3187,7 +3315,7 @@ scenes = {
 
         seq11 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 720), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 421), nextsequence=nil }
         },
 
         seq12 = {
@@ -3342,7 +3470,7 @@ scenes = {
 
         seq11 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 225), nextsequence=nil }
         },
 
         seq12 = {
@@ -3500,7 +3628,7 @@ scenes = {
 
         seq11 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 693), nextsequence=nil }
         },
 
         seq12 = {
@@ -3626,7 +3754,7 @@ scenes = {
 
         seq10 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(3, 441), nextsequence=nil }
+            timeout = { when=time_to_ms(5, 676), nextsequence=nil }
         },
 
         seq11 = {
@@ -3752,7 +3880,7 @@ scenes = {
 
         seq10 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(3, 441), nextsequence=nil }
+            timeout = { when=time_to_ms(5, 438), nextsequence=nil }
         },
 
         seq11 = {
@@ -3835,7 +3963,7 @@ scenes = {
 
         seq6 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 913), nextsequence=nil }
         },
 
         seq7 = {
@@ -3927,7 +4055,7 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(3, 736), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 269), nextsequence=nil }
         },
 
         seq8 = {
@@ -4053,7 +4181,7 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(3, 736), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 987), nextsequence=nil }
         },
 
         seq8 = {
@@ -4142,7 +4270,7 @@ scenes = {
 
         seq5 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(2, 884), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 145), nextsequence=nil }
         },
 
         seq6 = {
@@ -4297,10 +4425,9 @@ scenes = {
             }
         },
 
-        -- !!! FIXME: this was corrupted data in RomSpinner, look into this.
         seq13 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(10, 0), nextsequence=nil }
+            timeout = { when=time_to_ms(18, 101), nextsequence=nil }
         },
 
         seq14 = {
