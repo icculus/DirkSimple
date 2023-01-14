@@ -14,8 +14,8 @@ local starting_lives = 3
 -- SOME INITIAL SETUP STUFF
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "smithee"
-
+--test_scene_name = "crypt_creeps_reversed"
+local edit_rooms = false
 
 -- GAME STATE
 local infinite_lives = false
@@ -189,7 +189,6 @@ local function choose_next_scene(is_resurrection)
 end
 
 local function setup_scene_manager()
-DirkSimple.log("SETUP SCENE MANAGER")
     scene_manager.initialized = true
     scene_manager.completed_introduction = false
     scene_manager.current_scene = nil
@@ -313,9 +312,144 @@ local function check_timeout()
     end
 end
 
+-- this is kinda hacky, but I wanted to be able to step frame-by-frame to find the actual timeout of a sequence, which
+-- is apparently underestimated by the ROM data table (to give it time to transmit a new seek command to the player?)
+local function gen_tick_editor()
+    local one_frame_ms = laserdisc_frame_to_ms(1)
+    local half_frame_ms = laserdisc_frame_to_ms(1)
+    local ten_frame_ms = laserdisc_frame_to_ms(10)
+    local editing_scene_name = nil
+    local editing_scene = nil
+    local editing_sequence_name = nil
+    local editing_sequence = nil
+    local editing_ms = 0
+    local editing_scene_idx = 0
+    local start_ms = 0
+    local scenelist = {}
+    local sequencelist = {}
+
+    for i,row in ipairs(scene_manager.rows) do
+        for j,name in ipairs(row) do
+            scenelist[#scenelist+1] = name
+        end
+    end
+
+    local next_sequence = nil
+    next_sequence = function()
+        if editing_scene ~= nil then
+            editing_sequence_name = next(editing_scene, editing_sequence_name)
+            if editing_sequence_name ~= nil then
+                editing_sequence = editing_scene[editing_sequence_name]
+                if type(editing_sequence) ~= "table" or editing_sequence.start_time == -1 or editing_sequence.timeout.when == 0 or editing_sequence_name == 'enter_room' or editing_sequence_name == 'seq2' or editing_sequence_name == 'start_alive' then return next_sequence() end
+            end
+        end
+
+        while editing_sequence_name == nil do
+            editing_scene_idx = editing_scene_idx + 1
+            editing_scene_name = scenelist[editing_scene_idx]
+            if editing_scene_name == nil then
+                return nil  -- ran out of new things
+            end
+            if not scenes[editing_scene_name].edited then
+                editing_scene = scenes[editing_scene_name]
+                editing_sequence_name = next(editing_scene, nil)
+                if editing_sequence_name ~= nil then
+                    editing_sequence = editing_scene[editing_sequence_name]
+                    if type(editing_sequence) ~= "table" or editing_sequence.start_time == -1 or editing_sequence.timeout.when == 0 or editing_sequence_name == 'enter_room' or editing_sequence_name == 'seq2' or editing_sequence_name == 'start_alive' then return next_sequence() end
+                end
+            end
+        end
+
+        start_ms = editing_sequence.start_time
+        if start_ms == nil or start_ms == -1 then
+            if editing_sequence.timeout.nextsequence ~= nil then return next_sequence() end  -- if it's just part of the chain of the successful gameplay sequences, assume it's fine and skip it.
+
+            --DirkSimple.log(editing_scene_name .. "." .. editing_sequence_name .. " has unknown start time")
+            -- this is a cheat that happens to (mostly?) work for Dragon's Lair: look for all the sequences that kill the player, and the one with the lowest start frame is one frame past the final noseek sequence
+            local loweststart = 99999999
+            for k,v in pairs(editing_scene) do
+                if type(v) == "table" and v.timeout.nextsequence == nil and v.start_time > 0 and v.start_time < loweststart then
+                    loweststart = v.start_time
+                    DirkSimple.log("lowest start is currently " .. k .. " at " .. loweststart .. "ms")
+                end
+            end
+
+            start_ms = (loweststart - one_frame_ms) - editing_sequence.timeout.when;
+
+local timeout = start_ms
+local secs = (timeout / 1000)
+local ms = (timeout % 1000)
+secs = secs - (secs % 1)
+ms = ms - (ms % 1)
+secs = string.format("%.0f", secs)
+ms = string.format("%.0f", ms)
+DirkSimple.log("decided start_ms is probably -- time_to_ms(" .. secs .. ", " .. ms .. ")")
+
+        end
+
+        editing_ms = start_ms + editing_sequence.timeout.when
+        editing_ms = (editing_ms - (editing_ms % one_frame_ms)) + half_frame_ms
+        DirkSimple.log("Now editing " .. editing_scene_name .. "." .. editing_sequence_name .. ", starting at " .. editing_ms .. "ms")
+        DirkSimple.show_single_frame(editing_ms)
+
+        return editing_sequence_name, editing_sequence
+    end
+
+    next_sequence()
+
+    return function()
+        if editing_sequence_name == nil then
+            DirkSimple.log("Ran out of scenes to edit!")
+            edit_rooms = false  -- we ran out of stuff, turn off the editor.
+            return
+        end
+
+        if current_inputs.pressed["left"] then
+            editing_ms = editing_ms - one_frame_ms
+            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["right"] then
+            editing_ms = editing_ms + one_frame_ms
+            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["down"] then
+            editing_ms = editing_ms - ten_frame_ms
+            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["up"] then
+            editing_ms = editing_ms + ten_frame_ms
+            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["action"] then
+            local timeout = editing_ms - start_ms
+            local secs = (timeout / 1000)
+            local ms = (timeout % 1000)
+            secs = secs - (secs % 1)
+            ms = ms - (ms % 1)
+            secs = string.format("%.0f", secs)
+            ms = string.format("%.0f", ms)
+            DirkSimple.log("TIMEOUT for " .. editing_scene_name .. "." .. editing_sequence_name .. " is " .. timeout .. "   --   time_to_ms(" .. secs .. ", " .. ms .. ")")
+            DirkSimple.log("************ Moving on to next sequence! ************");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            next_sequence()
+        end
+    end
+end
+
+local tick_editor = nil
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
     current_inputs = inputs
+
+    if edit_rooms then
+        if tick_editor == nil then
+            tick_editor = gen_tick_editor()
+        end
+        tick_editor()
+        return
+    end
 
     if not scene_manager.initialized then
         setup_scene_manager()
@@ -393,7 +527,7 @@ scenes = {
     flaming_ropes = {
         start_dead = {
             start_time = time_laserdisc_frame(3505),
-            timeout = { when=time_to_ms(2, 228), nextsequence="enter_room" }
+            timeout = { when=time_to_ms(2, 167), nextsequence="enter_room" }
         },
 
         start_alive = {
@@ -488,24 +622,24 @@ scenes = {
 
         exit_room = {  -- player reaches exit platform
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 49), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 84), nextsequence=nil },
         },
 
         misses_landing = {  -- player landed on exit platform, but fell backwards
             start_time = time_laserdisc_frame(3879),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 540), nextsequence=nil },
+            timeout = { when=time_to_ms(1, 917), nextsequence=nil },
         },
 
         burns_hands = {  -- rope burns up to hands, making player fall
             start_time = time_laserdisc_frame(3925),
-            timeout = { when=time_to_ms(1, 475), nextsequence="fall_to_death" }
+            timeout = { when=time_to_ms(1, 583), nextsequence="fall_to_death" }
         },
 
         fall_to_death = {  -- player falls into the flames
             start_time = time_laserdisc_frame(3963),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 417), nextsequence=nil }
         }
     },
 
@@ -513,7 +647,7 @@ scenes = {
     bower = {
         start_dead = {
             start_time = time_laserdisc_frame(9093),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 366), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -533,7 +667,7 @@ scenes = {
         trapped_in_wall = {  -- player fails to climb through.
             start_time = time_laserdisc_frame(9301) - laserdisc_frame_to_ms(15),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 492) + laserdisc_frame_to_ms(30), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 792), nextsequence=nil }
         },
 
         exit_room = {  -- player reaches the door
@@ -546,7 +680,7 @@ scenes = {
     alice_room = {
         start_dead = {
             start_time = time_laserdisc_frame(18226),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -568,13 +702,13 @@ scenes = {
         drinks_potion = {  -- player drinks potion, dies
             start_time = time_laserdisc_frame(18378),
             kills_player = true,
-            timeout = { when=time_to_ms(4, 194), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 86), nextsequence=nil }
         },
 
         burned_to_death = {  -- player dies in a fire
             start_time = time_laserdisc_frame(18486),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 375), nextsequence=nil }
         },
 
         exit_room = {  -- player reaches the door
@@ -587,7 +721,7 @@ scenes = {
     wind_room = {
         start_dead = {
             start_time = time_laserdisc_frame(8653),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 376), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -607,7 +741,7 @@ scenes = {
         sucked_in = {  -- player sucked into hole, falls to death
             start_time = time_laserdisc_frame(8938),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 621), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 2), nextsequence=nil }
         },
 
         exit_room = {  -- player reaches the door
@@ -620,7 +754,7 @@ scenes = {
     vestibule = {
         start_dead = {
             start_time = time_laserdisc_frame(4083),
-            timeout = { when=time_to_ms(1, 966), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -652,7 +786,7 @@ scenes = {
         fell_to_death = {  -- player fell through floor.
             start_time = time_laserdisc_frame(2085),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         exit_room = {  -- player reaches the door
@@ -665,7 +799,7 @@ scenes = {
     falling_platform_short = {
         start_dead = {
             start_time = time_laserdisc_frame(14791),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 376), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -692,24 +826,24 @@ scenes = {
         crash_landing = {  -- platform crashes into the floor at the bottom of the pit.
             start_time = time_laserdisc_frame(15226),
             kills_player = true,
-            timeout = { when=time_to_ms(3, 47), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 335), nextsequence=nil }
         },
 
         missed_jump = {  -- player tried the jump but missed
             start_time = time_laserdisc_frame(15306),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 501), nextsequence=nil }
         },
 
         fell_to_death = {  -- player fell off the platform without jumping
             start_time = time_laserdisc_frame(15338),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 819), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 166), nextsequence=nil }
         },
 
         exit_room = {  -- player successfully makes the jump
             start_time = time_laserdisc_frame(15366),
-            timeout = { when=time_to_ms(4, 653), nextsequence=nil },
+            timeout = { when=time_to_ms(4, 586) + laserdisc_frame_to_ms(10), nextsequence=nil },
         }
     },
 
@@ -717,7 +851,7 @@ scenes = {
     falling_platform_long = {
         start_dead = {
             start_time = time_laserdisc_frame(14791),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 376), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -783,13 +917,13 @@ scenes = {
         missed_jump = {  -- player tried the jump but missed
             start_time = time_laserdisc_frame(15306),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 501), nextsequence=nil }
         },
 
         fell_to_death = {  -- player fell off the platform without jumping
             start_time = time_laserdisc_frame(15338),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 819), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 166), nextsequence=nil }
         },
 
         exit_room = {  -- player successfully makes the jump
@@ -802,7 +936,7 @@ scenes = {
     crypt_creeps = {
         start_dead = {
             start_time = time_laserdisc_frame(11433),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -885,31 +1019,31 @@ scenes = {
         overpowered_by_skulls = {  -- skulls got the player while drawing sword
             start_time = time_laserdisc_frame(11881),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 83) + laserdisc_frame_to_ms(10), nextsequence=nil }
         },
 
         eaten_by_skulls = {  -- skulls got the player
             start_time = time_laserdisc_frame(11904),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 229), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 124) + laserdisc_frame_to_ms(10), nextsequence=nil }
         },
 
         crushed_by_hand = {  -- giant skeletal hand got the player
             start_time = time_laserdisc_frame(11917),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 623), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
 
         eaten_by_slime = {  -- black slime got the player
             start_time = time_laserdisc_frame(11940),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 212), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 375), nextsequence=nil }
         },
 
         captured_by_ghouls = {  -- ghouls got the player
             start_time = time_laserdisc_frame(11983),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 458), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 292), nextsequence=nil }
         }
     },
 
@@ -917,7 +1051,7 @@ scenes = {
     flying_horse = {
         start_dead = {
             start_time = time_laserdisc_frame(9965),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -994,19 +1128,19 @@ scenes = {
         burned_to_death = {  -- player ran into the wall of flames
             start_time = time_laserdisc_frame(10565),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 500), nextsequence=nil }
         },
 
         hit_pillar = {  -- player ran into the pillar
             start_time = time_laserdisc_frame(10453),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
 
         hit_brick_wall = {  -- player ran into the brick wall
             start_time = time_laserdisc_frame(10501),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 292), nextsequence=nil }
         }
     },
 
@@ -1014,7 +1148,7 @@ scenes = {
     giddy_goons = {
         start_dead = {
             start_time = time_laserdisc_frame(5627),
-            timeout = { when=time_to_ms(1, 966), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -1077,7 +1211,7 @@ scenes = {
         knife_in_back = {  -- player gets a knife in the back
             start_time = time_laserdisc_frame(6039),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 835), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 84), nextsequence=nil }
         },
 
         shoves_off_edge = {  -- goons push player off edge
@@ -1089,19 +1223,19 @@ scenes = {
         fall_to_death = {  -- player falls down into pit
             start_time = time_laserdisc_frame(6163),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 41), nextsequence=nil }
         },
 
         fight_off_one_before_swarm = {  -- Player kills one, then swarm takes him down.
             start_time = time_laserdisc_frame(5947),
             kills_player = true,
-            timeout = { when=time_to_ms(3, 375), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 544), nextsequence=nil }
         },
 
         swarm_of_goons = {  -- giddy goons swarm dirk.
             start_time = time_laserdisc_frame(6015),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 708), nextsequence=nil }
         }
     },
 
@@ -1109,7 +1243,7 @@ scenes = {
     tentacle_room = {
         start_dead = {
             start_time = time_laserdisc_frame(2297),
-            timeout = { when=time_to_ms(1, 966), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -1190,32 +1324,32 @@ scenes = {
         left_tentacle_grabs = {  -- player gets grabbed by first tentacle in the room.
             start_time = time_laserdisc_frame(2729),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 621), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 918), nextsequence=nil }
         },
 
         squeeze_to_death = {  -- tentacles wrap around player in close-up and squeeze him to death
             start_time = time_laserdisc_frame(2801),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         two_front_war = {  -- player slashes tentacle on the right, but left tentacle sneaks up on him
             start_time = time_laserdisc_frame(2849),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 621), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 2), nextsequence=nil }
         },
 
         squeeze_to_death_by_door = {  -- tentacles wrap around player in close-up and squeeze him to death, door in background.
             start_time = time_laserdisc_frame(2933),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 623), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
     },
 
     tilting_room = {
         start_dead = {
             start_time = time_laserdisc_frame(20130),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 251), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -1263,26 +1397,26 @@ scenes = {
         catches_fire = {  -- player catches fire
             start_time = time_laserdisc_frame(20450),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 500), nextsequence=nil }
         },
 
         falls_to_death = {  -- player falls in pit
             start_time = time_laserdisc_frame(20486),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
 
         wrong_door = {  -- player jumps for the wrong door, hits gate
             start_time = time_laserdisc_frame(20384),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 425), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 710), nextsequence=nil }
         },
     },
 
     throne_room = {
         start_dead = {
             start_time = time_laserdisc_frame(20618),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -1342,26 +1476,26 @@ scenes = {
         electrified_sword = {   -- player grabs sword, gets zapped
             start_time = time_laserdisc_frame(20928),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 654), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 835), nextsequence=nil }
         },
 
         electrified_floor = {  -- player touched wrong part of floor, gets zapped
             start_time = time_laserdisc_frame(21000),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 918), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 41), nextsequence=nil }
         },
 
         electrified_throne = {  -- player doesn't leave throne, gets zapped.
             start_time = time_laserdisc_frame(21030),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 376), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 750), nextsequence=nil }
         },
     },
 
     underground_river = {
         start_dead = {
             start_time = time_laserdisc_frame(22682),
-            timeout = { when=time_to_ms(2, 032), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -1527,50 +1661,50 @@ scenes = {
         boulders_crash = {
             start_time = time_laserdisc_frame(23938),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 0), nextsequence=nil }
         },
 
         boulders_crash2 = {
             start_time = time_laserdisc_frame(23962),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 541), nextsequence=nil }
         },
 
         boulders_crash3 = {
             start_time = time_laserdisc_frame(23986),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 542), nextsequence=nil }
         },
 
         boulders_crash4 = {
             start_time = time_laserdisc_frame(24010),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 688), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 541), nextsequence=nil }
         },
 
         rapids_crash = {
             start_time = time_laserdisc_frame(24034),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 376), nextsequence=nil }
         },
 
         whirlpools_crash = {
             start_time = time_laserdisc_frame(24094),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 294), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 668), nextsequence=nil }
         },
 
         miss_chain = {
             start_time = time_laserdisc_frame(24187),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 737), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
     },
 
     rolling_balls = {
         start_dead = {
             start_time = time_laserdisc_frame(26042),
-            timeout = { when=time_to_ms(2, 32), nextsequence="enter_room", points = 49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
         },
 
         start_alive = {
@@ -1656,20 +1790,20 @@ scenes = {
         small_ball_crushes = {  -- player gets sideswiped by a smaller, colorful ball
             start_time = time_laserdisc_frame(26613),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 41), nextsequence=nil }
         },
 
         big_ball_crushes = {  -- player gets bowled over by the big black ball
             start_time = time_laserdisc_frame(26596),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 820), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 749), nextsequence=nil }
         },
     },
 
     black_knight = {
         start_dead = {
             start_time = time_laserdisc_frame(25480),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 42), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -1726,26 +1860,26 @@ scenes = {
         seq6 = {
             start_time = time_laserdisc_frame(25850),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 417), nextsequence=nil }
         },
 
         seq7 = {
             start_time = time_laserdisc_frame(25898),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 163), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 376), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(25918),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 343), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 542), nextsequence=nil }
         },
     },
 
     bubbling_cauldron = {
         start_dead = {
             start_time = time_laserdisc_frame(5067),
-            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -1829,19 +1963,19 @@ scenes = {
         seq8 = {
             start_time = time_laserdisc_frame(5423),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 417), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(5459),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 417), nextsequence=nil }
         },
 
         seq10 = {
             start_time = time_laserdisc_frame(5513),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 885), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 125), nextsequence=nil }
         },
 
     },
@@ -1849,7 +1983,7 @@ scenes = {
     catwalk_bats = {
         start_dead = {
             start_time = time_laserdisc_frame(12133),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 42), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -1932,20 +2066,20 @@ scenes = {
         seq8 = {
             start_time = time_laserdisc_frame(12537),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(12477),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 501), nextsequence=nil }
         },
     },
 
     crypt_creeps_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(18606),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2039,38 +2173,38 @@ scenes = {
         seq9 = {
             start_time = time_laserdisc_frame(19054),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 83) + laserdisc_frame_to_ms(10), nextsequence=nil }
         },
 
         seq10 = {
             start_time = time_laserdisc_frame(19077),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 229), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 124) + laserdisc_frame_to_ms(10), nextsequence=nil }
         },
 
         seq11 = {
             start_time = time_laserdisc_frame(19090),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 590), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 582), nextsequence=nil }
         },
 
         seq12 = {
             start_time = time_laserdisc_frame(19114),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 333), nextsequence=nil }
         },
 
         seq13 = {
             start_time = time_laserdisc_frame(19150),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 458), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 543), nextsequence=nil }
         },
     },
 
     electric_cage_and_geyser = {
         start_dead = {
             start_time = time_laserdisc_frame(26723),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 292), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2136,26 +2270,26 @@ scenes = {
         seq6 = {
             start_time = time_laserdisc_frame(27050),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 500), nextsequence=nil }
         },
 
         seq7 = {
             start_time = time_laserdisc_frame(27085),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 542), nextsequence=nil }
         },
 
         seq8 = {
             start_time = time_laserdisc_frame(27122),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 500), nextsequence=nil }
         },
     },
 
     falling_platform_long_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(21904),
-            timeout = { when=time_to_ms(2, 294), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2262,12 +2396,12 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_frame(22478),
-            timeout = { when=time_to_ms(4, 653), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 653) + laserdisc_frame_to_ms(10), nextsequence=nil },
         },
 
         seq8 = {
             start_time = time_laserdisc_frame(22418),
-            timeout = { when=time_to_ms(0, 754), nextsequence="seq6" }
+            timeout = { when=time_to_ms(1, 41), nextsequence="seq6" }
         },
 
     },
@@ -2275,7 +2409,7 @@ scenes = {
     flaming_ropes_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(12669),
-            timeout = { when=time_to_ms(2, 228), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2309,7 +2443,7 @@ scenes = {
 
         seq3 = {
             start_time = time_laserdisc_frame(12857),
-            timeout = { when=time_to_ms(1, 573), nextsequence="seq8" },
+            timeout = { when=time_to_ms(1, 583), nextsequence="seq8" },
             actions = {
                 { input="left", from=time_to_ms(0, 0), to=time_to_ms(1, 114), nextsequence="seq9" },
                 { input="left", from=time_to_ms(1, 114), to=time_to_ms(1, 835), nextsequence="seq4", points=495 },
@@ -2333,7 +2467,7 @@ scenes = {
 
         seq5 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(1, 475), nextsequence="seq7" },
+            timeout = { when=time_to_ms(1, 501), nextsequence="seq7" },
             actions = {
                 { input="left", from=time_to_ms(0, 0), to=time_to_ms(0, 852), nextsequence="seq9" },
                 { input="left", from=time_to_ms(0, 852), to=time_to_ms(1, 704), nextsequence="seq6" },
@@ -2351,19 +2485,19 @@ scenes = {
         seq7 = {
             start_time = time_laserdisc_frame(13041),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 475), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq8 = {
             start_time = time_laserdisc_frame(13089),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 753), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 85), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(13127),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 49), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 500), nextsequence=nil }
         },
 
         seq10 = {
@@ -2382,7 +2516,7 @@ scenes = {
     flattening_staircase = {
         start_dead = {
             start_time = time_laserdisc_frame(6283),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2444,26 +2578,26 @@ scenes = {
         seq7 = {
             start_time = time_laserdisc_frame(6647),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq8 = {
             start_time = time_laserdisc_frame(6695),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 166), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(6731),
             kills_player = true,
-            timeout = { when=time_to_ms(3, 637), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 44), nextsequence=nil }
         },
 
         -- !!! FIXME: this was corrupt data in RomSpinner, go figure this one out.
         seq11 = {
             start_time = time_laserdisc_frame(6731),
             kills_player = true,
-            timeout = { when=time_to_ms(3, 637), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 44), nextsequence=nil }
         },
 
     },
@@ -2471,7 +2605,7 @@ scenes = {
     flying_horse_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(16488),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 209), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2574,26 +2708,26 @@ scenes = {
         seq9 = {
             start_time = time_laserdisc_frame(16976),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 606), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 834), nextsequence=nil }
         },
 
         seq10 = {
             start_time = time_laserdisc_frame(17024),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 211), nextsequence=nil }
         },
 
         seq11 = {
             start_time = time_laserdisc_frame(17088),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 542), nextsequence=nil }
         },
     },
 
     giant_bat = {
         start_dead = {
             start_time = time_laserdisc_frame(14231),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2663,7 +2797,7 @@ scenes = {
         seq8 = {
             start_time = time_laserdisc_frame(14611),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq9 = {
@@ -2674,20 +2808,20 @@ scenes = {
         seq10 = {
             start_time = time_laserdisc_frame(14679),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 754), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 208), nextsequence=nil }
         },
 
         seq11 = {
             start_time = time_laserdisc_frame(14575),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 542), nextsequence=nil }
         },
     },
 
     grim_reaper = {
         start_dead = {
             start_time = time_laserdisc_frame(7829),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2768,26 +2902,26 @@ scenes = {
         seq7 = {
             start_time = time_laserdisc_frame(8395),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 901), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 292), nextsequence=nil }
         },
 
         seq8 = {
             start_time = time_laserdisc_frame(8475),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 97), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 418), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(8533),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 458), nextsequence=nil }
         },
     },
 
     grim_reaper_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(19306),
-            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -2869,26 +3003,26 @@ scenes = {
         seq7 = {
             start_time = time_laserdisc_frame(19872),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 901), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 292), nextsequence=nil }
         },
 
         seq8 = {
             start_time = time_laserdisc_frame(19950),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 459), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(20010),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 458), nextsequence=nil }
         },
     },
 
     lizard_king = {
         start_dead = {
             start_time = time_laserdisc_frame(17208),
-            timeout = { when=time_to_ms(1, 933), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3032,26 +3166,26 @@ scenes = {
         seq15 = {
             start_time = time_laserdisc_frame(18036),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 0), nextsequence=nil }
         },
 
         seq16 = {
             start_time = time_laserdisc_frame(18060),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 982), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 419), nextsequence=nil }
         },
 
         seq17 = {
             start_time = time_laserdisc_frame(18082),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 130), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 501), nextsequence=nil }
         },
     },
 
     mudmen = {
         start_dead = {
             start_time = time_laserdisc_frame(24322),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3195,38 +3329,38 @@ scenes = {
         seq12 = {
             start_time = time_laserdisc_frame(25194),
             kills_player = true,
-            timeout = { when=time_to_ms(4, 96), nextsequence=nil }
+            timeout = { when=time_to_ms(4, 420), nextsequence=nil }
         },
 
         seq13 = {
             start_time = time_laserdisc_frame(25098),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
 
         seq14 = {
             start_time = time_laserdisc_frame(25360),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 500), nextsequence=nil }
         },
 
         seq15 = {
             start_time = time_laserdisc_frame(25300),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq16 = {
             start_time = time_laserdisc_frame(25146),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
     },
 
     yellow_brick_road = {
         start_dead = {
             start_time = time_laserdisc_frame(4083),
-            timeout = { when=time_to_ms(1, 966), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3350,44 +3484,44 @@ scenes = {
         seq12 = {
             start_time = time_laserdisc_frame(4639),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 41), nextsequence=nil }
         },
 
         seq14 = {
             start_time = time_laserdisc_frame(4711),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq15 = {
             start_time = time_laserdisc_frame(4759),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 949), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 335), nextsequence=nil }
         },
 
         seq16 = {
             start_time = time_laserdisc_frame(4839),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 147), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 83), nextsequence=nil }
         },
 
         seq17 = {
             start_time = time_laserdisc_frame(4875),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 834), nextsequence=nil }
         },
 
         seq18 = {
             start_time = time_laserdisc_frame(4923),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 543), nextsequence=nil }
         },
     },
 
     yellow_brick_road_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(13247),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3508,44 +3642,44 @@ scenes = {
         seq12 = {
             start_time = time_laserdisc_frame(13803),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
 
         seq14 = {
             start_time = time_laserdisc_frame(13875),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
 
         seq15 = {
             start_time = time_laserdisc_frame(13923),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 916), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 293), nextsequence=nil }
         },
 
         seq16 = {
             start_time = time_laserdisc_frame(14003),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 83), nextsequence=nil }
         },
 
         seq17 = {
             start_time = time_laserdisc_frame(14039),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
 
         seq18 = {
             start_time = time_laserdisc_frame(14087),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 376), nextsequence=nil }
         },
     },
 
     robot_knight = {
         start_dead = {
             start_time = time_laserdisc_frame(10685),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 167), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3634,20 +3768,20 @@ scenes = {
         seq11 = {
             start_time = time_laserdisc_frame(11269),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 875), nextsequence=nil }
         },
 
         seq12 = {
             start_time = time_laserdisc_frame(11317),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 16), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
     },
 
     robot_knight_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(21156),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3760,20 +3894,20 @@ scenes = {
         seq11 = {
             start_time = time_laserdisc_frame(21740),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
 
         seq12 = {
             start_time = time_laserdisc_frame(21788),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 16), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
     },
 
     fire_room = {
         start_dead = {
             start_time = time_laserdisc_frame(9473),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 167), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3848,14 +3982,14 @@ scenes = {
         seq8 = {
             start_time = time_laserdisc_frame(9857),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 0), nextsequence=nil }
         },
     },
 
     smithee = {
         start_dead = {
             start_time = time_laserdisc_frame(6911),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 376), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -3935,44 +4069,44 @@ scenes = {
         seq8 = {
             start_time = time_laserdisc_frame(7489),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 458), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(7525),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 833), nextsequence=nil }
         },
 
         seq10 = {
             start_time = time_laserdisc_frame(7549),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 875), nextsequence=nil }
         },
 
         seq11 = {
             start_time = time_laserdisc_frame(7623),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 754), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 83), nextsequence=nil }
         },
 
         seq12 = {
             start_time = time_laserdisc_frame(7649),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 958), nextsequence=nil }
         },
 
         seq13 = {
             start_time = time_laserdisc_frame(7681),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 626), nextsequence=nil }
         },
     },
 
     smithee_reversed = {
         start_dead = {
             start_time = time_laserdisc_frame(15570),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -4061,44 +4195,44 @@ scenes = {
         seq8 = {
             start_time = time_laserdisc_frame(16148),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 180), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 417), nextsequence=nil }
         },
 
         seq9 = {
             start_time = time_laserdisc_frame(16184),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 791), nextsequence=nil }
         },
 
         seq10 = {
             start_time = time_laserdisc_frame(16208),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 542), nextsequence=nil }
         },
 
         seq11 = {
             start_time = time_laserdisc_frame(16282),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 754), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 125), nextsequence=nil }
         },
 
         seq12 = {
             start_time = time_laserdisc_frame(16308),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 41), nextsequence=nil }
         },
 
         seq13 = {
             start_time = time_laserdisc_frame(16341),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 327), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 668), nextsequence=nil }
         },
     },
 
     snake_room = {
         start_dead = {
             start_time = time_laserdisc_frame(3041),
-            timeout = { when=time_to_ms(1, 933), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 376), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -4155,7 +4289,7 @@ scenes = {
         seq7 = {
             start_time = time_laserdisc_frame(3397),
             kills_player = true,
-            timeout = { when=time_to_ms(0, 655), nextsequence=nil }
+            timeout = { when=time_to_ms(0, 874), nextsequence=nil }
         },
 
         seq9 = {
@@ -4172,7 +4306,7 @@ scenes = {
     the_dragons_lair = {
         start_dead = {
             start_time = time_laserdisc_frame(28882),
-            timeout = { when=time_to_ms(2, 32), nextsequence="seq2", points=49 }
+            timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
         },
 
         start_alive = {
@@ -4308,31 +4442,31 @@ scenes = {
         seq14 = {
             start_time = time_laserdisc_frame(31238),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 501), nextsequence=nil }
         },
 
         seq15 = {
             start_time = time_laserdisc_frame(31298),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 671), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 1), nextsequence=nil }
         },
 
         seq16 = {
             start_time = time_laserdisc_frame(31354),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 376), nextsequence=nil }
+            timeout = { when=time_to_ms(1, 583), nextsequence=nil }
         },
 
         seq17 = {
             start_time = time_laserdisc_frame(31394),
             kills_player = true,
-            timeout = { when=time_to_ms(2, 195), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 543), nextsequence=nil }
         },
 
         seq18 = {
             start_time = time_laserdisc_frame(31454),
             kills_player = true,
-            timeout = { when=time_to_ms(1, 638), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 42), nextsequence=nil }
         },
 
         seq19 = {
