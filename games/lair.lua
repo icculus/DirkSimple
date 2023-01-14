@@ -15,7 +15,6 @@ local starting_lives = 3
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
 --test_scene_name = "bower"
-local edit_rooms = true
 
 -- GAME STATE
 local infinite_lives = false
@@ -316,128 +315,9 @@ local function check_timeout()
     end
 end
 
--- this is kinda hacky, but I wanted to be able to step frame-by-frame to find the actual timeout of a sequence, which
--- is apparently underestimated by the ROM data table (to give it time to transmit a new seek command to the player?)
-local function gen_tick_editor()
-    local one_frame_ms = laserdisc_frame_to_ms(1)
-    local half_frame_ms = laserdisc_frame_to_ms(1)
-    local ten_frame_ms = laserdisc_frame_to_ms(10)
-    local editing_scene_name = nil
-    local editing_scene = nil
-    local editing_sequence_name = nil
-    local editing_sequence = nil
-    local editing_ms = 0
-    local editing_scene_idx = 0
-    local start_ms = 0
-    local scenelist = {}
-    local sequencelist = {}
-
-    for i,row in ipairs(scene_manager.rows) do
-        for j,name in ipairs(row) do
-            scenelist[#scenelist+1] = name
-        end
-    end
-
-    local next_sequence = nil
-    next_sequence = function()
-        editing_scene_idx = editing_scene_idx + 1
-        editing_scene_name = scenelist[editing_scene_idx]
-        if editing_scene_name == nil then
-            return nil  -- ran out of new things
-        end
-        editing_scene = scenes[editing_scene_name]
-        editing_sequence_name = 'start_alive'
-        editing_sequence = editing_scene[editing_sequence_name]
-
-        start_ms = editing_sequence.start_time
-        while editing_sequence.timeout.nextsequence ~= nil do
-DirkSimple.log("Looking at " .. editing_scene_name .. "." .. editing_sequence_name)
-            if editing_sequence.start_time ~= nil and editing_sequence.start_time ~= -1 then
-                start_ms = editing_sequence.start_time
-            end
-
-            local actions = editing_sequence.actions
-            if actions == nil then
-                start_ms = start_ms + editing_sequence.timeout.when
-                editing_sequence_name = editing_sequence.timeout.nextsequence
-                editing_sequence = editing_scene[editing_sequence_name]
-            else
-                for i,v in ipairs(actions) do
-                    if v.points ~= nil then
-                        start_ms = start_ms + editing_sequence.timeout.when
-                        editing_sequence_name = v.nextsequence
-                        editing_sequence = editing_scene[editing_sequence_name]
-                        break
-                    end
-                end
-            end
-        end
-
-        DirkSimple.log("Landed at possible exit room " .. editing_scene_name .. "." .. editing_sequence_name .. " with a start time of " .. start_ms .. "ms")
-
-        editing_ms = start_ms + editing_sequence.timeout.when
-        editing_ms = (editing_ms - (editing_ms % one_frame_ms)) + half_frame_ms
-        DirkSimple.log("Now editing " .. editing_scene_name .. "." .. editing_sequence_name .. ", starting at " .. editing_ms .. "ms")
-        DirkSimple.show_single_frame(editing_ms)
-
-        return editing_sequence_name, editing_sequence
-    end
-
-    next_sequence()
-
-    return function()
-        if editing_sequence_name == nil then
-            DirkSimple.log("Ran out of scenes to edit!")
-            edit_rooms = false  -- we ran out of stuff, turn off the editor.
-            return
-        end
-
-        if current_inputs.pressed["left"] then
-            editing_ms = editing_ms - one_frame_ms
-            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
-            DirkSimple.show_single_frame(editing_ms)
-        elseif current_inputs.pressed["right"] then
-            editing_ms = editing_ms + one_frame_ms
-            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
-            DirkSimple.show_single_frame(editing_ms)
-        elseif current_inputs.pressed["down"] then
-            editing_ms = editing_ms - ten_frame_ms
-            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
-            DirkSimple.show_single_frame(editing_ms)
-        elseif current_inputs.pressed["up"] then
-            editing_ms = editing_ms + ten_frame_ms
-            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
-            DirkSimple.show_single_frame(editing_ms)
-        elseif current_inputs.pressed["action"] then
-            local timeout = editing_ms - start_ms
-            local secs = (timeout / 1000)
-            local ms = (timeout % 1000)
-            secs = secs - (secs % 1)
-            ms = ms - (ms % 1)
-            secs = string.format("%.0f", secs)
-            ms = string.format("%.0f", ms)
-            DirkSimple.log("TIMEOUT for " .. editing_scene_name .. "." .. editing_sequence_name .. " is " .. timeout .. "   --   time_to_ms(" .. secs .. ", " .. ms .. ")")
-            DirkSimple.log("************ Moving on to next sequence! ************");
-            DirkSimple.log("");
-            DirkSimple.log("");
-            DirkSimple.log("");
-            next_sequence()
-        end
-    end
-end
-
-local tick_editor = nil
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
     current_inputs = inputs
-
-    if edit_rooms then
-        if tick_editor == nil then
-            tick_editor = gen_tick_editor()
-        end
-        tick_editor()
-        return
-    end
 
     if not scene_manager.initialized then
         setup_scene_manager()
