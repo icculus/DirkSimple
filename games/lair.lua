@@ -3032,7 +3032,7 @@ scenes = {
 
         seq14 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(5, 238), nextsequence=nil }
+            timeout = { when=time_to_ms(5, 238) - laserdisc_frame_to_ms(3), nextsequence=nil }
         },
 
         seq15 = {
