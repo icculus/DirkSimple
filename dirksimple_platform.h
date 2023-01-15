@@ -43,11 +43,12 @@
 // dirksimple.c implements these, which you can call into...
 
 // You implement main() or whatever, and call this with the path to the game's .ogv file to start.
+// `basedir` is where to load files this app needs (scripts, icons, etc).
 // `gamename` can specify the game type if the gamepath's filename isn't in the format of "gamename.ext",
 //  but can be NULL if you want us to figure that out for you.
 // This loads things, starts things going, and returns. If there's a failure, it
 // will call DirkSimple_panic. There is no graceful failure here.
-extern void DirkSimple_startup(const char *gamepath, const char *gamename);
+extern void DirkSimple_startup(const char *basedir, const char *gamepath, const char *gamename);
 
 // You call this frequently (once per frame or more).
 //  `monotonic_ms` is current time in milliseconds. It must increase reliably, and doesn't matter what value it starts at.

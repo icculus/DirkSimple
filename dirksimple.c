@@ -15,6 +15,11 @@
 
 #define DIRKSIMPLE_LUA_NAMESPACE "DirkSimple"
 
+#if defined(_WIN32) || defined(__OS2__)
+#define DIRSEP "\\"
+#else
+#define DIRSEP "/"
+#endif
 
 // "included in all copies or substantial portions of the Software"
 static const char *GLuaLicense =
@@ -415,39 +420,40 @@ static int luahook_DirkSimple_log(lua_State *L)
     return 0;
 }
 
-static void load_lua_gamecode(lua_State *L, const char *gamename)
+static void load_lua_gamecode(lua_State *L, const char *basedir, const char *gamename)
 {
+    int rc;
     DirkSimple_Io *io;
-    const size_t slen = strlen(gamename) + 32;
+    const size_t slen = strlen(basedir) + strlen(gamename) + 32;
     char *fname = (char *) DirkSimple_xmalloc(slen);
-    snprintf(fname, slen, "@%s.luac", gamename);
+    snprintf(fname, slen, "@%s%sgames%s%s.luac", basedir, DIRSEP, DIRSEP, gamename);
     io = DirkSimple_openfile_read(fname + 1);
     if (!io) {
-        int rc;
-
-        snprintf(fname, slen, "@%s.lua", gamename);
+        snprintf(fname, slen, "@%s%sgames%s%s.lua", basedir, DIRSEP, DIRSEP, gamename);
         io = DirkSimple_openfile_read(fname + 1);
         if (!io) {
             snprintf(fname, slen, "Failed to open %s Lua code", gamename);
+            free(fname);
             DirkSimple_panic(fname);
         }
-
-        lua_pushcfunction(L, luahook_DirkSimple_stackwalk);
-        rc = lua_load(L, DirkSimple_lua_reader, io, fname, NULL);
-        io->close(io);
-
-        if (rc != 0) {
-            lua_error(L);
-        } else {
-            // Call new chunk on top of the stack (lua_pcall will pop it off).
-            if (lua_pcall(L, 0, 0, -2) != 0) {  // retvals are dumped.
-                lua_error(L);   // error on stack has debug info.
-            }
-            // if this didn't panic, we succeeded.
-        }
-        lua_pop(L, 1);   // dump stackwalker.
     }
+
+    lua_pushcfunction(L, luahook_DirkSimple_stackwalk);
+    rc = lua_load(L, DirkSimple_lua_reader, io, fname, NULL);
+    io->close(io);
+
     free(fname);
+
+    if (rc != 0) {
+        lua_error(L);
+    } else {
+        // Call new chunk on top of the stack (lua_pcall will pop it off).
+        if (lua_pcall(L, 0, 0, -2) != 0) {  // retvals are dumped.
+            lua_error(L);   // error on stack has debug info.
+        }
+        // if this didn't panic, we succeeded.
+    }
+    lua_pop(L, 1);   // dump stackwalker.
 }
 
 // Sets t[sym]=f, where t is on the top of the Lua stack.
@@ -464,7 +470,7 @@ static void set_string(lua_State *L, const char *str, const char *sym)
     lua_setfield(L, -2, sym);
 }
 
-static void setup_lua(void)
+static void setup_lua(const char *basedir)
 {
     GLua = lua_newstate(DirkSimple_lua_allocator, NULL);  // calls DirkSimple_panic() on failure.
     lua_atpanic(GLua, luahook_panic);
@@ -482,7 +488,7 @@ static void setup_lua(void)
         set_string(GLua, GLuaLicense, "lua_license");  // just so deadcode elimination can't remove this string from the binary.
     lua_setglobal(GLua, DIRKSIMPLE_LUA_NAMESPACE);
 
-    load_lua_gamecode(GLua, GGameName);
+    load_lua_gamecode(GLua, basedir, GGameName);
 
     collect_lua_garbage(GLua);  // get rid of old init crap we don't need.
 }
@@ -558,12 +564,12 @@ static void setup_movie(const char *gamepath)
     }
 }
 
-void DirkSimple_startup(const char *gamepath, const char *gamename)
+void DirkSimple_startup(const char *basedir, const char *gamepath, const char *gamename)
 {
     DirkSimple_shutdown();  // safe to call even if not started up at the moment.
 
     setup_game_strings(gamepath, gamename);
-    setup_lua();
+    setup_lua(basedir);
     setup_movie(GGamePath);
 }
 

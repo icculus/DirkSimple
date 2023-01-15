@@ -252,6 +252,7 @@ static void emscripten_mainloop(void)
 int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
+    const char *basedir = NULL;
 
     #ifdef __EMSCRIPTEN__
     char varbuf[32];  // GDirkSimpleGameId is set up in the Javascript loader.
@@ -273,7 +274,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    DirkSimple_startup(gamepath, NULL);  // !!! FIXME: add --gamename option?
+    basedir = SDL_GetBasePath();
+
+    DirkSimple_startup(basedir, gamepath, NULL);  // !!! FIXME: add --gamename option?
 
 #if defined(__EMSCRIPTEN__)
     emscripten_set_main_loop(emscripten_mainloop, 0, 1);
