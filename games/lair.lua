@@ -15,6 +15,7 @@ local starting_lives = 3
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
 --test_scene_name = "bower"
+local edit_rooms = false
 
 -- GAME STATE
 local infinite_lives = false
@@ -79,6 +80,9 @@ local function start_scene(scenename, is_resurrection)
 
     scene_manager.current_scene_name = scenename
     scene_manager.current_scene = scenes[scenename]
+
+if scene_manager.current_scene.game_over ~= nil then sequencename = 'game_over' end
+
     start_sequence(sequencename)
 end
 
@@ -89,7 +93,7 @@ end
 local function game_over(won)
     DirkSimple.log("Game over!")
     if (scene_manager.current_scene ~= nil) and (scene_manager.current_scene.game_over ~= nil) then
-        start_sequence(scene_manager.current_scene.game_over)
+        start_sequence("game_over")
     else
         start_attract_mode(true)
     end
@@ -144,7 +148,7 @@ local function choose_next_scene(is_resurrection)
 
     -- intro must be played first.
     --  (!!! FIXME: if we add back in the drawbridge, do we want this to require it be _completed_ first?
-    if not scene_manager.completed_introduction then
+    if false then --not scene_manager.completed_introduction then
         start_scene("introduction", is_resurrection)
 
     -- If rerunning failures, always pick the start of the list to play next.
@@ -186,6 +190,12 @@ local function choose_next_scene(is_resurrection)
         end
     end
 end
+
+local function game_over_complete()
+--    start_attract_mode(true)
+    choose_next_scene(false)
+end
+
 
 local function setup_scene_manager()
     scene_manager.initialized = true
@@ -247,10 +257,10 @@ local function check_actions(inputs)
     local actions = scene_manager.current_sequence.actions
     if actions ~= nil then
         for i,v in ipairs(actions) do
-if v.points ~= nil then
-    accepted_input = v
-    return true
-end
+--if v.points ~= nil then
+--    accepted_input = v
+--    return true
+--end
             -- ignore if not in the time window for this input.
             if (scene_manager.current_sequence_ticks >= v.from) and (scene_manager.current_sequence_ticks <= v.to) then
                 local input = v.input
@@ -315,9 +325,145 @@ local function check_timeout()
     end
 end
 
+-- this is kinda hacky, but I wanted to be able to step frame-by-frame to find the actual timeout of a sequence, which
+-- is apparently underestimated by the ROM data table (to give it time to transmit a new seek command to the player?)
+local function gen_tick_editor()
+    local one_frame_ms = laserdisc_frame_to_ms(1)
+    local half_frame_ms = laserdisc_frame_to_ms(1)
+    local ten_frame_ms = laserdisc_frame_to_ms(10)
+    local editing_scene_name = nil
+    local editing_scene = nil
+    local editing_sequence_name = nil
+    local editing_sequence = nil
+    local editing_ms = 0
+    local editing_scene_idx = 0
+    local start_ms = 0
+    local scenelist = {}
+    local sequencelist = {}
+    local trimming_left = true
+    for i,row in ipairs(scene_manager.rows) do
+        for j,name in ipairs(row) do
+            scenelist[#scenelist+1] = name
+        end
+    end
+
+    local next_sequence = nil
+    next_sequence = function()
+        editing_scene_idx = editing_scene_idx + 1
+        editing_scene_name = scenelist[editing_scene_idx]
+        if editing_scene_name == nil then
+            return nil  -- ran out of new things
+        end
+        editing_scene = scenes[editing_scene_name]
+
+        trimming_left = true
+        latest_ms = 0
+        for editing_sequence_name, editing_sequence in pairs(editing_scene) do
+            if editing_sequence.start_time ~= nil and editing_sequence.start_time ~= -1 then
+                start_ms = editing_sequence.start_time
+                local endtime = start_ms + editing_sequence.timeout.when
+                if endtime > latest_ms then
+                    latest_ms = endtime
+                end
+            end
+        end
+
+        editing_sequence_name = 'game_over'
+        DirkSimple.log("Landed at possible game over scene for " .. editing_scene_name .. " with a start time of " .. start_ms .. "ms")
+
+        editing_ms = latest_ms
+        editing_ms = (editing_ms - (editing_ms % one_frame_ms)) + half_frame_ms
+        DirkSimple.log("Now editing " .. editing_scene_name .. "." .. editing_sequence_name .. ", starting at " .. editing_ms .. "ms")
+        DirkSimple.show_single_frame(editing_ms)
+
+        return editing_sequence_name, editing_sequence
+    end
+
+    next_sequence()
+
+    return function()
+        if editing_sequence_name == nil then
+            DirkSimple.log("Ran out of scenes to edit!")
+            edit_rooms = false  -- we ran out of stuff, turn off the editor.
+            return
+        end
+
+        if current_inputs.pressed["left"] then
+            editing_ms = editing_ms - one_frame_ms
+            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["right"] then
+            editing_ms = editing_ms + one_frame_ms
+            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["down"] then
+            editing_ms = editing_ms - ten_frame_ms
+            DirkSimple.log("Moving back to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["up"] then
+            editing_ms = editing_ms + ten_frame_ms
+            DirkSimple.log("Moving forward to ms " .. editing_ms .. "ms")
+            DirkSimple.show_single_frame(editing_ms)
+        elseif current_inputs.pressed["action"] then
+            if trimming_left then
+                start_ms = editing_ms
+                trimming_left = false
+                local secs = (start_ms / 1000)
+                local ms = (start_ms % 1000)
+                secs = secs - (secs % 1)
+                ms = ms - (ms % 1)
+                secs = string.format("%.0f", secs)
+                ms = string.format("%.0f", ms)
+                DirkSimple.log("START TIME for " .. editing_scene_name .. "." .. editing_sequence_name .. " is   --   time_to_ms(" .. secs .. ", " .. ms .. ")")
+--                return
+            end
+            local timeout = editing_ms - start_ms
+            local secs = (timeout / 1000)
+            local ms = (timeout % 1000)
+            secs = secs - (secs % 1)
+            ms = ms - (ms % 1)
+            secs = string.format("%.0f", secs)
+            ms = string.format("%.0f", ms)
+secs = 3
+ms = 503
+            local timeoutstr = "time_to_ms(" .. secs .. ", " .. ms .. ")"
+
+            local startframe = ((start_ms + 6297.0) / 1000.0) * 23.976
+            startframe = startframe - (startframe % 1)
+            startframe = string.format("%.0f", startframe)
+
+            DirkSimple.log("TIMEOUT for " .. editing_scene_name .. "." .. editing_sequence_name .. " is " .. timeout .. "   --   time_to_ms(" .. secs .. ", " .. ms .. ")")
+            DirkSimple.log("");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            print('        game_over = {')
+            print('            start_time = time_laserdisc_frame(' .. startframe .. '),')
+            print('            timeout = { when=' .. timeoutstr .. ', interrupt=game_over_complete }')
+            print('        },')
+            DirkSimple.log("");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            DirkSimple.log("************ Moving on to next sequence! ************");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            DirkSimple.log("");
+            next_sequence()
+        end
+    end
+end
+
+local tick_editor = nil
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
     current_inputs = inputs
+
+    if edit_rooms then
+        if tick_editor == nil then
+            tick_editor = gen_tick_editor()
+        end
+        tick_editor()
+        return
+    end
 
     if not scene_manager.initialized then
         setup_scene_manager()
@@ -393,6 +539,11 @@ scenes = {
 
     -- Swinging ropes, burning over a fiery pit.
     flaming_ropes = {
+        game_over = {
+            start_time = time_laserdisc_frame(3999),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(3505),
             timeout = { when=time_to_ms(2, 167), nextsequence="enter_room" }
@@ -513,6 +664,11 @@ scenes = {
 
     -- Bedroom where brick wall appears in front of you to be jumped through.
     bower = {
+        game_over = {
+            start_time = time_laserdisc_frame(9387),
+            timeout = { when=time_to_ms(3, 650), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(9093),
             timeout = { when=time_to_ms(2, 366), nextsequence="enter_room", points = 49 }
@@ -546,6 +702,11 @@ scenes = {
 
     -- Room with the "DRINK ME" sign.
     alice_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(18522),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(18226),
             timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
@@ -587,6 +748,11 @@ scenes = {
 
     -- Room with the wind blowing you and a diamond you shouldn't reach for.
     wind_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(9010),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(8653),
             timeout = { when=time_to_ms(2, 376), nextsequence="enter_room", points = 49 }
@@ -620,6 +786,11 @@ scenes = {
 
     -- Room that crumbles on three sides and then the ceiling caves in
     vestibule = {
+        game_over = {
+            start_time = time_laserdisc_frame(2214),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(4083),
             timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
@@ -665,6 +836,11 @@ scenes = {
 
     -- the one with three chances to jump.
     falling_platform_short = {
+        game_over = {
+            start_time = time_laserdisc_frame(15487),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(14791),
             timeout = { when=time_to_ms(2, 376), nextsequence="enter_room", points = 49 }
@@ -717,6 +893,11 @@ scenes = {
 
     -- the one with nine chances to jump.
     falling_platform_long = {
+        game_over = {
+            start_time = time_laserdisc_frame(15487),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(14791),
             timeout = { when=time_to_ms(2, 376), nextsequence="enter_room", points = 49 }
@@ -802,6 +983,11 @@ scenes = {
 
     -- The tomb with the skulls, slime, skeletal hands, and ghouls
     crypt_creeps = {
+        game_over = {
+            start_time = time_laserdisc_frame(12039),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(11433),
             timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
@@ -917,6 +1103,11 @@ scenes = {
 
     -- The flying horse machine that rides you past fires and other obstacles
     flying_horse = {
+        game_over = {
+            start_time = time_laserdisc_frame(10600),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(9965),
             timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
@@ -1014,6 +1205,11 @@ scenes = {
 
     -- The giddy goons!
     giddy_goons = {
+        game_over = {
+            start_time = time_laserdisc_frame(6198),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(5627),
             timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
@@ -1111,6 +1307,11 @@ scenes = {
 
     -- Green tentacles flood in to the room.
     tentacle_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(2954),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(2297),
             timeout = { when=time_to_ms(2, 84), nextsequence="enter_room", points = 49 }
@@ -1217,6 +1418,11 @@ scenes = {
     },
 
     tilting_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(20535),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(20130),
             timeout = { when=time_to_ms(2, 251), nextsequence="enter_room", points = 49 }
@@ -1284,6 +1490,11 @@ scenes = {
     },
 
     throne_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(21073),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(20618),
             timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
@@ -1363,6 +1574,11 @@ scenes = {
     },
 
     underground_river = {
+        game_over = {
+            start_time = time_laserdisc_frame(24239),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(22682),
             timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
@@ -1572,6 +1788,11 @@ scenes = {
     },
 
     rolling_balls = {
+        game_over = {
+            start_time = time_laserdisc_frame(26638),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(26042),
             timeout = { when=time_to_ms(2, 334), nextsequence="enter_room", points = 49 }
@@ -1670,6 +1891,11 @@ scenes = {
     },
 
     black_knight = {
+        game_over = {
+            start_time = time_laserdisc_frame(25956),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(25480),
             timeout = { when=time_to_ms(2, 42), nextsequence="seq2", points=49 }
@@ -1746,6 +1972,11 @@ scenes = {
     },
 
     bubbling_cauldron = {
+        game_over = {
+            start_time = time_laserdisc_frame(5541),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(5067),
             timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
@@ -1850,6 +2081,11 @@ scenes = {
     },
 
     catwalk_bats = {
+        game_over = {
+            start_time = time_laserdisc_frame(12586),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(12133),
             timeout = { when=time_to_ms(2, 42), nextsequence="seq2", points=49 }
@@ -1946,6 +2182,11 @@ scenes = {
     },
 
     crypt_creeps_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(19223),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(18606),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -2071,6 +2312,11 @@ scenes = {
     },
 
     electric_cage_and_geyser = {
+        game_over = {
+            start_time = time_laserdisc_frame(27158),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(26723),
             timeout = { when=time_to_ms(2, 292), nextsequence="seq2", points=49 }
@@ -2156,6 +2402,11 @@ scenes = {
     },
 
     falling_platform_long_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(22588),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(21904),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -2276,6 +2527,11 @@ scenes = {
     },
 
     flaming_ropes_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(13164),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(12669),
             timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
@@ -2383,6 +2639,11 @@ scenes = {
     },
 
     flattening_staircase = {
+        game_over = {
+            start_time = time_laserdisc_frame(6825),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(6283),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -2472,6 +2733,11 @@ scenes = {
     },
 
     flying_horse_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(17124),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(16488),
             timeout = { when=time_to_ms(2, 209), nextsequence="seq2", points=49 }
@@ -2594,6 +2860,11 @@ scenes = {
     },
 
     giant_bat = {
+        game_over = {
+            start_time = time_laserdisc_frame(14708),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(14231),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -2688,6 +2959,11 @@ scenes = {
     },
 
     grim_reaper = {
+        game_over = {
+            start_time = time_laserdisc_frame(8569),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(7829),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -2788,6 +3064,11 @@ scenes = {
     },
 
     grim_reaper_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(20046),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(19306),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -2889,6 +3170,11 @@ scenes = {
     },
 
     lizard_king = {
+        game_over = {
+            start_time = time_laserdisc_frame(18142),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(17208),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -3055,6 +3341,11 @@ scenes = {
     },
 
     mudmen = {
+        game_over = {
+            start_time = time_laserdisc_frame(25396),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(24322),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -3230,6 +3521,11 @@ scenes = {
     },
 
     yellow_brick_road = {
+        game_over = {
+            start_time = time_laserdisc_frame(4981),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(4083),
             timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
@@ -3391,6 +3687,11 @@ scenes = {
     },
 
     yellow_brick_road_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(14148),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(13247),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -3549,6 +3850,11 @@ scenes = {
     },
 
     robot_knight = {
+        game_over = {
+            start_time = time_laserdisc_frame(11340),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(10685),
             timeout = { when=time_to_ms(2, 167), nextsequence="seq2", points=49 }
@@ -3651,6 +3957,11 @@ scenes = {
     },
 
     robot_knight_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(21820),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(21156),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -3777,6 +4088,11 @@ scenes = {
     },
 
     fire_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(9880),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(9473),
             timeout = { when=time_to_ms(2, 167), nextsequence="seq2", points=49 }
@@ -3859,6 +4175,11 @@ scenes = {
     },
 
     smithee = {
+        game_over = {
+            start_time = time_laserdisc_frame(7745),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(6911),
             timeout = { when=time_to_ms(2, 376), nextsequence="seq2", points=49 }
@@ -3976,6 +4297,11 @@ scenes = {
     },
 
     smithee_reversed = {
+        game_over = {
+            start_time = time_laserdisc_frame(16405),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(15570),
             timeout = { when=time_to_ms(2, 84), nextsequence="seq2", points=49 }
@@ -4102,6 +4428,11 @@ scenes = {
     },
 
     snake_room = {
+        game_over = {
+            start_time = time_laserdisc_frame(3411),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(3041),
             timeout = { when=time_to_ms(2, 376), nextsequence="seq2", points=49 }
@@ -4176,6 +4507,11 @@ scenes = {
     },
 
     the_dragons_lair = {
+        game_over = {
+            start_time = time_laserdisc_frame(31503),
+            timeout = { when=time_to_ms(3, 503), interrupt=game_over_complete }
+        },
+
         start_dead = {
             start_time = time_laserdisc_frame(28882),
             timeout = { when=time_to_ms(2, 334), nextsequence="seq2", points=49 }
@@ -4371,3 +4707,4 @@ scene_manager = {
 
 -- end of lair.lua ...
 
+test_scene_name = "the_dragons_lair"
