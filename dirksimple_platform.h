@@ -15,6 +15,12 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#if defined(_WIN32) || defined(__OS2__)
+#define DIRSEP "\\"
+#else
+#define DIRSEP "/"
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #define DIRKSIMPLE_NORETURN __attribute__((noreturn))
 #elif defined(_MSC_VER)

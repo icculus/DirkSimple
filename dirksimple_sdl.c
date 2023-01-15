@@ -103,12 +103,35 @@ void DirkSimple_audioformat(int channels, int freq)
     SDL_PauseAudioDevice(GAudioDeviceID, 0);
 }
 
+
+static void load_icon(SDL_Window *window)
+{
+    char *basedir = SDL_GetBasePath();
+    if (basedir) {  // oh well if not.
+        const size_t slen = SDL_strlen(basedir) + 32;
+        char *iconpath = (char *) SDL_malloc(slen);
+        if (iconpath) {
+            SDL_Surface *icon;
+            SDL_snprintf(iconpath, slen, "%s%sicon.bmp", basedir, DIRSEP);
+            icon = SDL_LoadBMP(iconpath);
+            if (icon) {
+                SDL_SetWindowIcon(window, icon);
+                SDL_FreeSurface(icon);
+            }
+            SDL_free(iconpath);
+        }
+        SDL_free(basedir);
+    }
+}
+
 void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height)
 {
-    GWindow = SDL_CreateWindow(gametitle ? gametitle : "DirkSimple", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_RESIZABLE);  // !!! FIXME: fullscreen desktop?
+    GWindow = SDL_CreateWindow(gametitle ? gametitle : "DirkSimple", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);  // !!! FIXME: fullscreen desktop?
     if (!GWindow) {
         sdlpanic("Failed to create window");
     }
+
+    load_icon(GWindow);
 
     GRenderer = SDL_CreateRenderer(GWindow, -1, SDL_RENDERER_PRESENTVSYNC);
     if (!GRenderer) {
@@ -120,6 +143,9 @@ void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t heig
 
     SDL_SetRenderDrawColor(GRenderer, 0, 0, 0, 255);
     SDL_RenderSetLogicalSize(GRenderer, width, height);
+    SDL_RenderClear(GRenderer);
+    SDL_RenderPresent(GRenderer);
+    SDL_ShowWindow(GWindow);
     SDL_RenderClear(GRenderer);
     SDL_RenderPresent(GRenderer);
 
@@ -252,7 +278,7 @@ static void emscripten_mainloop(void)
 int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
-    const char *basedir = NULL;
+    char *basedir = NULL;
 
     #ifdef __EMSCRIPTEN__
     char varbuf[32];  // GDirkSimpleGameId is set up in the Javascript loader.
@@ -275,8 +301,16 @@ int main(int argc, char **argv)
     }
 
     basedir = SDL_GetBasePath();
+    if (basedir == NULL) {
+        const char *errstr = SDL_GetError();
+        SDL_Log("Failed to determine base dir: %s", errstr);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Failed to determine base dir", errstr, NULL);  // in case this works.
+        return 1;
+    }
 
     DirkSimple_startup(basedir, gamepath, NULL);  // !!! FIXME: add --gamename option?
+
+    SDL_free(basedir);
 
 #if defined(__EMSCRIPTEN__)
     emscripten_set_main_loop(emscripten_mainloop, 0, 1);

@@ -15,12 +15,6 @@
 
 #define DIRKSIMPLE_LUA_NAMESPACE "DirkSimple"
 
-#if defined(_WIN32) || defined(__OS2__)
-#define DIRSEP "\\"
-#else
-#define DIRSEP "/"
-#endif
-
 // "included in all copies or substantial portions of the Software"
 static const char *GLuaLicense =
 "Lua:\n"
