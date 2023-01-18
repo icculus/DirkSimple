@@ -1,4 +1,4 @@
-# Dirk Simple; a player for FMV games.
+# DirkSimple; a dirt-simple player for FMV games.
 #
 # Please see the file LICENSE.txt in the source's root directory.
 #
