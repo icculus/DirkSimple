@@ -860,20 +860,7 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         DirkSimple_panic("Video decoder is missing?!");
     }
 
-    if (GTicksOffset == 0) {
-        if (monotonic_ms == 0) {
-            return;  // just let this tick up until we aren't zero.
-        }
-        GTicksOffset = monotonic_ms;
-    } else if (GTicksOffset > monotonic_ms) {
-        DirkSimple_panic("Time ran backwards! Aborting!");
-    }
-
-    GTicks = monotonic_ms - GTicksOffset;
-
     THEORAPLAY_pumpDecode(GDecoder, 5);
-
-    //DirkSimple_log("Tick %u\n", (unsigned int) GTicks);
 
     if (!THEORAPLAY_isInitialized(GDecoder)) {
         return;  // still waiting for the decoder to spin up, don't do anything yet.
@@ -926,6 +913,20 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         DirkSimple_audioformat(audio->channels, audio->freq);
         THEORAPLAY_freeAudio(audio);  // dump this, the game is going to seek at startup anyhow.
     }
+
+
+    if (GTicksOffset == 0) {
+        if (monotonic_ms == 0) {
+            return;  // just let this tick up until we aren't zero.
+        }
+        GTicksOffset = monotonic_ms;
+    } else if (GTicksOffset > monotonic_ms) {
+        DirkSimple_panic("Time ran backwards! Aborting!");
+    }
+
+    GTicks = monotonic_ms - GTicksOffset;
+
+    //DirkSimple_log("Tick %u\n", (unsigned int) GTicks);
 
     if (!GPendingVideoFrame) {
         GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder);
