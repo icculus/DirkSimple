@@ -44,6 +44,7 @@ static const char *GLuaLicense =
 
 static char *GGameName = NULL;
 static char *GGamePath = NULL;
+static char *GBaseDir = NULL;
 static THEORAPLAY_Decoder *GDecoder = NULL;
 static THEORAPLAY_Io GTheoraplayIo;
 static lua_State *GLua = NULL;
@@ -464,7 +465,7 @@ static void set_string(lua_State *L, const char *str, const char *sym)
     lua_setfield(L, -2, sym);
 }
 
-static void setup_lua(const char *basedir)
+static void setup_lua(void)
 {
     GLua = lua_newstate(DirkSimple_lua_allocator, NULL);  // calls DirkSimple_panic() on failure.
     lua_atpanic(GLua, luahook_panic);
@@ -482,15 +483,16 @@ static void setup_lua(const char *basedir)
         set_string(GLua, GLuaLicense, "lua_license");  // just so deadcode elimination can't remove this string from the binary.
     lua_setglobal(GLua, DIRKSIMPLE_LUA_NAMESPACE);
 
-    load_lua_gamecode(GLua, basedir, GGameName);
+    load_lua_gamecode(GLua, GBaseDir, GGameName);
 
     collect_lua_garbage(GLua);  // get rid of old init crap we don't need.
 }
 
-static void setup_game_strings(const char *gamepath, const char *gamename)
+static void setup_game_strings(const char *basedir, const char *gamepath, const char *gamename)
 {
     char *ptr;
 
+    GBaseDir = DirkSimple_xstrdup(basedir);
     GGamePath = DirkSimple_xstrdup(gamepath);
 
     if (gamename) {
@@ -562,8 +564,8 @@ void DirkSimple_startup(const char *basedir, const char *gamepath, const char *g
 {
     DirkSimple_shutdown();  // safe to call even if not started up at the moment.
 
-    setup_game_strings(gamepath, gamename);
-    setup_lua(basedir);
+    setup_game_strings(basedir, gamepath, gamename);
+    setup_lua();
     setup_movie(GGamePath);
 }
 
@@ -768,6 +770,8 @@ void DirkSimple_shutdown(void)
     GGameName = NULL;
     free(GGamePath);
     GGamePath = NULL;
+    free(GBaseDir);
+    GBaseDir = NULL;
     if (GLua) {
         lua_close(GLua);
         GLua = NULL;
