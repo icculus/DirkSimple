@@ -8,7 +8,7 @@
 DirkSimple.gametitle = "Dragon's Lair"
 
 -- SOME GAME CONFIG STUFF
-local starting_lives = 3
+local starting_lives = 5
 
 
 -- SOME INITIAL SETUP STUFF
