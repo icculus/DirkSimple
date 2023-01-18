@@ -17,9 +17,6 @@ local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
 --test_scene_name = "bower"
 
 -- GAME STATE
-local infinite_lives = false
-local lives_left = 0
-local current_score = 0
 local current_ticks = 0
 local current_inputs = nil
 local accepted_input = nil
@@ -50,6 +47,7 @@ end
 
 local function start_sequence(sequencename)
     DirkSimple.log("Starting sequence '" .. sequencename .. "'")
+    scene_manager.current_sequence_name = sequencename
     scene_manager.current_sequence = scene_manager.current_scene[sequencename]
     accepted_input = nil
 
@@ -63,7 +61,9 @@ local function start_sequence(sequencename)
         else
             DirkSimple.start_clip(start_time)
         end
+        scene_manager.last_seek = start_time
         scene_manager.current_sequence_tick_offset = 0
+        scene_manager.unserialize_offset = 0
     end
 end
 
@@ -97,7 +97,7 @@ end
 
 local function choose_next_scene(is_resurrection)
     if test_scene_name ~= nil then
-        infinite_lives = true
+        scene_manager.infinite_lives = true
         start_scene(test_scene_name, is_resurrection)
         return
     end
@@ -191,15 +191,20 @@ local function game_over_complete()
     start_attract_mode(true)
 end
 
-
 local function setup_scene_manager()
     scene_manager.initialized = true
+    scene_manager.infinite_lives = false
+    scene_manager.lives_left = starting_lives
+    scene_manager.current_score = 0
+    scene_manager.last_seek = 0
     scene_manager.completed_introduction = false
     scene_manager.current_scene = nil
     scene_manager.current_scene_name = nil
     scene_manager.current_sequence = nil
+    scene_manager.current_sequence_name = nil
     scene_manager.current_sequence_ticks = 0
     scene_manager.current_sequence_tick_offset = 0
+    scene_manager.unserialize_offset = 0
     scene_manager.current_row = 1
     scene_manager.current_cycle = 1
     scene_manager.chosen = {}
@@ -217,27 +222,25 @@ end
 local function start_game()
     DirkSimple.log("Start game!")
     setup_scene_manager()
-    lives_left = starting_lives
-    current_score = 0
 
     -- Did you know this gives you infinite lives on any Dragon's Lair arcade
     -- cabinet, regardless of dip switch settings? Would have been nice to
     -- know when this cost a dollar per run!
-    infinite_lives = (current_inputs.held["up"] and current_inputs.held["left"])
+    scene_manager.infinite_lives = (current_inputs.held["up"] and current_inputs.held["left"])
 
     choose_next_scene(false)
 end
 
 local function kill_player()
-    if infinite_lives then
-        lives_left = starting_lives
-    elseif lives_left > 0 then
-        lives_left = lives_left - 1
+    if scene_manager.infinite_lives then
+        scene_manager.lives_left = starting_lives
+    elseif scene_manager.lives_left > 0 then
+        scene_manager.lives_left = scene_manager.lives_left - 1
     end
 
-    DirkSimple.log("Killing player (lives now left=" .. lives_left .. ")")
+    DirkSimple.log("Killing player (lives now left=" .. scene_manager.lives_left .. ")")
 
-    if lives_left == 0 then
+    if scene_manager.lives_left == 0 then
         game_over(false)
     else
         choose_next_scene(true)
@@ -292,7 +295,7 @@ local function check_timeout()
     end
 
     if outcome.points ~= nil then
-        current_score = current_score + outcome.points
+        scene_manager.current_score = scene_manager.current_score + outcome.points
     end
 
     if outcome.interrupt ~= nil then
@@ -316,6 +319,86 @@ local function check_timeout()
     end
 end
 
+DirkSimple.serialize = function()
+    if not scene_manager.initialized then
+        setup_scene_manager()   -- just so we can serialize a default state.
+    end
+
+    local state = {}
+    state[#state + 1] = 1   -- current serialization version
+    state[#state + 1] = scene_manager.infinite_lives
+    state[#state + 1] = scene_manager.lives_left
+    state[#state + 1] = scene_manager.current_score
+    state[#state + 1] = scene_manager.last_seek
+    state[#state + 1] = scene_manager.completed_introduction
+    state[#state + 1] = scene_manager.current_scene_name
+    state[#state + 1] = scene_manager.current_sequence_name
+    state[#state + 1] = scene_manager.current_sequence_ticks
+    state[#state + 1] = scene_manager.current_sequence_tick_offset
+    state[#state + 1] = scene_manager.current_row
+    state[#state + 1] = scene_manager.current_cycle
+    state[#state + 1] = scene_manager.total_failed
+
+    for i,v in ipairs(scene_manager.failed) do
+        state[#state + 1] = v
+    end
+
+    for i,v in ipairs(scene_manager.rows) do
+        for j,v2 in ipairs(v) do
+            state[#state + 1] = scene_manager.chosen[i][j]
+        end
+    end
+
+    return state
+end
+
+
+DirkSimple.unserialize = function(state)
+    -- !!! FIXME: this function assumes that `state` is completely valid. It doesn't check array length or data types.
+    setup_scene_manager()
+
+    local idx = 1
+    local version = state[idx] ; idx = idx + 1
+    scene_manager.infinite_lives = state[idx] ; idx = idx + 1
+    scene_manager.lives_left = state[idx] ; idx = idx + 1
+    scene_manager.current_score = state[idx] ; idx = idx + 1
+    scene_manager.last_seek = state[idx] ; idx = idx + 1
+    scene_manager.completed_introduction = state[idx] ; idx = idx + 1
+    scene_manager.current_scene_name = state[idx] ; idx = idx + 1
+    scene_manager.current_sequence_name = state[idx] ; idx = idx + 1
+    scene_manager.current_sequence_ticks = state[idx] ; idx = idx + 1
+    scene_manager.current_sequence_tick_offset = state[idx] ; idx = idx + 1
+    scene_manager.current_row = state[idx] ; idx = idx + 1
+    scene_manager.current_cycle = state[idx] ; idx = idx + 1
+    scene_manager.total_failed = state[idx] ; idx = idx + 1
+    scene_manager.unserialize_offset = scene_manager.current_sequence_ticks + scene_manager.current_sequence_tick_offset
+    scene_manager.current_sequence_tick_offset = 0  -- unserialize_offset will handle everything up until now, until the next sequence starts.
+
+    for i = 1, scene_manager.total_failed, 1 do
+        scene_manager.failed[#scene_manager.failed + 1] = state[idx] ; idx = idx + 1
+    end
+
+    for i,v in ipairs(scene_manager.rows) do
+        for j,v2 in ipairs(v) do
+            scene_manager.chosen[i][j] = state[idx] ; idx = idx + 1
+        end
+    end
+
+    if scene_manager.current_scene_name ~= nil then
+        scene_manager.current_scene = scenes[scene_manager.current_scene_name]
+        if scene_manager.current_sequence_name ~= nil then
+            scene_manager.current_sequence = scene_manager.current_scene[scene_manager.current_sequence_name]
+            local start_time = scene_manager.last_seek
+            if scene_manager.current_sequence.is_single_frame then
+                DirkSimple.show_single_frame(start_time)
+            else
+                DirkSimple.start_clip(start_time + scene_manager.unserialize_offset)
+            end
+        end
+    end
+
+    return true
+end
 
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     current_ticks = ticks
@@ -325,8 +408,8 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
         setup_scene_manager()
     end
 
-    scene_manager.current_sequence_ticks = sequenceticks - scene_manager.current_sequence_tick_offset
-    --DirkSimple.log("LUA TICK(ticks=" .. tostring(current_ticks) .. ", sequenceticks=" .. tostring(scene_manager.current_sequence_ticks) .. ")")
+    scene_manager.current_sequence_ticks = (sequenceticks + scene_manager.unserialize_offset) - scene_manager.current_sequence_tick_offset
+    --DirkSimple.log("LUA TICK(ticks=" .. tostring(current_ticks) .. ", sequenceticks=" .. tostring(scene_manager.current_sequence_ticks) .. ", tick_offset=" .. tostring(scene_manager.current_sequence_tick_offset) .. ", unserialize_offset=" .. tostring(scene_manager.unserialize_offset) .. ")")
 
     if scene_manager.current_sequence == nil then
         start_attract_mode(false)

@@ -567,6 +567,186 @@ void DirkSimple_startup(const char *basedir, const char *gamepath, const char *g
     setup_movie(GGamePath);
 }
 
+void DirkSimple_restart(void)  // DO NOT CALL THIS FROM LUA CODE
+{
+    if (GLua) {
+        lua_close(GLua);
+        GLua = NULL;
+    }
+    setup_lua();
+}
+
+static size_t serialize_lua_array(lua_State *L, void *_data, size_t len)
+{
+    uint8_t *data = (uint8_t *) _data;
+    size_t bw = 0;
+    lua_Integer i, total;
+
+    lua_len(L, -1);
+    total = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    for (i = 1; i <= total; i++) {
+        const int luatype = lua_geti(L, -1, i);
+        if (bw < len) {
+            *(data++) = (uint8_t) luatype;
+        }
+        bw++;
+
+        switch (luatype) {
+            case LUA_TBOOLEAN:
+                if (bw < len) {
+                    *(data++) = lua_toboolean(L, -1) ? 1 : 0;
+                }
+                bw++;
+                break;
+            case LUA_TNUMBER:
+                if ((bw+4) <= len) {
+                    union { float f; uint32_t u32; uint8_t u8[4]; } cvt;
+                    cvt.f = (float) lua_tonumber(L, -1);
+                    cvt.u32 = (((uint32_t) cvt.u8[0]) << 24) | (((uint32_t) cvt.u8[1]) << 16) | (((uint32_t) cvt.u8[2]) << 8) | (((uint32_t) cvt.u8[3]) << 0);
+                    *(data++) = cvt.u8[0];
+                    *(data++) = cvt.u8[1];
+                    *(data++) = cvt.u8[2];
+                    *(data++) = cvt.u8[3];
+                }
+                bw += 4;
+                break;
+            case LUA_TSTRING:
+                if ((bw+32) <= len) {
+                    size_t i;
+                    size_t slen = 0;
+                    const char *str = lua_tolstring (L, -1, &slen);
+                    if (slen > 31) {
+                        DirkSimple_panic("Tried to serialized too-long string. This is a DirkSimple bug!");
+                    }
+                    *(data++) = (uint8_t) slen;
+                    for (i = 0; i < slen; i++) {
+                        *(data++) = str[i];
+                    }
+                    while (i < 31) {
+                        *(data++) = '\0';
+                        i++;
+                    }
+                }
+                bw += 32;  // retroarch needs the size to be consistent, so we pack all strings to 32 bytes.
+                break;
+            default:
+                DirkSimple_panic("Tried to serialized unsupported data type. This is a DirkSimple bug!");
+                break;
+        }
+        lua_pop(L, 1);  // drop the aray element.
+    }
+
+    return bw;
+}
+
+static int unserialize_lua_array(lua_State *L, void *_data, size_t len)
+{
+    uint8_t *data = (uint8_t *) _data;
+    lua_Integer idx = 0;
+
+    lua_newtable(L);  // the Lua array we'll decode into.
+
+    while (len > 0) {
+        const int luatype = (int) *(data++);
+        len--;
+
+        switch (luatype) {
+            case LUA_TBOOLEAN:
+                if (len < 1) {
+                    lua_pop(L, 1);  // dump the table
+                    return 0;
+                }
+                lua_pushboolean(L, *(data++) ? 1 : 0);
+                len--;
+                break;
+
+            case LUA_TNUMBER:
+                if (len < 4) {
+                    lua_pop(L, 1);  // dump the table
+                    return 0;
+                } else {
+                    union { float f; uint32_t u32; uint8_t u8[4]; } cvt;
+                    cvt.u8[0] = *(data++);
+                    cvt.u8[1] = *(data++);
+                    cvt.u8[2] = *(data++);
+                    cvt.u8[3] = *(data++);
+                    cvt.u32 = (((uint32_t) cvt.u8[0]) << 24) | (((uint32_t) cvt.u8[1]) << 16) | (((uint32_t) cvt.u8[2]) << 8) | (((uint32_t) cvt.u8[3]) << 0);
+                    lua_pushnumber(L, (lua_Number) cvt.f);
+                }
+                len -= 4;
+                break;
+
+            case LUA_TSTRING:
+                if (len < 32) {
+                    lua_pop(L, 1);  // dump the table
+                    return 0;
+                } else {
+                    const uint8_t chars = *(data++);
+                    if (chars > 31) {
+                        lua_pop(L, 1);  // dump the table
+                        return 0;
+                    } else {
+                        lua_pushlstring(L, (const char *) data, chars);
+                    }
+                }
+                data += 31;
+                len -= 32;
+                break;
+
+            default:   // unsupported data type or corrupt data, dump it.
+                lua_pop(L, 1);  // dump the table
+                return 0;
+        }
+        lua_seti(L, -2, ++idx);
+    }
+
+    return 1;
+}
+
+size_t DirkSimple_serialize(void *data, size_t len)
+{
+    lua_State *L = GLua;
+    size_t retval = 0;
+    if (L) {
+        lua_getglobal(L, DIRKSIMPLE_LUA_NAMESPACE);
+        if (lua_istable(L, -1)) {  // namespace is sane?
+            lua_getfield(L, -1, "serialize");
+            if (lua_isfunction(L, -1)) {  // if not function, maybe unsupported by this game
+                lua_call(L, 0, 1);    // top of the stack is the return value.
+                if (lua_istable(L, -1)) {
+                    retval = serialize_lua_array(L, data, len);
+                }
+                lua_pop(L, 1);  // pop the return value.
+            }
+        }
+        lua_pop(L, 1);  // pop the namespace
+    }
+    return retval;
+}
+
+int DirkSimple_unserialize(void *data, size_t len)
+{
+    lua_State *L = GLua;
+    int retval = 0;
+    if (L) {
+        lua_getglobal(L, DIRKSIMPLE_LUA_NAMESPACE);
+        if (lua_istable(L, -1)) {  // namespace is sane?
+            lua_getfield(L, -1, "unserialize");
+            if (lua_isfunction(L, -1)) {  // if not function, maybe unsupported by this game
+                if (unserialize_lua_array(L, data, len)) {  // this will push the array on top of the function as an argument.
+                    lua_call(L, 1, 1);  // this will pop the array argument and function.
+                    retval = lua_toboolean(L, -1) ? 1 : 0;
+                }
+                lua_pop(L, 1);  // pop the return value (or the function we never called).
+            }
+        }
+        lua_pop(L, 1);  // pop the namespace
+    }
+    return retval;
+}
+
+
 void DirkSimple_shutdown(void)
 {
     THEORAPLAY_stopDecode(GDecoder);

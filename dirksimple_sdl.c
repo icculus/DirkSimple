@@ -40,7 +40,7 @@ static DIRKSIMPLE_NORETURN void sdlpanic(const char *what)
     DirkSimple_panic(errstr ? errstr : what);
 }
 
-extern void DirkSimple_writelog(const char *str)
+void DirkSimple_writelog(const char *str)
 {
     SDL_Log("%s", str);
 }
@@ -205,6 +205,15 @@ static void render_frame()
     SDL_RenderPresent(GRenderer);
 }
 
+typedef struct SaveSlot
+{
+    size_t len;
+    uint8_t *data;
+} SaveSlot;
+
+static uint8_t save_slot = 0;
+static SaveSlot save_data[8];
+
 static uint64_t keyinputbits = 0;
 static uint64_t controllerinputbits = 0;
 
@@ -224,7 +233,64 @@ static SDL_bool mainloop_iteration(void)
                     case SDLK_a: keyinputbits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
                     case SDLK_TAB: keyinputbits |= DIRKSIMPLE_INPUT_COINSLOT; break;
                     case SDLK_RETURN: keyinputbits |= DIRKSIMPLE_INPUT_START; break;
-                    case SDLK_ESCAPE: return SDL_FALSE;  // !!! FIXME: remove this later.
+
+                    case SDLK_ESCAPE:
+                        return SDL_FALSE;  // !!! FIXME: remove this later?
+
+                    case SDLK_LEFTBRACKET:
+                    case SDLK_RIGHTBRACKET:
+                        if (e.key.keysym.sym == SDLK_LEFTBRACKET) {
+                            if (save_slot == 0) {
+                                save_slot = 7;
+                            } else {
+                                save_slot--;
+                            }
+                        } else {
+                            if (save_slot == 7) {
+                                save_slot = 0;
+                            } else {
+                                save_slot++;
+                            }
+                        }
+                        DirkSimple_log("Now using save slot #%d", (int) save_slot);
+                        break;
+
+                    case SDLK_F2: {
+                        const size_t len = DirkSimple_serialize(NULL, 0);
+                        if (len == 0) {
+                            DirkSimple_log("Failed to determine save state size! Nothing has been saved!");
+                        } else {
+                            void *data = DirkSimple_xmalloc(len);
+                            if (DirkSimple_serialize(data, len) != len) {
+                                DirkSimple_log("Failed to save state! Nothing has been saved!");
+                                free(data);
+                            } else {
+                                DirkSimple_log("State saved (%d bytes) to save slot #%d", (int) len, (int) save_slot);
+                                free(save_data[save_slot].data);
+                                save_data[save_slot].data = data;
+                                save_data[save_slot].len = len;
+                            }
+                        }
+                        break;
+                    }
+
+                    case SDLK_F3: {
+                        if ((save_data[save_slot].data == NULL) || (save_data[save_slot].len == 0)) {
+                            DirkSimple_log("No save data currently in slot #%d, not restoring!", (int) save_slot);
+                        } else {
+                            if (DirkSimple_unserialize(save_data[save_slot].data, save_data[save_slot].len)) {
+                                DirkSimple_log("Restored from save slot #%d!", (int) save_slot);
+                            } else {
+                                DirkSimple_log("Failed to restore from save slot #%d!", (int) save_slot);
+                            }
+                        }
+                        break;
+                    }
+
+                    case SDLK_F5: {
+                        DirkSimple_restart();
+                        break;
+                    }
                 }
                 break;
 

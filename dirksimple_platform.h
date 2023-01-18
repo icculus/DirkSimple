@@ -65,13 +65,18 @@ extern void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits);
 extern void DirkSimple_shutdown(void);
 
 // Log a formatted string. This will eventually call DirkSimple_logwrite() in the platform code with the final formatted string.
-void DirkSimple_log(const char *fmt, ...);
+extern void DirkSimple_log(const char *fmt, ...);
 
 // These just wrap standard malloc, etc, but call DirkSimple_panic if they fail.
+// !!! FIXME: let the platform provide allocators.
 extern void *DirkSimple_xmalloc(size_t len);
 extern void *DirkSimple_xcalloc(size_t nmemb, size_t len);
 extern void *DirkSimple_xrealloc(void *ptr, size_t len);
 extern char *DirkSimple_xstrdup(const char *str);
+
+extern void DirkSimple_restart(void);
+extern size_t DirkSimple_serialize(void *data, size_t len);
+extern int DirkSimple_unserialize(void *data, size_t len);
 
 
 // Your platform layer implements these, which dirksimple.c calls into...
