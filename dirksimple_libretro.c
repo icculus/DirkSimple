@@ -394,8 +394,6 @@ static uint64_t get_current_inputbits(void)
     CHECK_JOYPAD_INPUT(START, START);
     #undef CHECK_JOYPAD_INPUT
 
-if (keyboard_inputbits & DIRKSIMPLE_INPUT_COINSLOT) { DirkSimple_panic("OH NO MISTER BILL"); }
-
     return joypad_inputbits | keyboard_inputbits;
 }
 
