@@ -22,6 +22,16 @@ static int GAudioChannels = 0;
 static int GLaserDiscTextureWidth = 0;
 static int GLaserDiscTextureHeight = 0;
 
+static char *get_base_dir(void)
+{
+#ifdef DIRKSIMPLE_FORCE_BASE_DIR  // let Linux distros hardcode this to something under /usr/share, or whatever.
+    return SDL_strdup(DIRKSIMPLE_FORCE_BASE_DIR);
+#else
+    return SDL_GetBasePath();
+#endif
+}
+
+
 void DirkSimple_panic(const char *str)
 {
     SDL_Log("DirkSimple PANIC: %s", str);
@@ -106,7 +116,7 @@ void DirkSimple_audioformat(int channels, int freq)
 
 static void load_icon(SDL_Window *window)
 {
-    char *basedir = SDL_GetBasePath();
+    char *basedir = get_base_dir();
     if (basedir) {  // oh well if not.
         const size_t slen = SDL_strlen(basedir) + 32;
         char *iconpath = (char *) SDL_malloc(slen);
@@ -366,7 +376,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    basedir = SDL_GetBasePath();
+    basedir = get_base_dir();
     if (basedir == NULL) {
         const char *errstr = SDL_GetError();
         SDL_Log("Failed to determine base dir: %s", errstr);

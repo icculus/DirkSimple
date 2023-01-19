@@ -460,11 +460,15 @@ bool retro_load_game(const struct retro_game_info *info)
         return false;
     }
 
+#ifdef DIRKSIMPLE_FORCE_BASE_DIR  // let Linux distros hardcode this to something under /usr/share, or whatever.
+    const char *sysdir = DIRKSIMPLE_FORCE_BASE_DIR;
+#else
     const char *sysdir = NULL;
     if (!environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &sysdir) || !sysdir) {
         log_cb(RETRO_LOG_INFO, "Couldn't find system directory, giving up.\n");
         return false;
     }
+#endif
 
     bool retval = false;
     char *basedir = NULL;

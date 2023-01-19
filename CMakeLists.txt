@@ -41,6 +41,7 @@ endif()
 
 option(DIRKSIMPLE_SDL "Build the DirkSimple SDL app" ${DIRKSIMPLE_SDL_DEFAULT})
 option(DIRKSIMPLE_LIBRETRO "Build the DirkSimple libretro core" ${DIRKSIMPLE_LIBRETRO_DEFAULT})
+set(DIRKSIMPLE_FORCE_BASE_DIR "" CACHE STRING "Force the base dir to a hardcoded path, like '/usr/share/games/DirkSimple'")
 
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -175,6 +176,10 @@ if(DIRKSIMPLE_SDL)
         set_target_properties(dirksimple PROPERTIES OUTPUT_NAME "dirksimple-wasm")
         set_target_properties(dirksimple PROPERTIES LINK_FLAGS "${IPO_FLAG} -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ASSERTIONS=0 -s EXPORTED_RUNTIME_METHODS=['addRunDependency','removeRunDependency'] -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE=['$autoResumeAudioContext','$dynCall']")
     endif()
+
+    if(NOT DIRKSIMPLE_FORCE_BASE_DIR STREQUAL "")
+        set_target_properties(dirksimple PROPERTIES COMPILE_DEFINITIONS "DIRKSIMPLE_FORCE_BASE_DIR=${DIRKSIMPLE_FORCE_BASE_DIR}")
+    endif()
 endif()
 
 if(DIRKSIMPLE_LIBRETRO)
@@ -194,6 +199,9 @@ if(DIRKSIMPLE_LIBRETRO)
     endif()
     if(ANDROID)  # Android builds of libretro cores need specific names.
         set_target_properties(dirksimple_libretro PROPERTIES LIBRARY_OUTPUT_NAME dirksimple_libretro_android)
+    endif()
+    if(NOT DIRKSIMPLE_FORCE_BASE_DIR STREQUAL "")
+        set_target_properties(dirksimple_libretro PROPERTIES COMPILE_DEFINITIONS "DIRKSIMPLE_FORCE_BASE_DIR=${DIRKSIMPLE_FORCE_BASE_DIR}")
     endif()
 endif()
 
