@@ -3,7 +3,8 @@
 ## What is this?
 
 This is a dirt-simple Dragon's Lair player. It uses the original footage
-from the laserdisc but not the ROM from the arcade cabinet.
+from the laserdisc but not the ROM from the arcade cabinet. The game logic
+has been implemented from scratch in Lua.
 
 There are very few options: you point it at an Ogg Theora-encoded video of
 the laserdisc contents and that's it.
@@ -30,6 +31,15 @@ Theora file that DirkSimple can use. Like this:
   ffmpeg -i lair.m2v -i lair.ogg -codec:v libtheora -qscale:v 7 -codec:a libvorbis -qscale:a 5 -pix_fmt yuv420p lair.ogv
   ```
 
+- If you have the game content split up across multiple files, you can
+  (probably) use ffmpeg to concatenate them into a single video file, as long
+  as the final contents match up. (if anyone has successfully done this,
+  please open an issue with the details!).
+
+- DirkSimple does not care what resolution the final video is, or what
+  framerate it runs at, as long as the video matches up to the original
+  arcade cabinet version.
+
 - Make sure that Ogg Theora file is named "lair.ogv" and you're good to go.
 
 - Build DirkSimple: Make sure you have CMake and SDL2 development libraries
@@ -52,4 +62,16 @@ to make lr-daphne work? Now you can. By default, building DirkSimple will
 also generate a libretro core; when used with RetroArch, you can point it
 at your lair.ogv and enjoy the RetroArch overlay, controller support,
 save states, etc.
+
+
+## What about other games?
+
+I would like to add other games to this besides Dragon's Lair; for many of
+the popular ones, like Space Ace, most of the work is just filling in a table
+of scenes, their timings and recognized player actions. For others (like
+Cobra Command), it'll take some extensions to this engine that are planned
+but not yet started.
+
+If you have access to that information, or would like to take the significant
+effort to gather that information, get in touch, please!
 
