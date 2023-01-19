@@ -16,7 +16,7 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const th_info *tinfo,
     const int w = tinfo->pic_width;
     const int h = tinfo->pic_height;
     const int halfw = w / 2;
-    unsigned char *pixels = (unsigned char *) malloc(w * h * 4);
+    unsigned char *pixels = (unsigned char *) malloc(THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h));
 
     // http://www.theora.org/doc/Theora.pdf, 1.1 spec,
     //  chapter 4.2 (Y'CbCr -> Y'PbPr -> R'G'B')
@@ -60,20 +60,8 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const th_info *tinfo,
                 const float r2 = (y2 + (2.0f * (1.0f - kr) * pr)) * 255.0f;
                 const float g2 = (y2 - ((2.0f * (((1.0f - kb) * kb) / ((1.0f - kb) - kr))) * pb) - ((2.0f * (((1.0f - kr) * kr) / ((1.0f - kb) - kr))) * pr)) * 255.0f;
                 const float b2 = (y2 + (2.0f * (1.0f - kb) * pb)) * 255.0f;
-
-                *(dst++) = (unsigned char) ((r1 < 0.0f) ? 0.0f : (r1 > 255.0f) ? 255.0f : r1);
-                *(dst++) = (unsigned char) ((g1 < 0.0f) ? 0.0f : (g1 > 255.0f) ? 255.0f : g1);
-                *(dst++) = (unsigned char) ((b1 < 0.0f) ? 0.0f : (b1 > 255.0f) ? 255.0f : b1);
-                #if THEORAPLAY_CVT_RGB_ALPHA
-                *(dst++) = 0xFF;
-                #endif
-
-                *(dst++) = (unsigned char) ((r2 < 0.0f) ? 0.0f : (r2 > 255.0f) ? 255.0f : r2);
-                *(dst++) = (unsigned char) ((g2 < 0.0f) ? 0.0f : (g2 > 255.0f) ? 255.0f : g2);
-                *(dst++) = (unsigned char) ((b2 < 0.0f) ? 0.0f : (b2 > 255.0f) ? 255.0f : b2);
-                #if THEORAPLAY_CVT_RGB_ALPHA
-                *(dst++) = 0xFF;
-                #endif
+                THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
+                THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
             } // for
 
             // adjust to the start of the next line.
@@ -85,6 +73,10 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const th_info *tinfo,
 
     return pixels;
 } // THEORAPLAY_CVT_FNNAME_420
+
+#undef THEORAPLAY_CVT_FNNAME_420
+#undef THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE
+#undef THEORAPLAY_CVT_RGB_OUTPUT
 
 // end of theoraplay_cvtrgb.h ...
 

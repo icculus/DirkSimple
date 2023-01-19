@@ -101,17 +101,48 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const th_info *tinfo,
 
 // RGB
 #define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGB
-#define THEORAPLAY_CVT_RGB_ALPHA 0
+#define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 3)
+#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+    *(dst++) = (unsigned char) ((r < 0.0f) ? 0.0f : (r > 255.0f) ? 255.0f : r); \
+    *(dst++) = (unsigned char) ((g < 0.0f) ? 0.0f : (g > 255.0f) ? 255.0f : g); \
+    *(dst++) = (unsigned char) ((b < 0.0f) ? 0.0f : (b > 255.0f) ? 255.0f : b); \
+}
 #include "theoraplay_cvtrgb.h"
-#undef THEORAPLAY_CVT_RGB_ALPHA
-#undef THEORAPLAY_CVT_FNNAME_420
 
 // RGBA
 #define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGBA
-#define THEORAPLAY_CVT_RGB_ALPHA 1
+#define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 4)
+#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+    *(dst++) = (unsigned char) ((r < 0.0f) ? 0.0f : (r > 255.0f) ? 255.0f : r); \
+    *(dst++) = (unsigned char) ((g < 0.0f) ? 0.0f : (g > 255.0f) ? 255.0f : g); \
+    *(dst++) = (unsigned char) ((b < 0.0f) ? 0.0f : (b > 255.0f) ? 255.0f : b); \
+    *(dst++) = 0xFF; \
+}
 #include "theoraplay_cvtrgb.h"
-#undef THEORAPLAY_CVT_RGB_ALPHA
-#undef THEORAPLAY_CVT_FNNAME_420
+
+// BGRA
+#define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToBGRA
+#define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 4)
+#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+    *(dst++) = (unsigned char) ((b < 0.0f) ? 0.0f : (b > 255.0f) ? 255.0f : b); \
+    *(dst++) = (unsigned char) ((g < 0.0f) ? 0.0f : (g > 255.0f) ? 255.0f : g); \
+    *(dst++) = (unsigned char) ((r < 0.0f) ? 0.0f : (r > 255.0f) ? 255.0f : r); \
+    *(dst++) = 0xFF; \
+}
+#include "theoraplay_cvtrgb.h"
+
+// RGB565
+#define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGB565
+#define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 2)
+#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+    const unsigned short r5 = ((unsigned short) ((r < 0.0f) ? 0.0f : (r > 255.0f) ? 255.0f : r)) >> 3; \
+    const unsigned short g6 = ((unsigned short) ((g < 0.0f) ? 0.0f : (g > 255.0f) ? 255.0f : g)) >> 2; \
+    const unsigned short b5 = ((unsigned short) ((b < 0.0f) ? 0.0f : (b > 255.0f) ? 255.0f : b)) >> 3; \
+    unsigned short *dst16 = (unsigned short *) dst; \
+    *dst16 = (r5 << 11) | (g6 << 5) | b5; \
+    dst += 2; \
+}
+#include "theoraplay_cvtrgb.h"
 
 
 // !!! FIXME: these volatiles really need to become atomics.
@@ -848,6 +879,8 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
         VIDCVT(IYUV)
         VIDCVT(RGB)
         VIDCVT(RGBA)
+        VIDCVT(BGRA)
+        VIDCVT(RGB565)
         #undef VIDCVT
         default: goto startdecode_failed;  // invalid/unsupported format.
     } // switch
