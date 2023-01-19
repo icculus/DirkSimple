@@ -54,8 +54,7 @@ static long DirkSimple_rwops_streamlen(DirkSimple_Io *io)
 {
     SDL_RWops *rwops = (SDL_RWops *) io->userdata;
     const Sint64 origpos = SDL_RWtell(rwops);
-    long retval = -1;
-    retval = (long) SDL_RWseek(rwops, 0, RW_SEEK_END);
+    const long retval = (long) SDL_RWseek(rwops, 0, RW_SEEK_END);
     SDL_RWseek(rwops, origpos, RW_SEEK_SET);
     return retval;
 }
@@ -68,6 +67,7 @@ static int DirkSimple_rwops_seek(DirkSimple_Io *io, long absolute_offset)
 static void DirkSimple_rwops_close(DirkSimple_Io *io)
 {
     SDL_RWclose((SDL_RWops *) io->userdata);
+    free(io);
 }
 
 DirkSimple_Io *DirkSimple_openfile_read(const char *path)
