@@ -42,6 +42,14 @@ Theora file that DirkSimple can use. Like this:
   If everything worked out, you will have a "dirksimple" binary in the
   "cmake-build" directory.
 
-
 - Run `./dirksimple lair.ogv` and enjoy the game.
+
+
+## libretro core!
+
+Ever want to play Dragon's Lair under RetroArch but couldn't figure out how
+to make lr-daphne work? Now you can. By default, building DirkSimple will
+also generate a libretro core; when used with RetroArch, you can point it
+at your lair.ogv and enjoy the RetroArch overlay, controller support,
+save states, etc.
 

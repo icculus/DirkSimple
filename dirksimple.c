@@ -428,7 +428,6 @@ static void load_lua_gamecode(lua_State *L, const char *basedir, const char *gam
         io = DirkSimple_openfile_read(fname + 1);
         if (!io) {
             snprintf(fname, slen, "Failed to open %s Lua code", gamename);
-            free(fname);
             DirkSimple_panic(fname);
         }
     }
@@ -533,7 +532,7 @@ static void setup_game_strings(const char *basedir, const char *gamepath, const 
     }
 }
 
-static void setup_movie(const char *gamepath)
+static void setup_movie(const char *gamepath, DirkSimple_PixFmt pixfmt)
 {
     DirkSimple_Io *io = DirkSimple_openfile_read(gamepath);
     if (!io) {
@@ -554,19 +553,19 @@ static void setup_movie(const char *gamepath)
     GTheoraplayIo.seek = theoraplayiobridge_seek;
     GTheoraplayIo.close = theoraplayiobridge_close;
     GTheoraplayIo.userdata = io;
-    GDecoder = THEORAPLAY_startDecode(&GTheoraplayIo, 30, THEORAPLAY_VIDFMT_IYUV, DIRKSIMPLE_MULTITHREADED);
+    GDecoder = THEORAPLAY_startDecode(&GTheoraplayIo, 30, (THEORAPLAY_VideoFormat) pixfmt, DIRKSIMPLE_MULTITHREADED);
     if (!GDecoder) {
         DirkSimple_panic("Failed to start movie decoding!");
     }
 }
 
-void DirkSimple_startup(const char *basedir, const char *gamepath, const char *gamename)
+void DirkSimple_startup(const char *basedir, const char *gamepath, const char *gamename, DirkSimple_PixFmt pixfmt)
 {
     DirkSimple_shutdown();  // safe to call even if not started up at the moment.
 
     setup_game_strings(basedir, gamepath, gamename);
     setup_lua();
-    setup_movie(GGamePath);
+    setup_movie(GGamePath, pixfmt);
 }
 
 void DirkSimple_restart(void)  // DO NOT CALL THIS FROM LUA CODE
@@ -642,9 +641,9 @@ static size_t serialize_lua_array(lua_State *L, void *_data, size_t len)
     return bw;
 }
 
-static int unserialize_lua_array(lua_State *L, void *_data, size_t len)
+static int unserialize_lua_array(lua_State *L, const void *_data, size_t len)
 {
-    uint8_t *data = (uint8_t *) _data;
+    const uint8_t *data = (const uint8_t *) _data;
     lua_Integer idx = 0;
 
     lua_newtable(L);  // the Lua array we'll decode into.
@@ -727,7 +726,7 @@ size_t DirkSimple_serialize(void *data, size_t len)
     return retval;
 }
 
-int DirkSimple_unserialize(void *data, size_t len)
+int DirkSimple_unserialize(const void *data, size_t len)
 {
     lua_State *L = GLua;
     int retval = 0;
@@ -900,7 +899,7 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         GFrameMS = (video->fps == 0.0) ? 0 : ((uint32_t) (1000.0 / video->fps));
 
         GDiscoveredVideoFormat = 1;
-        DirkSimple_videoformat(gametitle, video->width, video->height);
+        DirkSimple_videoformat(gametitle, video->width, video->height, video->fps);
         free(gametitle);
         THEORAPLAY_freeVideo(video);  // dump this, the game is going to seek at startup anyhow.
     }

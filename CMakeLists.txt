@@ -7,6 +7,15 @@
 project(DirkSimple)
 cmake_minimum_required(VERSION 3.0.0)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    set(ANDROID TRUE)
+endif()
+
+# Building as part of RetroArch? Turn off everything but the libretro plugin by default.
+if(LIBRETRO)
+    set(MOJOZORK_STANDALONE_DEFAULT OFF)
+endif()
+
 include(CheckLibraryExists)
 
 CHECK_LIBRARY_EXISTS(m floor "" HAVE_LIB_M)
@@ -26,8 +35,12 @@ if(LIBRETRO)
     set(DIRKSIMPLE_SDL_DEFAULT OFF)
 endif()
 
+# Rather than build the static libraries twice so we can have them built with
+# `-fPIC` for linking into the libretro shared library, just always build them
+# that way. It's fine. See the `POSITION_INDEPENDENT_CODE` lines below.
+
 option(DIRKSIMPLE_SDL "Build the DirkSimple SDL app" ${DIRKSIMPLE_SDL_DEFAULT})
-#option(DIRKSIMPLE_LIBRETRO "Build the DirkSimple libretro core" ${DIRKSIMPLE_LIBRETRO_DEFAULT})
+option(DIRKSIMPLE_LIBRETRO "Build the DirkSimple libretro core" ${DIRKSIMPLE_LIBRETRO_DEFAULT})
 
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -41,6 +54,7 @@ add_library(dirksimple-ogg STATIC
 	thirdparty/libogg/src/bitwise.c
 	thirdparty/libogg/src/framing.c
 )
+set_target_properties(dirksimple-ogg PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(dirksimple-ogg PRIVATE
     thirdparty/libogg/include
 )
@@ -68,6 +82,7 @@ add_library(dirksimple-vorbis STATIC
     thirdparty/libvorbis/lib/vorbisfile.c
     thirdparty/libvorbis/lib/window.c
 )
+set_target_properties(dirksimple-vorbis PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(dirksimple-vorbis PRIVATE
     thirdparty/libogg/include
     thirdparty/libvorbis/include
@@ -89,6 +104,7 @@ add_library(dirksimple-theora STATIC
     thirdparty/libtheora/lib/quant.c
     thirdparty/libtheora/lib/state.c
 )
+set_target_properties(dirksimple-theora PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(dirksimple-theora PRIVATE
     thirdparty/libogg/include
     thirdparty/libtheora/include
@@ -97,6 +113,7 @@ target_include_directories(dirksimple-theora PRIVATE
 add_library(dirksimple-theoraplay STATIC
     thirdparty/theoraplay/theoraplay.c
 )
+set_target_properties(dirksimple-theoraplay PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(dirksimple-theoraplay PRIVATE
     thirdparty/libogg/include
     thirdparty/libvorbis/include
@@ -137,6 +154,7 @@ add_library(dirksimple-lua STATIC
     thirdparty/lua/src/lcorolib.c
     thirdparty/lua/src/loadlib.c
 )
+set_target_properties(dirksimple-lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_MKSTEMP=1")  # as opposed to tmpnam(), yuck!
 target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_ULONGJMP=1")
 
@@ -159,18 +177,25 @@ if(DIRKSIMPLE_SDL)
     endif()
 endif()
 
-#if(DIRKSIMPLE_LIBRETRO)
-#    add_library(dirksimple_libretro SHARED dirksimple_libretro.c)
-#    set_target_properties(dirksimple_libretro PROPERTIES PREFIX "")
-#    target_include_directories(dirksimple PRIVATE
-#        thirdparty/lua/src
-#        thirdparty/theoraplay
-#    )
-#    target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
-#    if(HAVE_LIB_M)
-#        target_link_libraries(dirksimple_libretro m)
-#    endif()
-#endif()
+if(DIRKSIMPLE_LIBRETRO)
+    add_library(dirksimple_libretro SHARED dirksimple.c dirksimple_libretro.c)
+    target_include_directories(dirksimple_libretro PRIVATE
+        thirdparty/lua/src
+        thirdparty/theoraplay
+    )
+    set_target_properties(dirksimple_libretro PROPERTIES PREFIX "")
+    target_include_directories(dirksimple PRIVATE
+        thirdparty/lua/src
+        thirdparty/theoraplay
+    )
+    target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+    if(HAVE_LIB_M)
+        target_link_libraries(dirksimple_libretro m)
+    endif()
+    if(ANDROID)  # Android builds of libretro cores need specific names.
+        set_target_properties(dirksimple_libretro PROPERTIES LIBRARY_OUTPUT_NAME dirksimple_libretro_android)
+    endif()
+endif()
 
 # end of CMakeLists.txt ...
 

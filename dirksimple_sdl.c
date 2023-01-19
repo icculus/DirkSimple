@@ -124,7 +124,7 @@ static void load_icon(SDL_Window *window)
     }
 }
 
-void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height)
+void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height, double fps)
 {
     GWindow = SDL_CreateWindow(gametitle ? gametitle : "DirkSimple", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);  // !!! FIXME: fullscreen desktop?
     if (!GWindow) {
@@ -374,7 +374,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    DirkSimple_startup(basedir, gamepath, NULL);  // !!! FIXME: add --gamename option?
+    DirkSimple_startup(basedir, gamepath, NULL, DIRKSIMPLE_PIXFMT_IYUV);  // !!! FIXME: add --gamename option?
 
     SDL_free(basedir);
 

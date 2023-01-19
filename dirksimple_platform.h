@@ -45,6 +45,15 @@
 #define DIRKSIMPLE_INPUT_COINSLOT (1 << 6)
 #define DIRKSIMPLE_INPUT_START    (1 << 7)
 
+typedef enum DirkSimple_PixFmt
+{
+    DIRKSIMPLE_PIXFMT_YV12,  /* NTSC colorspace, planar YCrCb 4:2:0 */
+    DIRKSIMPLE_PIXFMT_IYUV,  /* NTSC colorspace, planar YCbCr 4:2:0 */
+    DIRKSIMPLE_PIXFMT_RGB,   /* 24 bits packed pixel RGB */
+    DIRKSIMPLE_PIXFMT_RGBA,  /* 32 bits packed pixel RGBA (full alpha). */
+    DIRKSIMPLE_PIXFMT_BGRA,  /* 32 bits packed pixel BGRA (full alpha). */
+    DIRKSIMPLE_PIXFMT_RGB565 /* 16 bits packed pixel RGB565. */
+} DirkSimple_PixFmt;
 
 // dirksimple.c implements these, which you can call into...
 
@@ -52,9 +61,10 @@
 // `basedir` is where to load files this app needs (scripts, icons, etc).
 // `gamename` can specify the game type if the gamepath's filename isn't in the format of "gamename.ext",
 //  but can be NULL if you want us to figure that out for you.
+// `pixfmt` tells DirkSimple_discvideo to provide a specific pixel format.
 // This loads things, starts things going, and returns. If there's a failure, it
 // will call DirkSimple_panic. There is no graceful failure here.
-extern void DirkSimple_startup(const char *basedir, const char *gamepath, const char *gamename);
+extern void DirkSimple_startup(const char *basedir, const char *gamepath, const char *gamename, DirkSimple_PixFmt pixfmt);
 
 // You call this frequently (once per frame or more).
 //  `monotonic_ms` is current time in milliseconds. It must increase reliably, and doesn't matter what value it starts at.
@@ -76,7 +86,7 @@ extern char *DirkSimple_xstrdup(const char *str);
 
 extern void DirkSimple_restart(void);
 extern size_t DirkSimple_serialize(void *data, size_t len);
-extern int DirkSimple_unserialize(void *data, size_t len);
+extern int DirkSimple_unserialize(const void *data, size_t len);
 
 
 // Your platform layer implements these, which dirksimple.c calls into...
@@ -107,7 +117,7 @@ extern DirkSimple_Io *DirkSimple_openfile_read(const char *path);
 // wait for the "laserdisc" video file to supply it. Be prepared to set up your outputs
 // at some arbitrary point, possibly after a few calls to DirkSimple_tick.
 extern void DirkSimple_audioformat(int channels, int freq);
-extern void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height);
+extern void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height, double fps);
 
 // A new frame from the "laserdisc." These won't show up every call to DirkSimple_tick, so if you need
 //  to refresh the display at specific times, you should redraw with this data more than once.
