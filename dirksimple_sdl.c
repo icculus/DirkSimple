@@ -92,7 +92,7 @@ void DirkSimple_audioformat(int channels, int freq)
     spec.freq = freq;
     spec.format = AUDIO_F32SYS;
     spec.channels = channels;
-    spec.samples = 512;
+    spec.samples = 1024;
     spec.callback = NULL;
     GAudioChannels = channels;
     GAudioDeviceID = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0);
