@@ -437,7 +437,7 @@ int oc_state_mbi_for_pos(oc_theora_state *_state,int _mbx,int _mby);
 int oc_state_get_mv_offsets(const oc_theora_state *_state,int _offsets[2],
  int _pli,int _dx,int _dy);
 
-int oc_state_loop_filter_init(oc_theora_state *_state,int *_bv);
+int oc_state_loop_filter_init(oc_theora_state *_state,int _bv[256]);
 void oc_state_loop_filter(oc_theora_state *_state,int _frame);
 #if defined(OC_DUMP_IMAGES)
 int oc_state_dump_frame(const oc_theora_state *_state,int _frame,

@@ -1012,8 +1012,7 @@ void oc_state_loop_filter_frag_rows(const oc_theora_state *_state,int _bv[256],
    _fragy0,_fragy_end);
 }
 
-void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int *_bv,
- int _refi,int _pli,int _fragy0,int _fragy_end){
+void oc_state_loop_filter_frag_rows_c(const oc_theora_state *_state,int _bv[256],int _refi,int _pli,int _fragy0,int _fragy_end) {
   const oc_fragment_plane *fplane;
   const oc_fragment       *frags;
   const ptrdiff_t         *frag_buf_offs;
