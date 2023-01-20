@@ -532,8 +532,17 @@ static void setup_game_strings(const char *basedir, const char *gamepath, const 
     }
 }
 
+static void *DirkSimple_theoraplay_allocate(const THEORAPLAY_Allocator *allocator, unsigned int len) { return DirkSimple_xmalloc((size_t) len); }
+static void DirkSimple_theoraplay_deallocate(const THEORAPLAY_Allocator *allocator, void *ptr) { DirkSimple_free(ptr); }
+
 static void setup_movie(const char *gamepath, DirkSimple_PixFmt pixfmt)
 {
+    THEORAPLAY_Allocator allocator;
+
+    allocator.allocate = DirkSimple_theoraplay_allocate;
+    allocator.deallocate = DirkSimple_theoraplay_deallocate;
+    allocator.userdata = NULL;
+
     DirkSimple_Io *io = DirkSimple_openfile_read(gamepath);
     if (!io) {
         const size_t slen = strlen(gamepath) + 5;
@@ -553,7 +562,7 @@ static void setup_movie(const char *gamepath, DirkSimple_PixFmt pixfmt)
     GTheoraplayIo.seek = theoraplayiobridge_seek;
     GTheoraplayIo.close = theoraplayiobridge_close;
     GTheoraplayIo.userdata = io;
-    GDecoder = THEORAPLAY_startDecode(&GTheoraplayIo, 30, (THEORAPLAY_VideoFormat) pixfmt, DIRKSIMPLE_MULTITHREADED);
+    GDecoder = THEORAPLAY_startDecode(&GTheoraplayIo, 30, (THEORAPLAY_VideoFormat) pixfmt, &allocator, DIRKSIMPLE_MULTITHREADED);
     if (!GDecoder) {
         DirkSimple_panic("Failed to start movie decoding!");
     }

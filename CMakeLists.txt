@@ -120,6 +120,8 @@ target_include_directories(dirksimple-theoraplay PRIVATE
     thirdparty/libvorbis/include
     thirdparty/libtheora/include
 )
+target_compile_definitions(dirksimple-theoraplay PRIVATE "-DTHEORAPLAY_NO_MALLOC_FALLBACK=1")
+target_compile_definitions(dirksimple-theoraplay PRIVATE "-DTHEORAPLAY_NO_FOPEN_FALLBACK=1")
 
 add_library(dirksimple-lua STATIC
     thirdparty/lua/src/lapi.c
