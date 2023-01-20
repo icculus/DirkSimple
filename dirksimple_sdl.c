@@ -10,6 +10,7 @@
 #include <emscripten.h>
 #endif
 
+#include <dirent.h>
 #include "SDL.h"
 
 #include "dirksimple_platform.h"
@@ -355,19 +356,7 @@ int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
     char *basedir = NULL;
-
-    #ifdef __EMSCRIPTEN__
-    char varbuf[32];  // GDirkSimpleGameId is set up in the Javascript loader.
-    EM_ASM({ stringToUTF8('/' + GDirkSimpleGameId + '.ogv', $0, $1); }, varbuf, sizeof (varbuf));
-    gamepath = varbuf;
-    #else
-    if (argc != 2) {
-        SDL_Log("USAGE: %s <path/to/game.ogv>", argv[0]);
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "USAGE", "USAGE: dirksimple <path/to/game.ogv>", NULL);
-        return 1;
-    }
-    gamepath = argv[1];
-    #endif
+    char *foundpath = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
         const char *errstr = SDL_GetError();
@@ -384,9 +373,41 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    if (argc >= 2) {
+        gamepath = argv[1];
+    }
+
+    // just look for an .ogv file in the base dir
+    if (!gamepath) {
+        DIR *dirp = opendir(basedir);
+        if (dirp) {
+            struct dirent *dent;
+            while ((dent = readdir(dirp)) != NULL) {
+                const char *ptr = SDL_strrchr(dent->d_name, '.');
+                if (ptr && (SDL_strcmp(ptr, ".ogv") == 0)) {
+                    const size_t slen = SDL_strlen(basedir) + SDL_strlen(dent->d_name) + 2;
+                    foundpath = (char *) SDL_malloc(slen);
+                    if (foundpath) {
+                        SDL_snprintf(foundpath, slen, "%s%s", basedir, dent->d_name);
+                        gamepath = foundpath;
+                    }
+                    break;
+                }
+            }
+            closedir(dirp);
+        }
+    }
+
+    if (!gamepath) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Can't find a movie file!", "Include an .ogv file with the build or put it on the command line.", NULL);
+        SDL_Quit();
+        return 1;
+    }
+
     DirkSimple_startup(basedir, gamepath, NULL, DIRKSIMPLE_PIXFMT_IYUV);  // !!! FIXME: add --gamename option?
 
     SDL_free(basedir);
+    SDL_free(foundpath);
 
 #if defined(__EMSCRIPTEN__)
     emscripten_set_main_loop(emscripten_mainloop, 0, 1);
