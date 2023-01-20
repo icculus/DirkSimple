@@ -32,7 +32,7 @@ static SDL_GameController *GGameController = NULL;
 static uint8_t GSaveSlot = 0;
 static SaveSlot GSaveData[8];
 static uint64_t GKeyInputBits = 0;
-
+static SDL_bool GWantFullscreen = SDL_FALSE;
 static char *get_base_dir(void)
 {
 #ifdef DIRKSIMPLE_FORCE_BASE_DIR  // let Linux distros hardcode this to something under /usr/share, or whatever.
@@ -152,7 +152,12 @@ static void load_icon(SDL_Window *window)
 
 void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height, double fps)
 {
-    GWindow = SDL_CreateWindow(gametitle ? gametitle : "DirkSimple", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);  // !!! FIXME: fullscreen desktop?
+    Uint32 flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+    if (GWantFullscreen) {
+        flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+
+    GWindow = SDL_CreateWindow(gametitle ? gametitle : "DirkSimple", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, flags);
     if (!GWindow) {
         sdlpanic("Failed to create window");
     }
@@ -308,6 +313,12 @@ static SDL_bool mainloop_iteration(void)
                         DirkSimple_restart();
                         break;
                     }
+
+                    case SDLK_F11: {
+                        GWantFullscreen = GWantFullscreen ? SDL_FALSE : SDL_TRUE;
+                        SDL_SetWindowFullscreen(GWindow, GWantFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+                        break;
+                    }
                 }
                 break;
 
@@ -391,8 +402,10 @@ static void emscripten_mainloop(void)
 int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
+    const char *gamename = NULL;
     char *basedir = NULL;
     char *foundpath = NULL;
+    int i;
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) == -1) {
         const char *errstr = SDL_GetError();
@@ -409,8 +422,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (argc >= 2) {
-        gamepath = argv[1];
+    for (i = 1; i < argc; i++) {
+        const char *arg = argv[i];
+        if (*arg == '-') {
+            while (*arg == '-') {
+                arg++;
+            }
+            if (SDL_strcmp(arg, "fullscreen") == 0) {
+                GWantFullscreen = SDL_TRUE;
+            } else if (SDL_strcmp(arg, "windowed") == 0) {
+                GWantFullscreen = SDL_FALSE;
+            }
+        } else {
+            if (gamepath == NULL) {
+                gamepath = arg;
+            } else if (gamename == NULL) {
+                gamename = arg;
+            }
+        }
     }
 
     // just look for an .ogv file in the base dir
@@ -440,7 +469,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    DirkSimple_startup(basedir, gamepath, NULL, DIRKSIMPLE_PIXFMT_IYUV);  // !!! FIXME: add --gamename option?
+    DirkSimple_startup(basedir, gamepath, gamename, DIRKSIMPLE_PIXFMT_IYUV);
 
     SDL_free(basedir);
     SDL_free(foundpath);
