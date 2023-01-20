@@ -405,7 +405,7 @@ static void playfile(const char *fname, const THEORAPLAY_VideoFormat vidfmt,
 
     printf("Trying file '%s' ...\n", fname);
 
-    decoder = THEORAPLAY_startDecodeFile(fname, MAX_FRAMES, vidfmt, 1);
+    decoder = THEORAPLAY_startDecodeFile(fname, MAX_FRAMES, vidfmt, NULL, 1);
     if (!decoder)
     {
         fprintf(stderr, "Failed to start decoding '%s'!\n", fname);

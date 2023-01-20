@@ -10,13 +10,12 @@
 #error Do not include this in your app. It is used internally by TheoraPlay.
 #endif
 
-static unsigned char *THEORAPLAY_CVT_FNNAME_420(const th_info *tinfo,
-                                                const th_ycbcr_buffer ycbcr)
+static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allocator, const th_info *tinfo, const th_ycbcr_buffer ycbcr)
 {
     const int w = tinfo->pic_width;
     const int h = tinfo->pic_height;
     const int halfw = w / 2;
-    unsigned char *pixels = (unsigned char *) malloc(THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h));
+    unsigned char *pixels = (unsigned char *) allocator->allocate(allocator, THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h));
 
     // http://www.theora.org/doc/Theora.pdf, 1.1 spec,
     //  chapter 4.2 (Y'CbCr -> Y'PbPr -> R'G'B')

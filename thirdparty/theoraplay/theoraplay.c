@@ -10,8 +10,6 @@
 //  libtheora-1.1.1/examples/player_example.c, but this is all my own
 //  code.
 
-// !!! FIXME: can we move this off malloc to a custom allocator?
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,10 +48,9 @@ typedef THEORAPLAY_AudioPacket AudioPacket;
 
 // !!! FIXME: these all count on the pixel format being TH_PF_420 for now.
 
-typedef unsigned char *(*ConvertVideoFrameFn)(const th_info *tinfo,
-                                              const th_ycbcr_buffer ycbcr);
+typedef unsigned char *(*ConvertVideoFrameFn)(const THEORAPLAY_Allocator *allocator, const th_info *tinfo, const th_ycbcr_buffer ycbcr);
 
-static unsigned char *ConvertVideoFrame420ToYUVPlanar(
+static unsigned char *ConvertVideoFrame420ToYUVPlanar(const THEORAPLAY_Allocator *allocator,
                             const th_info *tinfo, const th_ycbcr_buffer ycbcr,
                             const int p0, const int p1, const int p2)
 {
@@ -62,7 +59,7 @@ static unsigned char *ConvertVideoFrame420ToYUVPlanar(
     const int h = tinfo->pic_height;
     const int yoff = (tinfo->pic_x & ~1) + ycbcr[0].stride * (tinfo->pic_y & ~1);
     const int uvoff = (tinfo->pic_x / 2) + (ycbcr[1].stride) * (tinfo->pic_y / 2);
-    unsigned char *yuv = (unsigned char *) malloc(w * h * 2);
+    unsigned char *yuv = (unsigned char *) allocator->allocate(allocator, w * h * 2);
     const unsigned char *p0data = ycbcr[p0].data + yoff;
     const int p0stride = ycbcr[p0].stride;
     const unsigned char *p1data = ycbcr[p1].data + uvoff;
@@ -85,17 +82,15 @@ static unsigned char *ConvertVideoFrame420ToYUVPlanar(
 } // ConvertVideoFrame420ToYUVPlanar
 
 
-static unsigned char *ConvertVideoFrame420ToYV12(const th_info *tinfo,
-                                                 const th_ycbcr_buffer ycbcr)
+static unsigned char *ConvertVideoFrame420ToYV12(const THEORAPLAY_Allocator *allocator, const th_info *tinfo, const th_ycbcr_buffer ycbcr)
 {
-    return ConvertVideoFrame420ToYUVPlanar(tinfo, ycbcr, 0, 2, 1);
+    return ConvertVideoFrame420ToYUVPlanar(allocator, tinfo, ycbcr, 0, 2, 1);
 } // ConvertVideoFrame420ToYV12
 
 
-static unsigned char *ConvertVideoFrame420ToIYUV(const th_info *tinfo,
-                                                 const th_ycbcr_buffer ycbcr)
+static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *allocator, const th_info *tinfo, const th_ycbcr_buffer ycbcr)
 {
-    return ConvertVideoFrame420ToYUVPlanar(tinfo, ycbcr, 0, 1, 2);
+    return ConvertVideoFrame420ToYUVPlanar(allocator, tinfo, ycbcr, 0, 1, 2);
 } // ConvertVideoFrame420ToIYUV
 
 
@@ -156,6 +151,7 @@ typedef struct TheoraDecoder
     THEORAPLAY_THREAD_T worker;
 
     // API state...
+    THEORAPLAY_Allocator allocator;
     THEORAPLAY_Io *io;
     unsigned int maxframes;  // Max video frames to buffer.
     volatile unsigned int prepped;
@@ -610,14 +606,14 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
                     const int channels = ctx->vinfo.channels;
                     int chanidx, frameidx;
                     float *samples;
-                    AudioPacket *item = (AudioPacket *) malloc(sizeof (AudioPacket));
+                    AudioPacket *item = (AudioPacket *) ctx->allocator.allocate(&ctx->allocator, sizeof (AudioPacket));
                     if (item == NULL) goto cleanup;
                     item->seek_generation = ctx->current_seek_generation;
                     item->playms = playms;
                     item->channels = channels;
                     item->freq = ctx->vinfo.rate;
                     item->frames = frames;
-                    item->samples = (float *) malloc(sizeof (float) * frames * channels);
+                    item->samples = (float *) ctx->allocator.allocate(&ctx->allocator, sizeof (float) * frames * channels);
                     item->next = NULL;
 
                     if (item->samples == NULL)
@@ -698,7 +694,7 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
                         th_ycbcr_buffer ycbcr;
                         if (th_decode_ycbcr_out(ctx->tdec, ycbcr) == 0)
                         {
-                            VideoFrame *item = (VideoFrame *) malloc(sizeof (VideoFrame));
+                            VideoFrame *item = (VideoFrame *) ctx->allocator.allocate(&ctx->allocator, sizeof (VideoFrame));
                             if (item == NULL) goto cleanup;
                             item->seek_generation = ctx->current_seek_generation;
                             item->playms = playms;
@@ -706,7 +702,7 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
                             item->width = ctx->tinfo.pic_width;
                             item->height = ctx->tinfo.pic_height;
                             item->format = ctx->vidfmt;
-                            item->pixels = ctx->vidcvt(&ctx->tinfo, ycbcr);
+                            item->pixels = ctx->vidcvt(&ctx->allocator, &ctx->tinfo, ycbcr);
                             item->next = NULL;
 
                             if (item->pixels == NULL)
@@ -798,9 +794,16 @@ static void *WorkerThread(void *_this)
     return NULL;
 } // WorkerThread
 
+#ifndef THEORAPLAY_NO_FOPEN_FALLBACK
+typedef struct THEORAPLAY_IoUserData
+{
+    FILE *f;
+    THEORAPLAY_Allocator allocator;
+} THEORAPLAY_IoUserData;
+
 static long IoFopenRead(THEORAPLAY_Io *io, void *buf, long buflen)
 {
-    FILE *f = (FILE *) io->userdata;
+    FILE *f = ((THEORAPLAY_IoUserData *) io->userdata)->f;
     const size_t br = fread(buf, 1, buflen, f);
     if ((br == 0) && ferror(f))
         return -1;
@@ -809,7 +812,7 @@ static long IoFopenRead(THEORAPLAY_Io *io, void *buf, long buflen)
 
 static long IoFopenStreamLen(THEORAPLAY_Io *io)
 {
-    FILE *f = (FILE *) io->userdata;
+    FILE *f = ((THEORAPLAY_IoUserData *) io->userdata)->f;
     const long origpos = ftell(f);
     long retval = -1;
     if (fseek(f, 0, SEEK_END) == 0) {
@@ -821,31 +824,60 @@ static long IoFopenStreamLen(THEORAPLAY_Io *io)
 
 static int IoFopenSeek(THEORAPLAY_Io *io, long absolute_offset)
 {
-    FILE *f = (FILE *) io->userdata;
+    FILE *f = ((THEORAPLAY_IoUserData *) io->userdata)->f;
     return fseek(f, absolute_offset, SEEK_SET);
 } // IoFopenSeek
 
 static void IoFopenClose(THEORAPLAY_Io *io)
 {
-    FILE *f = (FILE *) io->userdata;
-    fclose(f);
-    free(io);
+    THEORAPLAY_IoUserData *userdata = (THEORAPLAY_IoUserData *) io->userdata;
+    fclose(userdata->f);
+    userdata->allocator.deallocate(&userdata->allocator, io);
 } // IoFopenClose
+#endif
 
+#ifndef THEORAPLAY_NO_MALLOC_FALLBACK
+static void *malloc_fallback_allocate(const THEORAPLAY_Allocator *allocator, unsigned int len) { return malloc((size_t) len); }
+static void malloc_fallback_deallocate(const THEORAPLAY_Allocator *allocator, void *ptr) { free(ptr); }
+#endif
 
 THEORAPLAY_Decoder *THEORAPLAY_startDecodeFile(const char *fname,
                                                const unsigned int maxframes,
                                                THEORAPLAY_VideoFormat vidfmt,
+                                               const THEORAPLAY_Allocator *allocator,
                                                const int multithreaded)
 {
-    THEORAPLAY_Io *io = (THEORAPLAY_Io *) malloc(sizeof (THEORAPLAY_Io));
+#ifdef THEORAPLAY_NO_FOPEN_FALLBACK
+    return NULL;
+#else
+    THEORAPLAY_Io *io;
+
+    #ifdef THEORAPLAY_NO_MALLOC_FALLBACK
+    if (allocator == NULL) {
+        return NULL;
+    }
+    #else
+    THEORAPLAY_Allocator malloc_fallback_allocator;
+    if (allocator == NULL) {
+        malloc_fallback_allocator.allocate = malloc_fallback_allocate;
+        malloc_fallback_allocator.deallocate = malloc_fallback_deallocate;
+        malloc_fallback_allocator.userdata = NULL;
+        allocator = &malloc_fallback_allocator;
+    }
+    #endif
+
+    io = (THEORAPLAY_Io *) allocator->allocate(allocator, sizeof (THEORAPLAY_Io) + sizeof (THEORAPLAY_IoUserData));
     if (io == NULL)
         return NULL;
 
-    FILE *f = fopen(fname, "rb");
-    if (f == NULL)
+    THEORAPLAY_IoUserData *userdata = (THEORAPLAY_IoUserData *) (io + 1);  /* we allocated it right after the Io interface */
+
+    memcpy(&userdata->allocator, allocator, sizeof (THEORAPLAY_allocator));
+
+    userdata->f = fopen(fname, "rb");
+    if (userdata->f == NULL)
     {
-        free(io);
+        allocator->deallocate(allocator, io);
         return NULL;
     } // if
 
@@ -853,18 +885,35 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecodeFile(const char *fname,
     io->seek = IoFopenSeek;
     io->streamlen = IoFopenStreamLen;
     io->close = IoFopenClose;
-    io->userdata = f;
-    return THEORAPLAY_startDecode(io, maxframes, vidfmt, multithreaded);
+    io->userdata = userdata;
+
+    return THEORAPLAY_startDecode(io, maxframes, vidfmt, allocator, multithreaded);
+#endif
 } // THEORAPLAY_startDecodeFile
 
 
 THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
                                            const unsigned int maxframes,
                                            THEORAPLAY_VideoFormat vidfmt,
+                                           const THEORAPLAY_Allocator *allocator,
                                            const int multithreaded)
 {
     TheoraDecoder *ctx = NULL;
     ConvertVideoFrameFn vidcvt = NULL;
+
+    #ifdef THEORAPLAY_NO_MALLOC_FALLBACK
+    if (allocator == NULL) {
+        return NULL;
+    }
+    #else
+    THEORAPLAY_Allocator malloc_fallback_allocator;
+    if (allocator == NULL) {
+        malloc_fallback_allocator.allocate = malloc_fallback_allocate;
+        malloc_fallback_allocator.deallocate = malloc_fallback_deallocate;
+        malloc_fallback_allocator.userdata = NULL;
+        allocator = &malloc_fallback_allocator;
+    }
+    #endif
 
     #if THEORAPLAY_ONLY_SINGLE_THREADED
     if (multithreaded)
@@ -885,11 +934,12 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
         default: goto startdecode_failed;  // invalid/unsupported format.
     } // switch
 
-    ctx = (TheoraDecoder *) malloc(sizeof (TheoraDecoder));
+    ctx = (TheoraDecoder *) allocator->allocate(allocator, sizeof (TheoraDecoder));
     if (ctx == NULL)
         goto startdecode_failed;
 
     memset(ctx, '\0', sizeof (TheoraDecoder));
+    memcpy(&ctx->allocator, allocator, sizeof (THEORAPLAY_Allocator));
     ctx->maxframes = maxframes;
     ctx->vidfmt = vidfmt;
     ctx->vidcvt = vidcvt;
@@ -919,7 +969,7 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
 
 startdecode_failed:
     io->close(io);
-    free(ctx);
+    allocator->deallocate(allocator, ctx);
     return NULL;
 } // THEORAPLAY_startDecode
 

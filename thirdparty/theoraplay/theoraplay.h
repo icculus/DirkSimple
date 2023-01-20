@@ -23,6 +23,15 @@ struct THEORAPLAY_Io
     void *userdata;
 };
 
+typedef struct THEORAPLAY_Allocator THEORAPLAY_Allocator;
+struct THEORAPLAY_Allocator
+{
+    void *(*allocate)(const THEORAPLAY_Allocator *allocator, unsigned int len);
+    void (*deallocate)(const THEORAPLAY_Allocator *allocator, void *ptr);
+    void *userdata;
+};
+
+
 typedef struct THEORAPLAY_Decoder THEORAPLAY_Decoder;
 
 /* YV12 is YCrCb, not YCbCr; that's what SDL uses for YV12 overlays. */
@@ -62,10 +71,12 @@ typedef struct THEORAPLAY_AudioPacket
 THEORAPLAY_Decoder *THEORAPLAY_startDecodeFile(const char *fname,
                                                const unsigned int maxframes,
                                                THEORAPLAY_VideoFormat vidfmt,
+                                               const THEORAPLAY_Allocator *allocator,
                                                const int multithreaded);
 THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
                                            const unsigned int maxframes,
                                            THEORAPLAY_VideoFormat vidfmt,
+                                           const THEORAPLAY_Allocator *allocator,
                                            const int multithreaded);
 void THEORAPLAY_stopDecode(THEORAPLAY_Decoder *decoder);
 
