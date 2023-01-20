@@ -314,11 +314,13 @@ static SDL_bool mainloop_iteration(void)
                         break;
                     }
 
+                    #ifndef __EMSCRIPTEN__
                     case SDLK_F11: {
                         GWantFullscreen = GWantFullscreen ? SDL_FALSE : SDL_TRUE;
                         SDL_SetWindowFullscreen(GWindow, GWantFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
                         break;
                     }
+                    #endif
                 }
                 break;
 
