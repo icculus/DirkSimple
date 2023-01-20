@@ -22,6 +22,7 @@ static SDL_AudioDeviceID GAudioDeviceID = 0;
 static int GAudioChannels = 0;
 static int GLaserDiscTextureWidth = 0;
 static int GLaserDiscTextureHeight = 0;
+static SDL_GameController *GGameController = NULL;
 
 static char *get_base_dir(void)
 {
@@ -202,6 +203,11 @@ void mainloop_shutdown(void)
 
     SDL_CloseAudioDevice(GAudioDeviceID);
 
+    if (GGameController) {
+        SDL_GameControllerClose(GGameController);
+        GGameController = NULL;
+    }
+
     SDL_Quit();
 }
 
@@ -226,10 +232,10 @@ static uint8_t save_slot = 0;
 static SaveSlot save_data[8];
 
 static uint64_t keyinputbits = 0;
-static uint64_t controllerinputbits = 0;
 
 static SDL_bool mainloop_iteration(void)
 {
+    uint64_t controllerinputbits = 0;
     SDL_Event e;
 
     while (SDL_PollEvent(&e)) {
@@ -318,9 +324,39 @@ static SDL_bool mainloop_iteration(void)
                 }
                 break;
 
+            case SDL_CONTROLLERDEVICEADDED:
+                if (GGameController == NULL) {
+                    GGameController = SDL_GameControllerOpen(e.cdevice.which);
+                    if (GGameController) {
+                        DirkSimple_log("Opened game controller #%d, '%s'", (int) e.cdevice.which, SDL_GameControllerName(GGameController));
+                    }
+                }
+                break;
+
+            case SDL_CONTROLLERDEVICEREMOVED:
+                if (GGameController && (SDL_GameControllerFromInstanceID(e.cdevice.which) == GGameController)) {
+                    DirkSimple_log("Closing removed game controller!");
+                    SDL_GameControllerClose(GGameController);
+                    GGameController = NULL;
+                }
+                break;
+
             case SDL_QUIT:
                 return SDL_FALSE;
         }
+    }
+
+    if (GGameController) {
+        #define CHECK_JOYPAD_INPUT(sdlid, dirksimpleid) if (SDL_GameControllerGetButton(GGameController, SDL_CONTROLLER_BUTTON_##sdlid)) { controllerinputbits |= DIRKSIMPLE_INPUT_##dirksimpleid; }
+        CHECK_JOYPAD_INPUT(DPAD_UP, UP);
+        CHECK_JOYPAD_INPUT(DPAD_DOWN, DOWN);
+        CHECK_JOYPAD_INPUT(DPAD_LEFT, LEFT);
+        CHECK_JOYPAD_INPUT(DPAD_RIGHT, RIGHT);
+        CHECK_JOYPAD_INPUT(A, ACTION1);  // !!! FIXME: what's best here?
+        CHECK_JOYPAD_INPUT(X, ACTION2);  // !!! FIXME: what's best here?
+        CHECK_JOYPAD_INPUT(BACK, COINSLOT);
+        CHECK_JOYPAD_INPUT(START, START);
+        #undef CHECK_JOYPAD_INPUT
     }
 
     DirkSimple_tick(SDL_GetTicks(), keyinputbits | controllerinputbits);
@@ -358,7 +394,7 @@ int main(int argc, char **argv)
     char *basedir = NULL;
     char *foundpath = NULL;
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == -1) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) == -1) {
         const char *errstr = SDL_GetError();
         SDL_Log("Failed to initialize SDL: %s", errstr);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Failed to initialize SDL", errstr, NULL);  // in case this works.
