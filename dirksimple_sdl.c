@@ -254,9 +254,6 @@ static SDL_bool mainloop_iteration(void)
                     case SDLK_TAB: GKeyInputBits |= DIRKSIMPLE_INPUT_COINSLOT; break;
                     case SDLK_RETURN: GKeyInputBits |= DIRKSIMPLE_INPUT_START; break;
 
-                    case SDLK_ESCAPE:
-                        return SDL_FALSE;  // !!! FIXME: remove this later?
-
                     case SDLK_LEFTBRACKET:
                     case SDLK_RIGHTBRACKET:
                         if (e.key.keysym.sym == SDLK_LEFTBRACKET) {
