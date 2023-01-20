@@ -15,6 +15,12 @@
 
 #include "dirksimple_platform.h"
 
+typedef struct SaveSlot
+{
+    size_t len;
+    uint8_t *data;
+} SaveSlot;
+
 static SDL_Window *GWindow = NULL;
 static SDL_Renderer *GRenderer = NULL;
 static SDL_Texture *GLaserDiscTexture = NULL;
@@ -23,6 +29,9 @@ static int GAudioChannels = 0;
 static int GLaserDiscTextureWidth = 0;
 static int GLaserDiscTextureHeight = 0;
 static SDL_GameController *GGameController = NULL;
+static uint8_t GSaveSlot = 0;
+static SaveSlot GSaveData[8];
+static uint64_t GKeyInputBits = 0;
 
 static char *get_base_dir(void)
 {
@@ -222,17 +231,6 @@ static void render_frame()
     SDL_RenderPresent(GRenderer);
 }
 
-typedef struct SaveSlot
-{
-    size_t len;
-    uint8_t *data;
-} SaveSlot;
-
-static uint8_t save_slot = 0;
-static SaveSlot save_data[8];
-
-static uint64_t keyinputbits = 0;
-
 static SDL_bool mainloop_iteration(void)
 {
     uint64_t controllerinputbits = 0;
@@ -242,14 +240,14 @@ static SDL_bool mainloop_iteration(void)
         switch (e.type) {
             case SDL_KEYDOWN:
                 switch (e.key.keysym.sym) {
-                    case SDLK_UP: keyinputbits |= DIRKSIMPLE_INPUT_UP; break;
-                    case SDLK_DOWN: keyinputbits |= DIRKSIMPLE_INPUT_DOWN; break;
-                    case SDLK_LEFT: keyinputbits |= DIRKSIMPLE_INPUT_LEFT; break;
-                    case SDLK_RIGHT: keyinputbits |= DIRKSIMPLE_INPUT_RIGHT; break;
-                    case SDLK_SPACE: keyinputbits |= DIRKSIMPLE_INPUT_ACTION1; break;
-                    case SDLK_a: keyinputbits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
-                    case SDLK_TAB: keyinputbits |= DIRKSIMPLE_INPUT_COINSLOT; break;
-                    case SDLK_RETURN: keyinputbits |= DIRKSIMPLE_INPUT_START; break;
+                    case SDLK_UP: GKeyInputBits |= DIRKSIMPLE_INPUT_UP; break;
+                    case SDLK_DOWN: GKeyInputBits |= DIRKSIMPLE_INPUT_DOWN; break;
+                    case SDLK_LEFT: GKeyInputBits |= DIRKSIMPLE_INPUT_LEFT; break;
+                    case SDLK_RIGHT: GKeyInputBits |= DIRKSIMPLE_INPUT_RIGHT; break;
+                    case SDLK_SPACE: GKeyInputBits |= DIRKSIMPLE_INPUT_ACTION1; break;
+                    case SDLK_a: GKeyInputBits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
+                    case SDLK_TAB: GKeyInputBits |= DIRKSIMPLE_INPUT_COINSLOT; break;
+                    case SDLK_RETURN: GKeyInputBits |= DIRKSIMPLE_INPUT_START; break;
 
                     case SDLK_ESCAPE:
                         return SDL_FALSE;  // !!! FIXME: remove this later?
@@ -257,19 +255,19 @@ static SDL_bool mainloop_iteration(void)
                     case SDLK_LEFTBRACKET:
                     case SDLK_RIGHTBRACKET:
                         if (e.key.keysym.sym == SDLK_LEFTBRACKET) {
-                            if (save_slot == 0) {
-                                save_slot = 7;
+                            if (GSaveSlot == 0) {
+                                GSaveSlot = 7;
                             } else {
-                                save_slot--;
+                                GSaveSlot--;
                             }
                         } else {
-                            if (save_slot == 7) {
-                                save_slot = 0;
+                            if (GSaveSlot == 7) {
+                                GSaveSlot = 0;
                             } else {
-                                save_slot++;
+                                GSaveSlot++;
                             }
                         }
-                        DirkSimple_log("Now using save slot #%d", (int) save_slot);
+                        DirkSimple_log("Now using save slot #%d", (int) GSaveSlot);
                         break;
 
                     case SDLK_F2: {
@@ -282,23 +280,23 @@ static SDL_bool mainloop_iteration(void)
                                 DirkSimple_log("Failed to save state! Nothing has been saved!");
                                 free(data);
                             } else {
-                                DirkSimple_log("State saved (%d bytes) to save slot #%d", (int) len, (int) save_slot);
-                                free(save_data[save_slot].data);
-                                save_data[save_slot].data = data;
-                                save_data[save_slot].len = len;
+                                DirkSimple_log("State saved (%d bytes) to save slot #%d", (int) len, (int) GSaveSlot);
+                                free(GSaveData[GSaveSlot].data);
+                                GSaveData[GSaveSlot].data = data;
+                                GSaveData[GSaveSlot].len = len;
                             }
                         }
                         break;
                     }
 
                     case SDLK_F3: {
-                        if ((save_data[save_slot].data == NULL) || (save_data[save_slot].len == 0)) {
-                            DirkSimple_log("No save data currently in slot #%d, not restoring!", (int) save_slot);
+                        if ((GSaveData[GSaveSlot].data == NULL) || (GSaveData[GSaveSlot].len == 0)) {
+                            DirkSimple_log("No save data currently in slot #%d, not restoring!", (int) GSaveSlot);
                         } else {
-                            if (DirkSimple_unserialize(save_data[save_slot].data, save_data[save_slot].len)) {
-                                DirkSimple_log("Restored from save slot #%d!", (int) save_slot);
+                            if (DirkSimple_unserialize(GSaveData[GSaveSlot].data, GSaveData[GSaveSlot].len)) {
+                                DirkSimple_log("Restored from save slot #%d!", (int) GSaveSlot);
                             } else {
-                                DirkSimple_log("Failed to restore from save slot #%d!", (int) save_slot);
+                                DirkSimple_log("Failed to restore from save slot #%d!", (int) GSaveSlot);
                             }
                         }
                         break;
@@ -313,14 +311,14 @@ static SDL_bool mainloop_iteration(void)
 
             case SDL_KEYUP:
                 switch (e.key.keysym.sym) {
-                    case SDLK_UP: keyinputbits &= ~DIRKSIMPLE_INPUT_UP; break;
-                    case SDLK_DOWN: keyinputbits &= ~DIRKSIMPLE_INPUT_DOWN; break;
-                    case SDLK_LEFT: keyinputbits &= ~DIRKSIMPLE_INPUT_LEFT; break;
-                    case SDLK_RIGHT: keyinputbits &= ~DIRKSIMPLE_INPUT_RIGHT; break;
-                    case SDLK_SPACE: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION1; break;
-                    case SDLK_a: keyinputbits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
-                    case SDLK_TAB: keyinputbits &= ~DIRKSIMPLE_INPUT_COINSLOT; break;
-                    case SDLK_RETURN: keyinputbits &= ~DIRKSIMPLE_INPUT_START; break;
+                    case SDLK_UP: GKeyInputBits &= ~DIRKSIMPLE_INPUT_UP; break;
+                    case SDLK_DOWN: GKeyInputBits &= ~DIRKSIMPLE_INPUT_DOWN; break;
+                    case SDLK_LEFT: GKeyInputBits &= ~DIRKSIMPLE_INPUT_LEFT; break;
+                    case SDLK_RIGHT: GKeyInputBits &= ~DIRKSIMPLE_INPUT_RIGHT; break;
+                    case SDLK_SPACE: GKeyInputBits &= ~DIRKSIMPLE_INPUT_ACTION1; break;
+                    case SDLK_a: GKeyInputBits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
+                    case SDLK_TAB: GKeyInputBits &= ~DIRKSIMPLE_INPUT_COINSLOT; break;
+                    case SDLK_RETURN: GKeyInputBits &= ~DIRKSIMPLE_INPUT_START; break;
                 }
                 break;
 
@@ -359,7 +357,7 @@ static SDL_bool mainloop_iteration(void)
         #undef CHECK_JOYPAD_INPUT
     }
 
-    DirkSimple_tick(SDL_GetTicks(), keyinputbits | controllerinputbits);
+    DirkSimple_tick(SDL_GetTicks(), GKeyInputBits | controllerinputbits);
     render_frame();
 
     return SDL_TRUE;
