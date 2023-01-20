@@ -70,7 +70,7 @@ static void out_of_memory(void)
 
 void *DirkSimple_xmalloc(size_t len)
 {
-    void *retval = malloc(len);
+    void *retval = DirkSimple_malloc(len);
     if (!retval) {
         out_of_memory();
     }
@@ -79,7 +79,7 @@ void *DirkSimple_xmalloc(size_t len)
 
 void *DirkSimple_xcalloc(size_t nmemb, size_t len)
 {
-    void *retval = calloc(nmemb, len);
+    void *retval = DirkSimple_calloc(nmemb, len);
     if (!retval) {
         out_of_memory();
     }
@@ -88,7 +88,7 @@ void *DirkSimple_xcalloc(size_t nmemb, size_t len)
 
 void *DirkSimple_xrealloc(void *ptr, size_t len)
 {
-    void *retval = realloc(ptr, len);
+    void *retval = DirkSimple_realloc(ptr, len);
     if (!retval && (len > 0)) {
         out_of_memory();
     }
@@ -97,7 +97,7 @@ void *DirkSimple_xrealloc(void *ptr, size_t len)
 
 char *DirkSimple_xstrdup(const char *str)
 {
-    char *retval = strdup(str);
+    char *retval = DirkSimple_strdup(str);
     if (!retval) {
         out_of_memory();
     }
@@ -120,7 +120,7 @@ void DirkSimple_log(const char *fmt, ...)
     va_end(ap);
 
     DirkSimple_writelog(str);
-    free(str);
+    DirkSimple_free(str);
 }
 
 
@@ -153,7 +153,7 @@ static void theoraplayiobridge_close(THEORAPLAY_Io *io)
 static void *DirkSimple_lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 {
     if (nsize == 0) {
-        free(ptr);
+        DirkSimple_free(ptr);
         return NULL;
     }
     return DirkSimple_xrealloc(ptr, nsize);
@@ -436,7 +436,7 @@ static void load_lua_gamecode(lua_State *L, const char *basedir, const char *gam
     rc = lua_load(L, DirkSimple_lua_reader, io, fname, NULL);
     io->close(io);
 
-    free(fname);
+    DirkSimple_free(fname);
 
     if (rc != 0) {
         lua_error(L);
@@ -541,7 +541,7 @@ static void setup_movie(const char *gamepath, DirkSimple_PixFmt pixfmt)
         if (gamepath_ext) {
             snprintf(gamepath_ext, slen, "%s.ogv", gamepath);
             io = DirkSimple_openfile_read(gamepath_ext);
-            free(gamepath_ext);
+            DirkSimple_free(gamepath_ext);
         }
         if (!io) {
             DirkSimple_panic("Couldn't open game path!");
@@ -765,11 +765,11 @@ void DirkSimple_shutdown(void)
     GDiscoveredVideoFormat = 0;
     GDiscoveredAudioFormat = 0;
     GPendingVideoFrame = NULL;
-    free(GGameName);
+    DirkSimple_free(GGameName);
     GGameName = NULL;
-    free(GGamePath);
+    DirkSimple_free(GGamePath);
     GGamePath = NULL;
-    free(GBaseDir);
+    DirkSimple_free(GBaseDir);
     GBaseDir = NULL;
     if (GLua) {
         lua_close(GLua);
@@ -900,7 +900,7 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 
         GDiscoveredVideoFormat = 1;
         DirkSimple_videoformat(gametitle, video->width, video->height, video->fps);
-        free(gametitle);
+        DirkSimple_free(gametitle);
         THEORAPLAY_freeVideo(video);  // dump this, the game is going to seek at startup anyhow.
     }
 

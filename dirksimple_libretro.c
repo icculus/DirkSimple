@@ -74,6 +74,13 @@ static void post_notification(const char *msgstr, const unsigned int duration)
     }
 }
 
+void *DirkSimple_malloc(size_t len) { return malloc(len); }
+void *DirkSimple_calloc(size_t nmemb, size_t len) { return calloc(nmemb, len); }
+void *DirkSimple_realloc(void *ptr, size_t len) { return realloc(ptr, len); }
+char *DirkSimple_strdup(const char *str) { return strdup(str); }
+void DirkSimple_free(void *ptr) { return free(ptr); }
+
+
 void DirkSimple_panic(const char *str)
 {
     panic_triggered = true;
@@ -136,7 +143,7 @@ static int DirkSimple_stdio_seek(DirkSimple_Io *io, long absolute_offset)
 static void DirkSimple_stdio_close(DirkSimple_Io *io)
 {
     fclose((FILE *) io->userdata);
-    free(io);
+    DirkSimple_free(io);
 }
 
 DirkSimple_Io *DirkSimple_openfile_read(const char *path)
@@ -180,7 +187,7 @@ static void DirkSimple_retro_vfs_close(DirkSimple_Io *io)
 {
     struct retro_vfs_file_handle *vio = (struct retro_vfs_file_handle *) io->userdata;
     retro_vfs->close(vio);
-    free(io);
+    DirkSimple_free(io);
 }
 
 DirkSimple_Io *DirkSimple_openfile_read(const char *path)
@@ -239,7 +246,7 @@ void DirkSimple_discaudio(const float *pcm, int numframes)
             dst[i] = (int16_t) (pcm[i] * 32767.0f);
         }
     } else {
-        free(item);
+        DirkSimple_free(item);
         return;  // oh well.
     }
 
@@ -254,7 +261,7 @@ void DirkSimple_cleardiscaudio(void)
 
     for (i = audio_queue_head.next; i != NULL; i = next) {
         next = i->next;
-        free(i);
+        DirkSimple_free(i);
     }
     
     audio_queue_head.next = NULL;
@@ -430,7 +437,7 @@ void retro_run(void)
             if (audio_queue_tail == i) {
                 audio_queue_tail = &audio_queue_head;
             }
-            free(i);
+            DirkSimple_free(i);
             sent_sample_frames += num_frames;
             if (sent_sample_frames >= 1024) {
                 break;
@@ -488,7 +495,7 @@ bool retro_load_game(const struct retro_game_info *info)
         retval = true;
     }
 
-    free(basedir);
+    DirkSimple_free(basedir);
 
     return retval;
 }
@@ -496,7 +503,7 @@ bool retro_load_game(const struct retro_game_info *info)
 void retro_unload_game(void)
 {
     DirkSimple_shutdown();
-    free(framebuffer);
+    DirkSimple_free(framebuffer);
     framebuffer = NULL;
     framebuffer_width = 0;
     framebuffer_height = 0;

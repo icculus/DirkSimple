@@ -42,6 +42,11 @@ static char *get_base_dir(void)
 #endif
 }
 
+void *DirkSimple_malloc(size_t len) { return SDL_malloc(len); }
+void *DirkSimple_calloc(size_t nmemb, size_t len) { return SDL_calloc(nmemb, len); }
+void *DirkSimple_realloc(void *ptr, size_t len) { return SDL_realloc(ptr, len); }
+char *DirkSimple_strdup(const char *str) { return SDL_strdup(str); }
+void DirkSimple_free(void *ptr) { return SDL_free(ptr); }
 
 void DirkSimple_panic(const char *str)
 {
@@ -278,10 +283,10 @@ static SDL_bool mainloop_iteration(void)
                             void *data = DirkSimple_xmalloc(len);
                             if (DirkSimple_serialize(data, len) != len) {
                                 DirkSimple_log("Failed to save state! Nothing has been saved!");
-                                free(data);
+                                DirkSimple_free(data);
                             } else {
                                 DirkSimple_log("State saved (%d bytes) to save slot #%d", (int) len, (int) GSaveSlot);
-                                free(GSaveData[GSaveSlot].data);
+                                DirkSimple_free(GSaveData[GSaveSlot].data);
                                 GSaveData[GSaveSlot].data = data;
                                 GSaveData[GSaveSlot].len = len;
                             }
