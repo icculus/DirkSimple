@@ -28,6 +28,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   set(IPO_SUPPORTED YES)  # !!! FIXME: -flto=thin currently broken in Emscripten: https://github.com/emscripten-core/emscripten/issues/12763
   set(IPO_FLAG "-flto")
   add_definitions("${IPO_FLAG}")  # Force every compile to the thing Emscripten currently supports.
+  add_definitions("__EMSCRIPTEN_PTHREADS__")
 endif()
 
 # Building as part of RetroArch? Turn off everything but the libretro plugin by default.
@@ -49,6 +50,7 @@ if(MSVC)
     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
+    set(USE_PTHREAD TRUE)
 endif()
 
 add_library(dirksimple-ogg STATIC
@@ -171,6 +173,9 @@ if(DIRKSIMPLE_SDL)
     )
     target_link_libraries(dirksimple ${SDL2_LIBRARIES} ${SDL2_LIBRARY})
     target_link_libraries(dirksimple dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+    if(USE_PTHREAD)
+        target_link_libraries(dirksimple pthread)
+    endif()
     if(HAVE_LIB_M)
         target_link_libraries(dirksimple m)
     endif()
@@ -196,6 +201,11 @@ if(DIRKSIMPLE_LIBRETRO)
         thirdparty/theoraplay
     )
     target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+    
+    if(USE_PTHREAD)
+        target_link_libraries(dirksimple pthread)
+    endif()
+
     if(HAVE_LIB_M)
         target_link_libraries(dirksimple_libretro m)
     endif()
