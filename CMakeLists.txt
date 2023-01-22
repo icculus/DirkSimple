@@ -28,7 +28,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   set(IPO_SUPPORTED YES)  # !!! FIXME: -flto=thin currently broken in Emscripten: https://github.com/emscripten-core/emscripten/issues/12763
   set(IPO_FLAG "-flto")
   add_definitions("${IPO_FLAG}")  # Force every compile to the thing Emscripten currently supports.
-  add_definitions("__EMSCRIPTEN_PTHREADS__")
 endif()
 
 # Building as part of RetroArch? Turn off everything but the libretro plugin by default.
@@ -50,7 +49,9 @@ if(MSVC)
     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
-    set(USE_PTHREAD TRUE)
+    if(NOT EMSCRIPTEN)
+        set(USE_PTHREAD TRUE)
+    endif()
 endif()
 
 add_library(dirksimple-ogg STATIC
