@@ -1058,7 +1058,7 @@ scenes = {
         },
 
         enter_room = {  -- Player mounts the horse, starts the wild ride, dodge first fire
-            start_time = time_laserdisc_frame(10021),
+            start_time = time_laserdisc_frame(10021) + laserdisc_frame_to_ms(1),
             timeout = { when=time_to_ms(4, 522), nextsequence="hit_pillar" },
             actions = {
                 -- The ROM checks for UpRight here, but also an identical entry for Right which comes to the same result.
