@@ -940,6 +940,25 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 
     //DirkSimple_log("Tick %u\n", (unsigned int) GTicks);
 
+    // Call our Lua tick function if we aren't seeking...
+    const unsigned int expected_seek_generation = GSeekGeneration;
+    if (GNeedInitialLuaTick) {
+        GNeedInitialLuaTick = 0;
+        call_lua_tick(L, 0, 0, 0);
+    } else if (GClipStartTicks) {
+        call_lua_tick(L, GTicks, (GTicks - GClipStartTicks), inputbits);
+    }
+
+    GPreviousInputBits = inputbits;
+
+    // the tick function demanded a seek, don't bother messing with the movie this frame.
+    // also doing this after the tick makes sure we don't render any frames past the end
+    // of the scene due to latency and process scheduling.
+    if (GSeekGeneration != expected_seek_generation) {
+//DirkSimple_log("seek was requested
+        return;
+    }
+
     if (!GPendingVideoFrame) {
         GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder);
     }
@@ -1019,15 +1038,6 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
             }
         }
     }
-    // Call our Lua tick function if we aren't seeking...
-    if (GNeedInitialLuaTick) {
-        GNeedInitialLuaTick = 0;
-        call_lua_tick(L, 0, 0, 0);
-    } else if (GClipStartTicks) {
-        call_lua_tick(L, GTicks, (GTicks - GClipStartTicks), inputbits);
-    }
-
-    GPreviousInputBits = inputbits;
 }
 
 // end of dirksimple.c ...
