@@ -2788,7 +2788,7 @@ scenes = {
         seq10 = {
             start_time = time_laserdisc_frame(17024),
             kills_player = true,
-            timeout = { when=time_to_ms(4, 211), nextsequence=nil }
+            timeout = { when=time_to_ms(2, 692), nextsequence=nil }
         },
 
         seq11 = {
