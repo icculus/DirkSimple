@@ -197,10 +197,6 @@ if(DIRKSIMPLE_LIBRETRO)
         thirdparty/theoraplay
     )
     set_target_properties(dirksimple_libretro PROPERTIES PREFIX "")
-    target_include_directories(dirksimple PRIVATE
-        thirdparty/lua/src
-        thirdparty/theoraplay
-    )
     target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
     
     if(USE_PTHREAD)
