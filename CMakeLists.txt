@@ -200,7 +200,7 @@ if(DIRKSIMPLE_LIBRETRO)
     target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
     
     if(USE_PTHREAD)
-        target_link_libraries(dirksimple pthread)
+        target_link_libraries(dirksimple_libretro pthread)
     endif()
 
     if(HAVE_LIB_M)
