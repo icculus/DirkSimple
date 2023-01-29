@@ -11,15 +11,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(ANDROID TRUE)
 endif()
 
-# Building as part of RetroArch? Turn off everything but the libretro plugin by default.
-if(LIBRETRO)
-    set(MOJOZORK_STANDALONE_DEFAULT OFF)
-endif()
-
 include(CheckLibraryExists)
 
 CHECK_LIBRARY_EXISTS(m floor "" HAVE_LIB_M)
-                                                                                                                                         
+
 set(DIRKSIMPLE_SDL_DEFAULT ON)
 set(DIRKSIMPLE_LIBRETRO_DEFAULT ON)
 
@@ -193,7 +188,7 @@ if(DIRKSIMPLE_SDL)
        TARGET dirksimple POST_BUILD
        COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/games" "${CMAKE_CURRENT_BINARY_DIR}/games"
    )
-   
+
    if(APPLE)
        add_custom_command(
            TARGET dirksimple POST_BUILD
@@ -217,7 +212,7 @@ if(DIRKSIMPLE_LIBRETRO)
     )
     set_target_properties(dirksimple_libretro PROPERTIES PREFIX "")
     target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
-    
+
     if(USE_PTHREAD)
         target_link_libraries(dirksimple_libretro pthread)
     endif()
