@@ -188,6 +188,25 @@ if(DIRKSIMPLE_SDL)
     if(NOT DIRKSIMPLE_FORCE_BASE_DIR STREQUAL "")
         set_target_properties(dirksimple PROPERTIES COMPILE_DEFINITIONS "DIRKSIMPLE_FORCE_BASE_DIR=${DIRKSIMPLE_FORCE_BASE_DIR}")
     endif()
+
+   add_custom_command(
+       TARGET dirksimple POST_BUILD
+       COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/games" "${CMAKE_CURRENT_BINARY_DIR}/games"
+   )
+   
+   if(APPLE)
+       add_custom_command(
+           TARGET dirksimple POST_BUILD
+           COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app"
+           COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents"
+           COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/MacOS"
+           COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources"
+           COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/games" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/games"
+           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_BINARY_DIR}/dirksimple" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/MacOS/dirksimple"
+           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mac-appbundle-info.plist" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Info.plist"
+           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/icon.icns" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/DirkSimple.icns"
+       )
+   endif()
 endif()
 
 if(DIRKSIMPLE_LIBRETRO)
@@ -212,25 +231,6 @@ if(DIRKSIMPLE_LIBRETRO)
     if(NOT DIRKSIMPLE_FORCE_BASE_DIR STREQUAL "")
         set_target_properties(dirksimple_libretro PROPERTIES COMPILE_DEFINITIONS "DIRKSIMPLE_FORCE_BASE_DIR=${DIRKSIMPLE_FORCE_BASE_DIR}")
     endif()
-endif()
-
-add_custom_command(
-    TARGET dirksimple POST_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/games" "${CMAKE_CURRENT_BINARY_DIR}/games"
-)
-
-if(APPLE)
-    add_custom_command(
-        TARGET dirksimple POST_BUILD
-        COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app"
-        COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents"
-        COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/MacOS"
-        COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources"
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/games" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/games"
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_BINARY_DIR}/dirksimple" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/MacOS/dirksimple"
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mac-appbundle-info.plist" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Info.plist"
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/icon.icns" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/DirkSimple.icns"
-    )
 endif()
 
 # end of CMakeLists.txt ...
