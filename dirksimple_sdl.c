@@ -255,7 +255,7 @@ static SDL_bool mainloop_iteration(void)
                     case SDLK_LEFT: GKeyInputBits |= DIRKSIMPLE_INPUT_LEFT; break;
                     case SDLK_RIGHT: GKeyInputBits |= DIRKSIMPLE_INPUT_RIGHT; break;
                     case SDLK_SPACE: GKeyInputBits |= DIRKSIMPLE_INPUT_ACTION1; break;
-                    case SDLK_a: GKeyInputBits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
+                    case SDLK_LCTRL: GKeyInputBits |= DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
                     case SDLK_TAB: GKeyInputBits |= DIRKSIMPLE_INPUT_COINSLOT; break;
                     case SDLK_RETURN: GKeyInputBits |= DIRKSIMPLE_INPUT_START; break;
 
@@ -334,7 +334,7 @@ static SDL_bool mainloop_iteration(void)
                     case SDLK_LEFT: GKeyInputBits &= ~DIRKSIMPLE_INPUT_LEFT; break;
                     case SDLK_RIGHT: GKeyInputBits &= ~DIRKSIMPLE_INPUT_RIGHT; break;
                     case SDLK_SPACE: GKeyInputBits &= ~DIRKSIMPLE_INPUT_ACTION1; break;
-                    case SDLK_a: GKeyInputBits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
+                    case SDLK_LCTRL: GKeyInputBits &= ~DIRKSIMPLE_INPUT_ACTION2; break;  // for now I guess
                     case SDLK_TAB: GKeyInputBits &= ~DIRKSIMPLE_INPUT_COINSLOT; break;
                     case SDLK_RETURN: GKeyInputBits &= ~DIRKSIMPLE_INPUT_START; break;
                 }
