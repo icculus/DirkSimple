@@ -505,8 +505,8 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
             lo = 0;
             hi = ctx->streamlen;
 
-            if (targetms == 0)
-                hi = 0;  /* as an optimization, just jump to the start of file if rewinding to start instead of binary searching. */
+            if (targetms < 1000)
+                hi = 0;  /* as an optimization, just jump to the start of file if seeking within the first second, instead of binary searching. */
 
             seekpos = (lo / 2) + (hi / 2);
 
@@ -595,7 +595,7 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
             if (ctx->current_seek_generation != ctx->seek_generation)
                 break;  // seek requested? Break out of the loop right away so we can handle it; this loop's work would be wasted.
 
-            if (ctx->resolving_audio_seek && audiotime >= 0.0 && ((playms >= ctx->seek_target) || ((ctx->seek_target - playms) <= (unsigned long) (1000.0 / ctx->fps))))
+            if (ctx->resolving_audio_seek && (audiotime >= 0.0) && ((playms >= ctx->seek_target) || ((ctx->seek_target - playms) <= (unsigned long) (1000.0 / ctx->fps))))
                 ctx->resolving_audio_seek = 0;
 
             frames = vorbis_synthesis_pcmout(&ctx->vdsp, &pcm);
