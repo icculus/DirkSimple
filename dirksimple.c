@@ -504,7 +504,7 @@ static void setup_game_strings(const char *basedir, const char *gamepath, const 
         GGameName = DirkSimple_xstrdup(gamename);
     } else {
         // Find the filename, without parent directories, to figure out the game name.
-        for (ptr = GGamePath + strlen(GGamePath); ptr != GGamePath; ptr--) {
+        for (ptr = GGamePath + strlen(GGamePath); ptr >= GGamePath; ptr--) {
             #if defined(_WIN32) || defined(__OS2__)
             if (*ptr == '\\') {
                 ptr++;
@@ -518,10 +518,14 @@ static void setup_game_strings(const char *basedir, const char *gamepath, const 
             }
         }
 
+        if (ptr < GGamePath) {
+            ptr = GGamePath;
+        }
+
         GGameName = DirkSimple_xstrdup(ptr);
 
         // dump the filename extension.
-        for (ptr = GGameName + strlen(GGameName); ptr != GGameName; ptr--) {
+        for (ptr = GGameName + strlen(GGameName); ptr >= GGameName; ptr--) {
             if (*ptr == '.') {
                 *ptr = '\0';
                 break;
