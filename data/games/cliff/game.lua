@@ -53,6 +53,7 @@ local function setup_scene_manager()
 end
 
 local function start_attract_mode(after_game_over)
+    DirkSimple.log("Starting attract mode")
     -- !!! FIXME: need some graphics rendered here.
     scene_manager.in_attract_mode = true
     scene_manager.current_scene_num = 0
@@ -194,13 +195,17 @@ local function tick_game(inputs)
         scene_manager.current_sequence = scene_manager.current_scene.moves[scene_manager.current_sequence_num]
         sequence = scene_manager.current_sequence
 
-        local seqname = sequence.name
-        if seqname ~= nil then
-            seqname = " (" .. seqname .. ")"
+        if sequence == nil then  -- did we run out of sequences?
+            DirkSimple.log("Finished all sequences in this scene!");
         else
-            seqname = ''
+            local seqname = sequence.name
+            if seqname ~= nil then
+                seqname = " (" .. seqname .. ")"
+            else
+                seqname = ''
+            end
+            DirkSimple.log("Moving on to sequence " .. scene_manager.current_sequence_num .. seqname)
         end
-        DirkSimple.log("Moving on to sequence " .. scene_manager.current_sequence_num .. seqname)
     end
 
     -- are we in the window for moves in this sequence?
@@ -231,7 +236,7 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
         tick_attract_mode(inputs)
     elseif scene_manager.in_death_scene then
         tick_death_scene()
-    elseif scene_manager.current_sequence == nil then
+    elseif scene_manager.current_scene == nil then
         start_attract_mode(false)
     else
         tick_game(inputs)
