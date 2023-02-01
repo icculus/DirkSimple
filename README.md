@@ -10,7 +10,7 @@ There are very few options: you point it at an Ogg Theora-encoded video of
 the laserdisc contents and that's it.
 
 The goal was to make a simple, portable way to play Dragon's Lair without
-a lot of bells an whistles. If you need more features, like actual laserdisc
+a lot of bells and whistles. If you need more features, like actual laserdisc
 player support and control of hardware scoreboards, etc, not to mention
 support for more FMV games, you should consider checking out the
 [DAPHNE](http://www.daphne-emu.com/) instead.
@@ -66,6 +66,11 @@ save states, etc.
 
 ## What about other games?
 
+We have work in progress on [Cliff Hanger](https://en.wikipedia.org/wiki/Cliff_Hanger_(video_game)).
+The game itself is playable but is not particularly authentic to the arcade
+experience, as the HUD and UI are currently unimplemented. Point the program
+at "cliff.ogv" and enjoy!
+
 I would like to add other games to this besides Dragon's Lair; for many of
 the popular ones, like Space Ace, most of the work is just filling in a table
 of scenes, their timings and recognized player actions. For others (like
@@ -74,4 +79,5 @@ but not yet started.
 
 If you have access to that information, or would like to take the significant
 effort to gather that information, get in touch, please!
+
 
