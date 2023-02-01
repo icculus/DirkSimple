@@ -87,6 +87,10 @@ extern void DirkSimple_restart(void);
 extern size_t DirkSimple_serialize(void *data, size_t len);
 extern int DirkSimple_unserialize(const void *data, size_t len);
 
+// these are valid between a successful DirkSimple_startup and DirkSimple_shutdown.
+extern const char *DirkSimple_gamename(void);
+extern const char *DirkSimple_gamedir(void);  // root of current game's data
+extern const char *DirkSimple_datadir(void);  // root of all DirkSimple data
 
 // Your platform layer implements these, which dirksimple.c calls into...
 

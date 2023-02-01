@@ -54,6 +54,14 @@ Theora file that DirkSimple can use. Like this:
 
 - Run `./dirksimple lair.ogv` and enjoy the game.
 
+- If installing somewhere, the "data" directory in the root of this repo
+  must be included in the same directory as the binary (or in the proper
+  place in a macOS app bundle). You can hardcode a different directory
+  (for Linux distros that want this to be in /usr/share/games/DirkSimple,
+  separate from the binary, for example), by setting the CMake option
+  `-DDIRKSIMPLE_FORCE_BASE_DIR=/usr/share/games/DirkSimple/` ... make sure
+  there's a trailing '/' char!
+
 
 ## libretro core!
 
@@ -62,6 +70,16 @@ to make lr-daphne work? Now you can. By default, building DirkSimple will
 also generate a libretro core; when used with RetroArch, you can point it
 at your lair.ogv and enjoy the RetroArch overlay, controller support,
 save states, etc.
+
+Make sure that the `data` directory in the root of this repo is copied to
+your RetroArch frontend's system directory, under a directory named
+`DirkSimple`.
+
+For example, on my machine's Steam install of RetroArch, this file exists:
+
+    /home/icculus/.local/share/Steam/steamapps/common/RetroArch/system/DirkSimple/data/games/lair/game.lua
+
+The libretro core will not work if these files are missing!
 
 
 ## What about other games?

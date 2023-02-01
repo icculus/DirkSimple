@@ -481,9 +481,9 @@ bool retro_load_game(const struct retro_game_info *info)
     char *basedir = NULL;
 
     if (setjmp(panic_jmpbuf) == 0) {  // if non-zero, something called DirkSimple_panic()
-        const size_t slen = strlen(sysdir) + strlen("DirkSimple") + 2;
+        const size_t slen = strlen(sysdir) + strlen("DirkSimple") + 32;
         basedir = DirkSimple_xmalloc(slen);
-        snprintf(basedir, slen, "%s/DirkSimple", sysdir);
+        snprintf(basedir, slen, "%s%sDirkSimple%s", sysdir, DIRSEP, DIRSEP);
 
         // DirkSimple_startup cleans up previous runs automatically.
         DirkSimple_startup(basedir, info->path, NULL, pixfmt);

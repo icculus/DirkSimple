@@ -186,7 +186,7 @@ if(DIRKSIMPLE_SDL)
 
    add_custom_command(
        TARGET dirksimple POST_BUILD
-       COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/games" "${CMAKE_CURRENT_BINARY_DIR}/games"
+       COMMAND ${CMAKE_COMMAND} ARGS -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/data" "${CMAKE_CURRENT_BINARY_DIR}/data"
    )
 
    if(APPLE)

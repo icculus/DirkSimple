@@ -44,7 +44,8 @@ static const char *GLuaLicense =
 
 static char *GGameName = NULL;
 static char *GGamePath = NULL;
-static char *GBaseDir = NULL;
+static char *GDataDir = NULL;
+static char *GGameDir = NULL;
 static THEORAPLAY_Decoder *GDecoder = NULL;
 static THEORAPLAY_Io GTheoraplayIo;
 static lua_State *GLua = NULL;
@@ -103,6 +104,10 @@ char *DirkSimple_xstrdup(const char *str)
     }
     return retval;
 }
+
+const char *DirkSimple_gamename(void) { return GGameName; }
+const char *DirkSimple_datadir(void) { return GDataDir; }
+const char *DirkSimple_gamedir(void) { return GGameDir; }
 
 void DirkSimple_log(const char *fmt, ...)
 {
@@ -415,20 +420,21 @@ static int luahook_DirkSimple_log(lua_State *L)
     return 0;
 }
 
-static void load_lua_gamecode(lua_State *L, const char *basedir, const char *gamename)
+static void load_lua_gamecode(lua_State *L, const char *gamedir)
 {
     int rc;
     DirkSimple_Io *io;
-    const size_t slen = strlen(basedir) + strlen(gamename) + 32;
+    const size_t slen = strlen(gamedir) + 32;
     char *fname = (char *) DirkSimple_xmalloc(slen);
-    snprintf(fname, slen, "@%s%sgames%s%s.luac", basedir, DIRSEP, DIRSEP, gamename);
+    snprintf(fname, slen, "@%sgame.luac", gamedir);
     io = DirkSimple_openfile_read(fname + 1);
     if (!io) {
-        snprintf(fname, slen, "@%s%sgames%s%s.lua", basedir, DIRSEP, DIRSEP, gamename);
+        snprintf(fname, slen, "@%sgame.lua", gamedir);
         io = DirkSimple_openfile_read(fname + 1);
         if (!io) {
-            snprintf(fname, slen, "Failed to open %s Lua code", gamename);
-            DirkSimple_panic(fname);
+            char *err = (char *) DirkSimple_xmalloc(slen * 2);
+            snprintf(err, slen * 2, "Failed to open Lua code at '%s'", fname + 1);
+            DirkSimple_panic(err);
         }
     }
 
@@ -482,7 +488,7 @@ static void setup_lua(void)
         set_string(GLua, GLuaLicense, "lua_license");  // just so deadcode elimination can't remove this string from the binary.
     lua_setglobal(GLua, DIRKSIMPLE_LUA_NAMESPACE);
 
-    load_lua_gamecode(GLua, GBaseDir, GGameName);
+    load_lua_gamecode(GLua, GGameDir);
 
     collect_lua_garbage(GLua);  // get rid of old init crap we don't need.
 }
@@ -490,8 +496,8 @@ static void setup_lua(void)
 static void setup_game_strings(const char *basedir, const char *gamepath, const char *gamename)
 {
     char *ptr;
+    size_t slen;
 
-    GBaseDir = DirkSimple_xstrdup(basedir);
     GGamePath = DirkSimple_xstrdup(gamepath);
 
     if (gamename) {
@@ -530,6 +536,14 @@ static void setup_game_strings(const char *basedir, const char *gamepath, const 
             *ptr = ch - ('A' - 'a');
         }
     }
+
+    slen = strlen(basedir) + 32;
+    GDataDir = (char *) DirkSimple_xmalloc(slen);
+    snprintf(GDataDir, slen, "%sdata%s", basedir, DIRSEP);
+
+    slen = strlen(GDataDir) + strlen(GGameName) + 32;
+    GGameDir = (char *) DirkSimple_xmalloc(slen);
+    snprintf(GGameDir, slen, "%sgames%s%s%s", GDataDir, DIRSEP, GGameName, DIRSEP);
 }
 
 static void *DirkSimple_theoraplay_allocate(const THEORAPLAY_Allocator *allocator, unsigned int len) { return DirkSimple_xmalloc((size_t) len); }
@@ -778,8 +792,10 @@ void DirkSimple_shutdown(void)
     GGameName = NULL;
     DirkSimple_free(GGamePath);
     GGamePath = NULL;
-    DirkSimple_free(GBaseDir);
-    GBaseDir = NULL;
+    DirkSimple_free(GGameDir);
+    GGameDir = NULL;
+    DirkSimple_free(GDataDir);
+    GDataDir = NULL;
     if (GLua) {
         lua_close(GLua);
         GLua = NULL;

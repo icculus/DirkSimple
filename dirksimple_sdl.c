@@ -33,14 +33,6 @@ static uint8_t GSaveSlot = 0;
 static SaveSlot GSaveData[8];
 static uint64_t GKeyInputBits = 0;
 static SDL_bool GWantFullscreen = SDL_FALSE;
-static char *get_base_dir(void)
-{
-#ifdef DIRKSIMPLE_FORCE_BASE_DIR  // let Linux distros hardcode this to something under /usr/share, or whatever.
-    return SDL_strdup(DIRKSIMPLE_FORCE_BASE_DIR);
-#else
-    return SDL_GetBasePath();
-#endif
-}
 
 void *DirkSimple_malloc(size_t len) { return SDL_malloc(len); }
 void *DirkSimple_calloc(size_t nmemb, size_t len) { return SDL_calloc(nmemb, len); }
@@ -129,24 +121,31 @@ void DirkSimple_audioformat(int channels, int freq)
     SDL_PauseAudioDevice(GAudioDeviceID, 0);
 }
 
-
-static void load_icon(SDL_Window *window)
+static SDL_bool load_icon_from_dir(SDL_Window *window, const char *dir)
 {
-    char *basedir = get_base_dir();
-    if (basedir) {  // oh well if not.
-        const size_t slen = SDL_strlen(basedir) + 32;
+    SDL_bool retval = SDL_FALSE;
+    if (dir) {  // oh well if not.
+        const size_t slen = SDL_strlen(dir) + 32;
         char *iconpath = (char *) SDL_malloc(slen);
         if (iconpath) {
             SDL_Surface *icon;
-            SDL_snprintf(iconpath, slen, "%s%sicon.bmp", basedir, DIRSEP);
+            SDL_snprintf(iconpath, slen, "%sicon.bmp", dir);
             icon = SDL_LoadBMP(iconpath);
             if (icon) {
                 SDL_SetWindowIcon(window, icon);
                 SDL_FreeSurface(icon);
+                retval = SDL_TRUE;
             }
             SDL_free(iconpath);
         }
-        SDL_free(basedir);
+    }
+    return retval;
+}
+
+static void load_icon(SDL_Window *window)
+{
+    if (!load_icon_from_dir(window, DirkSimple_gamedir())) {
+        load_icon_from_dir(window, DirkSimple_datadir());
     }
 }
 
@@ -419,7 +418,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    basedir = get_base_dir();
+#ifdef DIRKSIMPLE_FORCE_BASE_DIR  // let Linux distros hardcode this to something under /usr/share, or whatever.
+    basedir = SDL_strdup(DIRKSIMPLE_FORCE_BASE_DIR);
+#else
+    basedir = SDL_GetBasePath();
+#endif
+
     if (basedir == NULL) {
         const char *errstr = SDL_GetError();
         SDL_Log("Failed to determine base dir: %s", errstr);
