@@ -215,11 +215,15 @@ local function tick_game(inputs)
             return
         else
             scene_manager.accepted_input = move_was_made(inputs, sequence.correct_moves)
+            if scene_manager.accepted_input ~= nil then  -- correct move was just made!
+                scene_manager.current_score = scene_manager.current_score + 5000
+            end
         end
     end
 
     -- see if the entire scene has ended.
     if laserdisc_frame >= scene_manager.current_scene.end_frame then
+        scene_manager.current_score = scene_manager.current_score + 10000
         if scene_manager.current_scene_num >= #scenes then  -- out of scenes? You won the game!
             game_over(true)
         else
