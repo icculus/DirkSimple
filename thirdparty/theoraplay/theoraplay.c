@@ -595,8 +595,13 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
             if (ctx->current_seek_generation != ctx->seek_generation)
                 break;  // seek requested? Break out of the loop right away so we can handle it; this loop's work would be wasted.
 
-            if (ctx->resolving_audio_seek && (audiotime >= 0.0) && ((playms >= ctx->seek_target) || ((ctx->seek_target - playms) <= (unsigned long) (1000.0 / ctx->fps))))
-                ctx->resolving_audio_seek = 0;
+            if (ctx->resolving_audio_seek)
+            {
+                if (ctx->seek_target < 1000)   // if the seek target is the start of the data, assume we're good even before audiotime is valid. As soon as we have data, ship it.
+                    ctx->resolving_audio_seek = 0;
+                else if ((audiotime >= 0.0) && ((playms >= ctx->seek_target) || ((ctx->seek_target - playms) <= (unsigned long) (1000.0 / ctx->fps))))
+                    ctx->resolving_audio_seek = 0;
+            }
 
             frames = vorbis_synthesis_pcmout(&ctx->vdsp, &pcm);
             if (frames > 0)

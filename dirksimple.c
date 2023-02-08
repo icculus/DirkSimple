@@ -1009,10 +1009,7 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
     if (!GShowingSingleFrame) {
         while ((audio = THEORAPLAY_getAudio(GDecoder)) != NULL) {
             if (audio->seek_generation == GSeekGeneration) {  // frame from before our latest seek, dump it.
-                const uint64_t playms = (uint64_t) (audio->playms + GSeekToTicksOffset);
-                if (playms >= GTicks) {
-                    DirkSimple_discaudio(audio->samples, audio->frames);
-                }
+                DirkSimple_discaudio(audio->samples, audio->frames);
             }
             THEORAPLAY_freeAudio(audio);
         }
