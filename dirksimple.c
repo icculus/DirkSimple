@@ -994,7 +994,6 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
     // also doing this after the tick makes sure we don't render any frames past the end
     // of the scene due to latency and process scheduling.
     if (GSeekGeneration != expected_seek_generation) {
-//DirkSimple_log("seek was requested
         return;
     }
 
