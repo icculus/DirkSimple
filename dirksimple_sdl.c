@@ -155,6 +155,8 @@ static void load_icon(SDL_Window *window)
 
 void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height, double fps)
 {
+    SDL_RendererInfo info;
+
     Uint32 flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
     if (GWantFullscreen) {
         flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -182,6 +184,9 @@ void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t heig
     SDL_ShowWindow(GWindow);
     SDL_RenderClear(GRenderer);
     SDL_RenderPresent(GRenderer);
+
+    SDL_GetRendererInfo(GRenderer, &info);
+    DirkSimple_log("SDL renderer backend: %s", info.name);
 
     GLaserDiscTexture = SDL_CreateTexture(GRenderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, (int) width, (int) height);
     if (!GLaserDiscTexture) {

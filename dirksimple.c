@@ -881,6 +881,22 @@ static void call_lua_tick(lua_State *L, uint64_t ticks, uint64_t clipstartticks,
     collect_lua_garbage(L);  // we can move this to start_clip if it turns out to be too heavy.
 }
 
+static const char *pixfmtstr(const THEORAPLAY_VideoFormat pixfmt)
+{
+    switch (pixfmt) {
+        #define PIXFMTCASE(x) case THEORAPLAY_VIDFMT_##x: return #x
+        PIXFMTCASE(YV12);
+        PIXFMTCASE(IYUV);
+        PIXFMTCASE(RGB);
+        PIXFMTCASE(RGBA);
+        PIXFMTCASE(BGRA);
+        PIXFMTCASE(RGB565);
+        #undef PIXFMTCASE
+        default: break;
+    }
+    return "[unknown]";
+}
+
 void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 {
     lua_State *L = GLua;
@@ -928,6 +944,8 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         GFrameMS = (video->fps == 0.0) ? 0 : ((uint32_t) (1000.0 / video->fps));
 
         GDiscoveredVideoFormat = 1;
+        DirkSimple_log("We are playing '%s'", gametitle);
+        DirkSimple_log("Virtual laserdisc video format: %s, %dx%d, %ffps", pixfmtstr(video->format), (int) video->width, video->height, video->fps);
         DirkSimple_videoformat(gametitle, video->width, video->height, video->fps);
         DirkSimple_free(gametitle);
         THEORAPLAY_freeVideo(video);  // dump this, the game is going to seek at startup anyhow.
@@ -942,6 +960,7 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
             return;  // still waiting on audio to arrive so we can figure out format.
         }
         GDiscoveredAudioFormat = 1;
+        DirkSimple_log("Virtual laserdisc audio format: float32, %d channels, %dHz", (int) audio->channels, (int) audio->freq);
         DirkSimple_audioformat(audio->channels, audio->freq);
         THEORAPLAY_freeAudio(audio);  // dump this, the game is going to seek at startup anyhow.
     }
