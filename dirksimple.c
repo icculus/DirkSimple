@@ -1289,8 +1289,6 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         call_lua_tick(L, GTicks, (GTicks - GClipStartTicks), inputbits);
     }
 
-    GPreviousInputBits = inputbits;
-
     // the tick function demanded a seek, don't bother messing with the movie this frame.
     // also doing this after the tick makes sure we don't render any frames past the end
     // of the scene due to latency and process scheduling.
@@ -1323,6 +1321,8 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
             THEORAPLAY_freeVideo(GPendingVideoFrame);
             GPendingVideoFrame = NULL;
         }
+        // we didn't call the tick earlier in this function because we were still waiting; do it now that the seek is resolved.
+        call_lua_tick(L, GTicks, (GTicks - GClipStartTicks), inputbits);
     }
 
     if (!GShowingSingleFrame) {
@@ -1376,6 +1376,8 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
     }
 
     send_rendering_primitives();
+
+    GPreviousInputBits = inputbits;
 }
 
 // end of dirksimple.c ...
