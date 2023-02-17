@@ -37,6 +37,7 @@ static uint64_t keyboard_inputbits = 0;
 static retro_log_printf_t log_cb = fallback_log;
 static retro_environment_t environ_cb;
 static DirkSimple_PixFmt pixfmt = DIRKSIMPLE_PIXFMT_BGRA;
+static void *laserdisc_frame = NULL;
 static void *framebuffer = NULL;
 static uint32_t framebuffer_width = 0;
 static uint32_t framebuffer_height = 0;
@@ -215,6 +216,7 @@ void DirkSimple_audioformat(int channels, int freq)
 void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height, double fps)
 {
     framebuffer = DirkSimple_xcalloc(width * height, (pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t));
+    laserdisc_frame = DirkSimple_xcalloc(width * height, (pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t));
     framebuffer_width = width;
     framebuffer_height = height;
     framebuffer_fps = fps;
@@ -223,7 +225,7 @@ void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t heig
 void DirkSimple_discvideo(const uint8_t *pixels)
 {
     // !!! FIXME: this would be much more efficient if we can just hand yuv data to the renderer, but we'll need to use a shader for that.
-    memcpy(framebuffer, pixels, framebuffer_width * framebuffer_height * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
+    memcpy(laserdisc_frame, pixels, framebuffer_width * framebuffer_height * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
 }
 
 void DirkSimple_discaudio(const float *pcm, int numframes)
@@ -268,6 +270,134 @@ void DirkSimple_cleardiscaudio(void)
     audio_queue_tail = &audio_queue_head;
 }
 
+void DirkSimple_beginframe(void)
+{
+    if (framebuffer) {
+        if (!laserdisc_frame) {
+            memset(framebuffer, '\0', framebuffer_height * framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
+        } else {
+            memcpy(framebuffer, laserdisc_frame, framebuffer_height * framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
+        }
+    }
+}
+
+void DirkSimple_clearscreen(uint8_t r, uint8_t g, uint8_t b)
+{
+    const int total = framebuffer_width * framebuffer_height;
+    int i;
+
+    if (pixfmt == DIRKSIMPLE_PIXFMT_RGB565) {
+        const uint16_t rgb565 = ((((uint16_t) r) >> 3) << 11) | ((((uint16_t) g) >> 2) << 5) | (((uint16_t) b) >> 3);
+        uint16_t *ptr = (uint16_t *) framebuffer;
+        for (i = 0; i < total; i++) {
+            ptr[i] = rgb565;
+        }
+    } else {
+        uint32_t *ptr = (uint32_t *) framebuffer;
+        union { uint32_t ui32; uint8_t ui8[4]; } cvt;
+        cvt.ui8[0] = b;
+        cvt.ui8[1] = g;
+        cvt.ui8[2] = r;
+        cvt.ui8[3] = 0xFF;
+        {
+            const uint32_t rgba8888 = cvt.ui32;
+            for (i = 0; i < total; i++) {
+                ptr[i] = rgba8888;
+            }
+        }
+    }
+}
+
+void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, uint8_t rmod, uint8_t gmod, uint8_t bmod)
+{
+    // !!! FIXME: this is probably the worst possible scaling code, but it's dirt simple. We'll still want Nearest Neighbor, but...maybe a faster version of it.
+    const float rscale = ((float) rmod) / 255.0f;
+    const float gscale = ((float) gmod) / 255.0f;
+    const float bscale = ((float) bmod) / 255.0f;
+    const float scalew = ((double) dw) / ((double) sw);
+    const float scaleh = ((double) dh) / ((double) sh);
+    const uint32_t *rgba = (const uint32_t *) sprite->rgba;
+    int framebuffer_y = dy;
+    int x, y;
+
+    if (pixfmt == DIRKSIMPLE_PIXFMT_RGB565) {
+        uint16_t *dst = (uint16_t *) framebuffer;
+        dst += dx + (dy * framebuffer_width);
+        for (y = 0; y < dh; y++) {
+            uint16_t *orig_dst = dst;
+            if (framebuffer_y >= framebuffer_height) {
+                break;  // past end of framebuffer, stop drawing.
+            } else if (framebuffer_y >= 0) {
+                int framebuffer_x = dx;
+                const int sample_y = sy + ((int) (y / scaleh));
+                for (x = 0; x < dw; x++) {
+                    if (framebuffer_x >= framebuffer_width) {
+                        break;  // past end of framebuffer, stop drawing.
+                    } else if (framebuffer_x >= 0) {
+                        const int sample_x = sx + ((int) (x / scalew));
+                        union { uint32_t ui32; uint8_t ui8[4]; } cvt;
+                        cvt.ui32 = rgba[(sample_y * sprite->width) + sample_x];
+                        if (cvt.ui8[3] == 0xFF) {  // we don't actually alpha blend atm, just treat it as fully transparent or fully opaque
+                            const uint8_t r = ((uint8_t) (cvt.ui8[0] * rscale)) >> 3;
+                            const uint8_t g = ((uint8_t) (cvt.ui8[1] * gscale)) >> 2;
+                            const uint8_t b = ((uint8_t) (cvt.ui8[2] * bscale)) >> 3;
+                            *dst = (((uint16_t) r) << 11) | (((uint16_t) g) << 5) | ((uint16_t) b);
+                        }
+                        dst++;
+                        framebuffer_x++;
+                    }
+                }
+            }
+            dst = orig_dst + framebuffer_width;
+            framebuffer_y++;
+        }
+    } else {
+        uint32_t *dst = (uint32_t *) framebuffer;
+        dst += dx + (dy * framebuffer_width);
+        for (y = 0; y < dh; y++) {
+            uint32_t *orig_dst = dst;
+            if (framebuffer_y >= framebuffer_height) {
+                break;  // past end of framebuffer, stop drawing.
+            } else if (framebuffer_y >= 0) {
+                int framebuffer_x = dx;
+                const int sample_y = sy + ((int) (y / scaleh));
+                for (x = 0; x < dw; x++) {
+                    if (framebuffer_x >= framebuffer_width) {
+                        break;  // past end of framebuffer, stop drawing.
+                    } else if (framebuffer_x >= 0) {
+                        const int sample_x = sx + ((int) (x / scalew));
+                        union { uint32_t ui32; uint8_t ui8[4]; } cvt;
+                        cvt.ui32 = rgba[(sample_y * sprite->width) + sample_x];
+                        if (cvt.ui8[3] == 0xFF) {  // we don't actually alpha blend atm, just treat it as fully transparent or fully opaque
+                            const uint8_t tmp = cvt.ui8[0];  // rgba to bgra
+                            cvt.ui8[0] = cvt.ui8[2];
+                            cvt.ui8[2] = tmp;
+                            cvt.ui8[0] = (uint8_t) (cvt.ui8[0] * bscale);
+                            cvt.ui8[1] = (uint8_t) (cvt.ui8[1] * gscale);
+                            cvt.ui8[2] = (uint8_t) (cvt.ui8[2] * rscale);
+                            *dst = cvt.ui32;
+                        }
+                        dst++;
+                        framebuffer_x++;
+                    }
+                }
+            }
+            dst = orig_dst + framebuffer_width;
+            framebuffer_y++;
+        }
+    }
+}
+
+void DirkSimple_destroysprite(DirkSimple_Sprite *sprite)
+{
+    // we aren't currently using sprite->platform_handle, so ignore it.
+}
+
+void DirkSimple_endframe(void)
+{
+    // nothing to do here, we'll send the data at the end of retro_run.
+}
+
 void retro_init(void) {}
 void retro_deinit(void) {}
 
@@ -299,7 +429,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->geometry.base_height  = framebuffer_height;
     info->geometry.max_width    = framebuffer_width;
     info->geometry.max_height   = framebuffer_height;
-    info->geometry.aspect_ratio = ((float) framebuffer_width) / ((float) framebuffer_height);;
+    info->geometry.aspect_ratio = ((float) framebuffer_width) / ((float) framebuffer_height);
 
     info->timing.fps = framebuffer_fps;
     info->timing.sample_rate = (double) audio_freq;
@@ -504,7 +634,9 @@ void retro_unload_game(void)
 {
     DirkSimple_shutdown();
     DirkSimple_free(framebuffer);
+    DirkSimple_free(laserdisc_frame);
     framebuffer = NULL;
+    laserdisc_frame = NULL;
     framebuffer_width = 0;
     framebuffer_height = 0;
     framebuffer_fps = 0.0;

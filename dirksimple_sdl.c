@@ -238,14 +238,53 @@ void mainloop_shutdown(void)
     SDL_Quit();
 }
 
-static void render_frame()
+void DirkSimple_beginframe(void)
 {
-    if (!GRenderer) {
-        return;  // no video yet.
-    }
-
+    SDL_assert(GRenderer);
     SDL_RenderClear(GRenderer);
     SDL_RenderCopy(GRenderer, GLaserDiscTexture, NULL, NULL);
+}
+
+void DirkSimple_clearscreen(uint8_t r, uint8_t g, uint8_t b)
+{
+    SDL_SetRenderDrawColor(GRenderer, r, g, b, 255);
+    SDL_RenderClear(GRenderer);
+}
+
+void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, uint8_t rmod, uint8_t gmod, uint8_t bmod)
+{
+    SDL_Texture *texture = (SDL_Texture *) sprite->platform_handle;
+    const SDL_Rect srcrect = { sx, sy, sw, sh };
+    const SDL_Rect dstrect = { dx, dy, dw, dh };
+
+    if (texture == NULL) {
+        texture = SDL_CreateTexture(GRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, sprite->width, sprite->height);
+        if (!texture) {
+            char what[128];
+            SDL_snprintf(what, sizeof (what), "Failed to create texture for sprite '%s'", sprite->name);
+            sdlpanic(what);
+        }
+        sprite->platform_handle = texture;
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+        SDL_UpdateTexture(texture, NULL, sprite->rgba, sprite->width * 4);
+    }
+
+    SDL_SetTextureColorMod(texture, rmod, gmod, bmod);
+    SDL_RenderCopy(GRenderer, texture, &srcrect, &dstrect);
+}
+
+void DirkSimple_destroysprite(DirkSimple_Sprite *sprite)
+{
+    SDL_Texture *texture = (SDL_Texture *) sprite->platform_handle;
+    if (texture) {
+        SDL_DestroyTexture(texture);
+    }
+}
+
+void DirkSimple_endframe(void)
+{
+    SDL_assert(GRenderer);
     SDL_RenderPresent(GRenderer);
 }
 
@@ -384,7 +423,6 @@ static SDL_bool mainloop_iteration(void)
     }
 
     DirkSimple_tick(SDL_GetTicks(), GKeyInputBits | controllerinputbits);
-    render_frame();
 
     return SDL_TRUE;
 }

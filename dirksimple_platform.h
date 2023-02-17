@@ -152,6 +152,40 @@ extern void DirkSimple_cleardiscaudio(void);
 
 // !!! FIXME: add in a non-disc audio and video function, for playing bleeps and drawing overlay UI.
 
+// Called once during DirkSimple_tick, if the laserdisc is ready to play.
+//  The platform layer should prepare the screen for a new frame of video
+//  and render the current laserdisc frame. Other drawing commands might
+//  follow that render on top of this, and will finish with a call to
+//  DirkSimple_endframe.
+extern void DirkSimple_beginframe(void);
+
+// Called once during DirkSimple_tick, if DirkSimple_beginframe was called.
+// This signifies that rendering is complete and the frame should be presented.
+extern void DirkSimple_endframe(void);
+
+extern void DirkSimple_clearscreen(uint8_t r, uint8_t g, uint8_t b);
+
+typedef struct DirkSimple_Sprite DirkSimple_Sprite;
+
+struct DirkSimple_Sprite
+{
+    char *name;
+    int width;
+    int height;
+    uint8_t *rgba;
+    void *platform_handle;
+    DirkSimple_Sprite *next;
+};
+
+// Platform layer should build out any thing it needs (textures, etc) and cache them on
+//  `platform_handle`, then draw the sprite as requested over the latest laserdisc frame.
+// There is an alpha channel, but it's legal to treat it as full or empty
+//  for simplicity here...it's meant to be a mask, not proper blending.
+extern void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, uint8_t rmod, uint8_t gmod, uint8_t bmod);
+
+// This is just to clear out any `platform_handle` stuff. The engine cleans up the rest.
+extern void DirkSimple_destroysprite(DirkSimple_Sprite *sprite);
+
 #endif // INCL_DIRKSIMPLE_PLATFORM_H
 
 // end of dirksimple_platform.h ...

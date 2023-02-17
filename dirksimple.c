@@ -41,6 +41,30 @@ static const char *GLuaLicense =
 "\n";
 
 
+typedef enum RenderPrimitive
+{
+    RENDPRIM_CLEAR,
+    RENDPRIM_SPRITE,
+} RenderPrimitive;
+
+typedef struct RenderCommand
+{
+    RenderPrimitive prim;
+    union
+    {
+        struct
+        {
+            uint8_t r, g, b;
+        } clear;
+        struct
+        {
+            char name[32];
+            int32_t sx, sy, sw, sh, dx, dy, dw, dh;
+            uint8_t r, g, b;
+        } sprite;
+    } data;
+} RenderCommand;
+
 
 static char *GGameName = NULL;
 static char *GGamePath = NULL;
@@ -62,7 +86,10 @@ static int GShowingSingleFrame = 0;
 static unsigned int GSeekGeneration = 0;
 static int GNeedInitialLuaTick = 1;
 static const THEORAPLAY_VideoFrame *GPendingVideoFrame = NULL;
-
+static DirkSimple_Sprite *GSprites = NULL;
+static RenderCommand *GRenderCommands = NULL;
+static int GNumRenderCommands = 0;
+static int GNumAllocatedRenderCommands = 0;
 
 static void out_of_memory(void)
 {
@@ -272,6 +299,60 @@ uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h)
     return (uint8_t *) pixels;
 }
 
+static DirkSimple_Sprite *get_cached_sprite(const char *name)
+{
+    DirkSimple_Sprite *sprite = NULL;
+
+    // lowercase the name, just in case.
+    char *loweredname = DirkSimple_xstrdup(name);
+    int i;
+    for (i = 0; name[i]; i++) {
+        char ch = name[i];
+        if ((ch >= 'A') && (ch <= 'Z')) {
+            loweredname[i] = ch - ('A' - 'a');
+        }
+    }
+    name = loweredname;
+
+    for (sprite = GSprites; sprite != NULL; sprite = sprite->next) {
+        if (strcmp(sprite->name, loweredname) == 0) {
+            DirkSimple_free(loweredname);
+            return sprite;  // already cached.
+        }
+    }
+
+    // not cached yet, load it from disk.
+    const size_t slen = strlen(GGameDir) + strlen(name) + 8;
+    char *fname = (char *) DirkSimple_xmalloc(slen);
+    snprintf(fname, slen, "%s%s.bmp", GGameDir, name);
+
+    int w, h;
+    uint8_t *rgba = DirkSimple_loadbmp(fname, &w, &h);
+    if (rgba) {
+        DirkSimple_log("Loaded sprite '%s': %dx%d, RGBA", fname, w, h);
+    }
+
+    DirkSimple_free(fname);
+
+    if (!rgba) {
+        char errmsg[128];
+        snprintf(errmsg, sizeof (errmsg), "Failed to load needed sprite '%s'. Check your installation?", name);
+        DirkSimple_panic(errmsg);
+    }
+
+    sprite = (DirkSimple_Sprite *) DirkSimple_xmalloc(sizeof (DirkSimple_Sprite));
+    sprite->name = loweredname;
+    sprite->width = w;
+    sprite->height = h;
+    sprite->rgba = rgba;
+    sprite->platform_handle = NULL;
+    sprite->next = GSprites;
+
+    GSprites = sprite;
+
+    return sprite;
+}
+
 // Allocator interface for internal Lua use.
 static void *DirkSimple_lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
 {
@@ -452,7 +533,6 @@ void DirkSimple_debugger(void)
     luahook_DirkSimple_debugger(GLua);
 }
 
-// !!! FIXME: start_clip and show_single_frame should take a framenum, not timestamp
 static void DirkSimple_show_single_frame(uint32_t startms)
 {
     if (GDecoder) {
@@ -490,6 +570,12 @@ static int luahook_DirkSimple_start_clip(lua_State *L)
     const uint32_t startms = (uint32_t) lua_tonumber(L, 1);
     DirkSimple_start_clip(startms);
     return 0;
+}
+
+static int luahook_DirkSimple_truncate(lua_State *L)
+{
+    lua_pushinteger(L, (lua_Integer) lua_tonumber(L, 1));
+    return 1;
 }
 
 static void register_lua_libs(lua_State *L)
@@ -538,6 +624,49 @@ static int luahook_DirkSimple_log(lua_State *L)
     return 0;
 }
 
+static RenderCommand *new_render_command(const RenderPrimitive prim)
+{
+    if (GNumRenderCommands >= GNumAllocatedRenderCommands) {
+        if (GNumAllocatedRenderCommands == 0) {
+            GNumAllocatedRenderCommands = 32;
+        } else {
+            GNumAllocatedRenderCommands *= 2;
+        }
+        GRenderCommands = DirkSimple_xrealloc(GRenderCommands, sizeof (RenderCommand) * GNumAllocatedRenderCommands);
+    }
+
+    RenderCommand *retval = &GRenderCommands[GNumRenderCommands++];
+    retval->prim = prim;
+    return retval;
+}
+
+static int luahook_DirkSimple_clear_screen(lua_State *L)
+{
+    RenderCommand *cmd = new_render_command(RENDPRIM_CLEAR);
+    cmd->data.clear.r = (uint8_t) lua_tonumber(L, 1);
+    cmd->data.clear.g = (uint8_t) lua_tonumber(L, 2);
+    cmd->data.clear.b = (uint8_t) lua_tonumber(L, 3);
+    return 0;
+}
+
+static int luahook_DirkSimple_draw_sprite(lua_State *L)
+{
+    RenderCommand *cmd = new_render_command(RENDPRIM_SPRITE);
+    snprintf(cmd->data.sprite.name, sizeof (cmd->data.sprite.name), "%s", lua_tostring(L, 1));
+    cmd->data.sprite.sx = (int32_t) lua_tonumber(L, 2);
+    cmd->data.sprite.sy = (int32_t) lua_tonumber(L, 3);
+    cmd->data.sprite.sw = (int32_t) lua_tonumber(L, 4);
+    cmd->data.sprite.sh = (int32_t) lua_tonumber(L, 5);
+    cmd->data.sprite.dx = (int32_t) lua_tonumber(L, 6);
+    cmd->data.sprite.dy = (int32_t) lua_tonumber(L, 7);
+    cmd->data.sprite.dw = (int32_t) lua_tonumber(L, 8);
+    cmd->data.sprite.dh = (int32_t) lua_tonumber(L, 9);
+    cmd->data.sprite.r = (uint8_t) lua_tonumber(L, 10);
+    cmd->data.sprite.g = (uint8_t) lua_tonumber(L, 11);
+    cmd->data.sprite.b = (uint8_t) lua_tonumber(L, 12);
+    return 0;
+}
+
 static void load_lua_gamecode(lua_State *L, const char *gamedir)
 {
     int rc;
@@ -582,6 +711,13 @@ static void set_cfunc(lua_State *L, lua_CFunction f, const char *sym)
 }
 
 // Sets t[sym]=f, where t is on the top of the Lua stack.
+static void set_integer(lua_State *L, const int x, const char *sym)
+{
+    lua_pushinteger(L, x);
+    lua_setfield(L, -2, sym);
+}
+
+// Sets t[sym]=f, where t is on the top of the Lua stack.
 static void set_string(lua_State *L, const char *str, const char *sym)
 {
     lua_pushstring(L, str);
@@ -602,6 +738,9 @@ static void setup_lua(void)
         set_cfunc(GLua, luahook_panic, "panic");
         set_cfunc(GLua, luahook_DirkSimple_stackwalk, "stackwalk");
         set_cfunc(GLua, luahook_DirkSimple_debugger, "debugger");
+        set_cfunc(GLua, luahook_DirkSimple_truncate, "truncate");
+        set_cfunc(GLua, luahook_DirkSimple_clear_screen, "clear_screen");
+        set_cfunc(GLua, luahook_DirkSimple_draw_sprite, "draw_sprite");
         set_string(GLua, "", "gametitle");
         set_string(GLua, GLuaLicense, "lua_license");  // just so deadcode elimination can't remove this string from the binary.
     lua_setglobal(GLua, DIRKSIMPLE_LUA_NAMESPACE);
@@ -892,9 +1031,24 @@ int DirkSimple_unserialize(const void *data, size_t len)
     return retval;
 }
 
-
 void DirkSimple_shutdown(void)
 {
+    DirkSimple_Sprite *sprite;
+    DirkSimple_Sprite *spritenext;
+    for (sprite = GSprites; sprite != NULL; sprite = spritenext) {
+        spritenext = sprite->next;
+        DirkSimple_destroysprite(sprite);
+        DirkSimple_free(sprite->name);
+        DirkSimple_free(sprite->rgba);
+        DirkSimple_free(sprite);
+    }
+    GSprites = NULL;
+
+    DirkSimple_free(GRenderCommands);
+    GRenderCommands = NULL;
+    GNumRenderCommands = 0;
+    GNumAllocatedRenderCommands = 0;
+
     THEORAPLAY_stopDecode(GDecoder);
     GDecoder = NULL;
     GFrameMS = 0;
@@ -1015,6 +1169,31 @@ static const char *pixfmtstr(const THEORAPLAY_VideoFormat pixfmt)
     return "[unknown]";
 }
 
+static void send_rendering_primitives(void)
+{
+    DirkSimple_beginframe();
+    for (int i = 0; i < GNumRenderCommands; i++) {
+        const RenderCommand *cmd = &GRenderCommands[i];
+        switch (cmd->prim) {
+            case RENDPRIM_CLEAR:
+                DirkSimple_clearscreen(cmd->data.clear.r, cmd->data.clear.g, cmd->data.clear.b);
+                break;
+            case RENDPRIM_SPRITE:
+                DirkSimple_drawsprite(get_cached_sprite(cmd->data.sprite.name),
+                                      cmd->data.sprite.sx, cmd->data.sprite.sy, cmd->data.sprite.sw, cmd->data.sprite.sh,
+                                      cmd->data.sprite.dx, cmd->data.sprite.dy, cmd->data.sprite.dw, cmd->data.sprite.dh,
+                                      cmd->data.sprite.r, cmd->data.sprite.g, cmd->data.sprite.b);
+                break;
+            default:
+                DirkSimple_panic("Unexpected rendering primitive");
+                break;
+        }
+    }
+    DirkSimple_endframe();
+
+    GNumRenderCommands = 0;
+}
+
 void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
 {
     lua_State *L = GLua;
@@ -1055,6 +1234,10 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
                     gametitle = DirkSimple_xstrdup(gametitle_lua);
                 }
                 lua_pop(L, 1);
+
+                // This is the dimensions of the video, which might not actually match what the arcade used.
+                set_integer(L, (int) video->width, "video_width");
+                set_integer(L, (int) video->height, "video_height");
             }
             lua_pop(L, 1);
         }
@@ -1191,6 +1374,8 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
             }
         }
     }
+
+    send_rendering_primitives();
 }
 
 // end of dirksimple.c ...
