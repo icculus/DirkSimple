@@ -92,6 +92,13 @@ extern const char *DirkSimple_gamename(void);
 extern const char *DirkSimple_gamedir(void);  // root of current game's data
 extern const char *DirkSimple_datadir(void);  // root of all DirkSimple data
 
+// returns RGBA8 data for the .BMP file at `fname`. This is not super-robust,
+//  but it's only meant to load small assets we control. Returns NULL on
+//  error. Fills in `*_w` and `*_h` with image dimensions in pixels on
+//  success. Call DirkSimple_free() on the return value when done with it.
+extern uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h);
+
+
 // Your platform layer implements these, which dirksimple.c calls into...
 
 /* simple allocators, in case you don't want to use malloc */

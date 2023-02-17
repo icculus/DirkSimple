@@ -153,6 +153,124 @@ static void theoraplayiobridge_close(THEORAPLAY_Io *io)
     return dio->close(dio);
 }
 
+static uint8_t *invalid_bmp(const char *fname, const char *err)
+{
+    DirkSimple_log("Failed to load '%s': %s", fname, err);
+    return NULL;
+}
+
+static uint32_t readui32le(const uint8_t **pptr)
+{
+    const uint8_t *ptr = *pptr;
+    uint32_t retval = (uint32_t) ptr[0];
+    retval |= ((uint32_t) ptr[1]) << 8;
+    retval |= ((uint32_t) ptr[2]) << 16;
+    retval |= ((uint32_t) ptr[3]) << 24;
+    *pptr += sizeof (retval);
+    return retval;
+}
+
+static uint16_t readui16le(const uint8_t **pptr)
+{
+    const uint8_t *ptr = *pptr;
+    uint16_t retval = (uint16_t) ptr[0];
+    retval |= ((uint16_t) ptr[1]) << 8;
+    *pptr += sizeof (retval);
+    return retval;
+}
+
+static uint8_t *loadbmp_from_memory(const char *fname, const uint8_t *buf, int buflen, int *_w, int *_h)
+{
+    const uint8_t *ptr = buf;
+
+    *_w = *_h = 0;
+
+    if (buflen < 50) {
+        return invalid_bmp(fname, "Not a .BMP file");
+    }
+
+    if ((ptr[0] != 'B') || (ptr[1] != 'M')) {
+        return invalid_bmp(fname, "Not a .BMP file");
+    }
+    ptr += 10;
+    const uint32_t offset_bits = readui32le(&ptr);
+    const uint32_t infolen = readui32le(&ptr);
+    if (offset_bits > buflen) {
+        return invalid_bmp(fname, "Incomplete or corrupt .BMP file");
+    } else if ((infolen + 10) > buflen) {
+        return invalid_bmp(fname, "Incomplete or corrupt .BMP file");
+    } else if (infolen < 40) {  // not a standard BITMAPINFOHEADER.
+        return invalid_bmp(fname, "Unsupported .BMP format");
+    } else if (infolen == 64) {  // this is some ancient, incompatible OS/2 thing.
+        return invalid_bmp(fname, "Unsupported .BMP format");
+    }
+
+    const uint32_t bmpwidth = readui32le(&ptr);
+    const uint32_t bmpheight = readui32le(&ptr);
+    if ((bmpwidth > 1024) || (bmpheight > 1024)) {
+        return invalid_bmp(fname, "Image is too big");  // this is just an arbitrary limit.
+    } else if ((bmpwidth == 0) || (bmpheight == 0)) {
+        return invalid_bmp(fname, "Image is zero pixels in size");
+    } else if ((offset_bits + (bmpwidth * bmpheight * 4)) > buflen) {
+        return invalid_bmp(fname, "Incomplete or corrupt .BMP file");
+    }
+
+    ptr += 2;  // skip planes
+    const uint16_t bitcount = readui16le(&ptr);
+    if (bitcount != 32) {
+        return invalid_bmp(fname, "Only 32bpp .BMP files supported");
+    }
+
+    const uint32_t compression = readui32le(&ptr);
+    if ((compression != 0) && (compression != 3)) {
+        return invalid_bmp(fname, "Only uncompressed RGB .BMP files supported");
+    }
+
+    // we don't check the color masks; we assume they match what we want,
+    // and checking them just to verify is a lot of compatibility tapdancing.
+
+    uint8_t *pixels = (uint8_t *) DirkSimple_xmalloc(bmpwidth * bmpheight * 4);
+
+    // of course the stupid pixels are upside down in a bmp file.
+    const size_t rowlen = bmpwidth * 4;
+    const uint8_t *src = (buf + offset_bits) + (rowlen * (bmpheight - 1));
+    uint8_t *dst = pixels;
+    for (int y = 0; y < bmpheight; y++) {
+        memcpy(dst, src, rowlen);
+        dst += rowlen;
+        src -= rowlen;
+    }
+
+    *_w = (int) bmpwidth;
+    *_h = (int) bmpheight;
+    return pixels;
+}
+
+uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h)
+{
+    DirkSimple_Io *io = DirkSimple_openfile_read(fname);
+    if (!io) {
+        return invalid_bmp(fname, "Couldn't open file for reading");
+    }
+
+    const long flen = io->streamlen(io);
+    uint8_t *fbuf = (uint8_t *) DirkSimple_malloc(flen);
+    if (!fbuf) {
+        return invalid_bmp(fname, "Out of memory");
+    }
+
+    const long br = io->read(io, fbuf, flen);
+    io->close(io);
+    if (br != flen) {
+        DirkSimple_free(fbuf);
+        return invalid_bmp(fname, "couldn't read whole file into memory");
+    }
+
+    uint8_t *pixels = loadbmp_from_memory(fname, fbuf, flen, _w, _h);
+    DirkSimple_free(fbuf);
+
+    return (uint8_t *) pixels;
+}
 
 // Allocator interface for internal Lua use.
 static void *DirkSimple_lua_allocator(void *ud, void *ptr, size_t osize, size_t nsize)
