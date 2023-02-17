@@ -8,8 +8,21 @@
 DirkSimple.gametitle = "Cliff Hanger"
 
 -- SOME GAME CONFIG STUFF
-local starting_lives = 5
+local starting_lives = 6
+local show_full_hints = true
 
+local default_highscores = {
+    { "JMH", 1000000 },
+    { "PMR", 90000 },
+    { "EMJ", 80000 },
+    { "APH", 70000 },
+    { "VAV", 60000 },
+    { "MAS", 50000 },
+    { "JON", 40000 },
+    { "WHO", 30000 },
+    { "HP?", 20000 },
+    { "JIM", 10000 }
+}
 
 -- SOME INITIAL SETUP STUFF
 local scenes = nil  -- gets set up later in the file.
@@ -34,10 +47,17 @@ local function seek_laserdisc_to(frame)
     DirkSimple.start_clip(scene_manager.last_seek)
 end
 
+local function halt_laserdisc()  -- !!! FIXME: this should really be an Engine function that actually halts playback.
+    -- will suspend ticking until the seek completes and reset sequence tick count
+    scene_manager.last_seek = laserdisc_frame_to_ms(4563 - 6)   -- this just happens to be a black frame.
+    scene_manager.unserialize_offset = 0
+    DirkSimple.show_single_frame(scene_manager.last_seek)
+end
+
 local function setup_scene_manager()
     scene_manager.initialized = true
     scene_manager.accepted_input = nil
-    scene_manager.in_attract_mode = false
+    scene_manager.attract_mode_state = 0
     scene_manager.in_death_scene = false
     scene_manager.infinite_lives = false
     scene_manager.lives_left = starting_lives
@@ -52,17 +72,109 @@ local function setup_scene_manager()
     scene_manager.unserialize_offset = 0
 end
 
-local function start_attract_mode(after_game_over)
-    DirkSimple.log("Starting attract mode")
-    -- !!! FIXME: need some graphics rendered here.
-    scene_manager.in_attract_mode = true
-    scene_manager.current_scene_num = 0
-    scene_manager.current_scene = nil
-    scene_manager.current_sequence_num = 0
-    scene_manager.current_sequence = nil
-    scene_manager.accepted_input = nil
-    seek_laserdisc_to(6)
+-- Cliff Hanger only draws "characters" to grid on the screen. It could not
+-- draw outside the grid (one character filled a cell, you couldn't draw
+-- in the middle to straddle two cells, which means you could not position
+-- anything by pixel position if it didn't align to the grid. Think of it
+-- as a fancy text terminal.
+-- Coordinates and sizes are in character blocks (8x8 pixels). The logical
+-- screen here is 40x24 blocks, so we'll scale as appropriate to match the
+-- laserdisc video resolution.
+local function draw_sprite_chars(name, sx, sy, sw, sh, dx, dy, modr, modg, modb)
+    -- scale dest coords for the screen resolution.
+    -- some percentage of the laserdisc video height is letterboxing, don't count that part.
+    local blockh = (DirkSimple.video_height - (DirkSimple.video_height * 0.216666)) / 24.0
+    local blockw = DirkSimple.video_width / 40.0
+    dx = DirkSimple.truncate(DirkSimple.truncate(dx) * blockw)
+    dy = DirkSimple.truncate((DirkSimple.truncate(dy) * blockh) + (DirkSimple.video_height * 0.10))
+    local dw = DirkSimple.truncate(DirkSimple.truncate(sw) * blockw)
+    local dh = DirkSimple.truncate(DirkSimple.truncate(sh) * blockh)
+
+    -- convert from source blocks to pixels
+    sx = DirkSimple.truncate(sx) * 8
+    sy = DirkSimple.truncate(sy) * 8
+    sw = DirkSimple.truncate(sw) * 8
+    sh = DirkSimple.truncate(sh) * 8
+
+    --DirkSimple.log("draw_sprite(" .. sx .. ", " .. sy .. ", " .. sw .. ", " .. sh .. ", " .. dx .. ", " .. dy .. ", " .. dw .. ", " .. dh .. ")")
+    DirkSimple.draw_sprite(name, sx, sy, sw, sh, dx, dy, dw, dh, modr, modg, modb)
 end
+
+local chartable = nil
+local function draw_text(str, x, y, modr, modg, modb)
+    if chartable == nil then
+        local x = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[~]^~`abcdefghijklmnopqrstuvwxyz{|}"
+        local bytelist = { x:byte(1, #x) }
+        chartable = {}
+        for i,ch in ipairs(bytelist) do
+            chartable[ch] = i
+        end
+    end
+
+    local bytes = { str:byte(1, #str) }
+    for i,ch in ipairs(bytes) do
+        local idx = chartable[ch]
+        if idx == nil then
+            idx = 1
+        end
+        draw_sprite_chars("cliffglyphs", idx - 1, 0, 1, 1, x, y, modr, modg, modb)
+        x = x + 1
+    end
+end
+
+local function draw_rectangle(x, y, w, h, r, g, b)
+    draw_sprite_chars("cliffglyphs", 99, 0, 1, 1, x, y, r, g, b)
+    draw_sprite_chars("cliffglyphs", 98, 0, 1, 1, x+w+1, y, r, g, b)
+    draw_sprite_chars("cliffglyphs", 101, 0, 1, 1, x, y+h+1, r, g, b)
+    draw_sprite_chars("cliffglyphs", 100, 0, 1, 1, x+w+1, y+h+1, r, g, b)
+    for i = 1,w,1 do
+        draw_sprite_chars("cliffglyphs", 96, 0, 1, 1, x+i, y, r, g, b)
+        draw_sprite_chars("cliffglyphs", 96, 0, 1, 1, x+i, y+h+1, r, g, b)
+    end
+    for i = 1,h,1 do
+        draw_sprite_chars("cliffglyphs", 97, 0, 1, 1, x, y+i, r, g, b)
+        draw_sprite_chars("cliffglyphs", 97, 0, 1, 1, x+w+1, y+i, r, g, b)
+    end
+end
+
+local function draw_standard_rectangle(idx, r, g, b)
+    draw_rectangle(idx, idx, 38 - (idx * 2), 21 - (idx * 2), r, g, b)
+end
+
+-- these color values come from Daphne's TMS9128NL code.
+local colortable = {  -- red, blue, green triplets.
+    black = { 0, 0, 0 },
+    medium_green = { 26, 219, 36 },
+    light_green = { 109, 255, 109 },
+    dark_blue = { 36, 36, 255 },
+    light_blue = { 73, 109, 255 },
+    dark_red = { 182, 36, 36 },
+    purple = { 125, 0, 128 },  -- daphne uses this for Cliff Hanger's move prompts, looks more accurate to the arcade than dark_red.
+    light_cyan = { 73, 219, 255 },
+    medium_red = { 255, 36, 36 },
+	light_red = { 255, 109, 109 },
+    dark_yellow = { 219, 219, 36 },
+    light_yellow = { 219, 219, 146 },
+	dark_green = { 36, 146, 36 },
+    magenta = { 219, 73, 182 },
+    grey = { 182, 182, 182 },
+    white = { 255, 255, 255 }
+}
+
+local function mapcolor(name)
+    if colortable[name] == nil then
+        name = "black"
+    end
+    local triplet = colortable[name]
+    return triplet[1], triplet[2], triplet[3]
+end
+
+
+local start_attract_mode = nil -- predeclare
+
+local attract_mode_flash_colors = {
+    "white", "light_yellow", "medium_red", "dark_yellow", "dark_blue", "dark_green", "light_green"
+}
 
 local function start_scene(scenenum, sequencenum)
     if test_scene ~= nil then
@@ -109,6 +221,210 @@ local function start_game()
     start_scene(1, 0)
 end
 
+local function tick_attract_mode(inputs)
+    -- !!! FIXME: if someone wants to make this frame-perfect, feel free to adjust all the magic tick values in this function.
+    local ticks = scene_manager.current_scene_ticks
+    if scene_manager.attract_mode_state == 1 then  -- state == 1? Showing initial intro before laserdisc starts playing. current_scene_ticks will reset at that point.
+        if ticks <= 2000 then  -- Sliding in initial logo.
+            DirkSimple.clear_screen(mapcolor("black"))
+            draw_sprite_chars("logo", 0, 0, 20, 10, 31 - (31 * (ticks / 2000)), 0, mapcolor("light_blue"))
+        elseif ticks <= 3000 then  -- waiting to flash
+            DirkSimple.clear_screen(mapcolor("black"))
+            draw_sprite_chars("logo", 0, 0, 20, 10, 0, 0, mapcolor("light_blue"))
+        elseif ticks <= 3128 then  -- flash
+            DirkSimple.clear_screen(mapcolor("light_blue"))
+            draw_sprite_chars("logo", 0, 0, 20, 10, 0, 0, mapcolor("dark_red"))
+        elseif ticks <= 3256 then  -- flash2
+            DirkSimple.clear_screen(mapcolor("light_blue"))
+            draw_sprite_chars("logo", 0, 0, 20, 10, 0, 0, mapcolor("white"))
+        else  -- into the main graphics screen, before laserdisc kicks in.
+            local flashticks = ticks - 8384
+            local fg = "black"
+            local bg = "light_blue"
+
+            if flashticks > 0 then
+                local flashidx = DirkSimple.truncate(flashticks / 128.0)
+                if flashidx > #attract_mode_flash_colors then
+                    flashidx = #attract_mode_flash_colors   -- moving on to next mode, but do this one more time for this last frame.
+                    scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1
+                    seek_laserdisc_to(6)  -- start the laserdisc attract mode video playing.
+                end
+
+                fg = attract_mode_flash_colors[flashidx]
+                if flashidx == #attract_mode_flash_colors then  -- last one chooses a black background.
+                    bg = "black"
+                end
+            end
+
+            DirkSimple.clear_screen(mapcolor(bg))
+            draw_sprite_chars("logo", 0, 0, 20, 10, 0, 0, mapcolor(fg))
+            if ticks > 4256 then
+                draw_text("A Laser Disc Video Game", 8, 16, mapcolor(fg))
+            end
+            if ticks > 5256 then  -- show byline
+                draw_text("BY STERN ELECTRONICS, INC.", 7, 18, mapcolor(fg))
+            end
+            if ticks > 6256 then  -- show number of credits
+                draw_text("FREE PLAY", 15, 23, mapcolor(fg))
+            end
+        end
+    elseif scene_manager.attract_mode_state == 2 then  -- state == 2? Started actual laserdisc attract mode video playing, so our current_scene_ticks has reset.
+        if scene_manager.laserdisc_frame >= 100 then --1546 then
+            DirkSimple.clear_screen(mapcolor("dark_blue"))
+            halt_laserdisc()
+            scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to original game's credits page.
+            return
+        end
+    elseif scene_manager.attract_mode_state == 3 then  -- state == 3? Show developer credits.
+        -- ticks were reset by the halt_laserdisc call that ended state 2.
+        DirkSimple.clear_screen(mapcolor("dark_blue"))
+        draw_text("Designed & Programmed By", 8, 7, mapcolor("white"))
+        if ticks >= 1000 then
+            draw_text("PAUL M. RUBENSTEIN", 11, 10, mapcolor("white"))
+        end
+        if ticks >= 1100 then
+            draw_text("BOB KOWALSKI", 13, 12, mapcolor("white"))
+        end
+        if ticks >= 1200 then
+            draw_text("JON MICHAEL HOGAN", 11, 14, mapcolor("white"))
+        end
+        if ticks >= 1300 then
+            draw_text("EDWARD J. MARCH JR.", 10, 16, mapcolor("white"))
+        end
+        if ticks >= 1400 then
+            local total = DirkSimple.truncate((ticks - 1400) / 128)
+            if total > 5 then
+                total = 5
+            end
+            for i = 1,total,1 do
+                draw_standard_rectangle(i-1, mapcolor("white"))
+            end
+        end
+
+        if ticks >= 6300 then -- move on to next state.
+            scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to DirkSimple credits page.
+        end
+    elseif scene_manager.attract_mode_state == 4 then  -- state == 4? Added a DirkSimple credits page.
+        ticks = ticks - 6300  -- make this act like the state starts at tick 0
+        DirkSimple.clear_screen(mapcolor("medium_red"))
+        draw_text("Rebuilt for DirkSimple By", 7, 7, mapcolor("white"))
+        if ticks >= 1000 then
+            draw_text("RYAN C. GORDON", 13, 12, mapcolor("white"))
+        end
+        if ticks >= 1500 then
+            draw_text("https://icculus.org/dirksimple", 5, 17, mapcolor("light_yellow"))
+        end
+        if ticks >= 1600 then
+            local total = DirkSimple.truncate((ticks - 1600) / 128)
+            if total > 3 then
+                total = 3
+            end
+            for i = 1,total,1 do
+                draw_standard_rectangle(i-1, mapcolor("white"))
+            end
+        end
+        if ticks >= 4000 then -- move on to next state.
+            scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to high scores.
+        end
+    elseif scene_manager.attract_mode_state == 5 then  -- state == 5? High scores list.
+        ticks = ticks - 11300  -- make this act like the state starts at tick 0
+        DirkSimple.clear_screen(mapcolor("magenta"))
+
+        draw_rectangle(0, 0, 19, 22, mapcolor("white"))
+        draw_rectangle(20, 0, 18, 22, mapcolor("white"))
+        draw_text("The Highest Scores", 2, 1, mapcolor("white"))
+
+        -- this only shows the default scores for now. We could manage actual scores, though!
+        for i,v in ipairs(default_highscores) do
+            if ticks >= (i * 100) then
+                local score = "" .. v[2]
+                local y = 2 + (i * 2)
+                draw_text(v[1], 2, y, mapcolor("white"))
+                draw_text(score, 19 - #score, y, mapcolor("white"))
+            end
+        end
+
+        if ticks >= 1100 then
+            draw_text("High Scores Today", 22, 1, mapcolor("white"))
+            for i,v in ipairs(default_highscores) do
+                if ticks >= (1100 + (i * 100)) then
+                    local score = "" .. v[2]
+                    local y = 2 + (i * 2)
+                    draw_text(v[1], 22, y, mapcolor("white"))
+                    draw_text(score, 39 - #score, y, mapcolor("white"))
+                end
+            end
+        end
+
+        if ticks >= 5000 then -- move on to next state.
+            scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to instructions
+        end
+    elseif scene_manager.attract_mode_state == 6 then  -- state == 6? Instructions.
+        ticks = ticks - 16300  -- make this act like the state starts at tick 0
+        DirkSimple.clear_screen(mapcolor("dark_blue"))
+        if ticks >= 128 then
+            draw_text("Move the joystick in the", 8, 3, mapcolor("white"))
+        end
+        if ticks >= 256 then
+            draw_text("direction Cliff or his car", 7, 4, mapcolor("white"))
+        end
+        if ticks >= 386 then
+            draw_text("moves on the screen", 10, 5, mapcolor("white"))
+        end
+        if ticks >= 770 then
+            draw_text("Stick right if object moves", 6, 9, mapcolor("white"))
+        end
+        if ticks >= 898 then
+            draw_text("toward right edge of screen", 6, 10, mapcolor("white"))
+        end
+        if ticks >= 1226 then
+            draw_text("Stick left if object moves", 7, 12, mapcolor("white"))
+        end
+        if ticks >= 1354 then
+            draw_text("toward left edge of screen", 7, 13, mapcolor("white"))
+        end
+        if ticks >= 1682 then
+            draw_text("Stick up if object moves", 8, 15, mapcolor("white"))
+        end
+        if ticks >= 1810 then
+            draw_text("toward upper edge of screen", 6, 16, mapcolor("white"))
+        end
+        if ticks >= 2138 then
+            draw_text("Stick down if object moves", 7, 18, mapcolor("white"))
+        end
+        if ticks >= 2266 then
+            draw_text("toward bottom edge of screen", 6, 19, mapcolor("white"))
+        end
+        if ticks >= 2366 then
+            draw_standard_rectangle(0, mapcolor("white"))
+        end
+        if ticks >= 2466 then
+            draw_standard_rectangle(1, mapcolor("white"))
+        end
+        if ticks >= 12522 then
+            scene_manager.attract_mode_state = 1  -- restart attract mode.
+            halt_laserdisc()  -- just to restart the ticks.
+        end
+    end
+
+    if inputs ~= nil and inputs.pressed["start"] then
+        start_game()
+    end
+end
+
+start_attract_mode = function(after_game_over)
+    DirkSimple.log("Starting attract mode")
+    scene_manager.attract_mode_state = 1
+    scene_manager.current_scene_ticks = 0
+    scene_manager.current_scene_num = 0
+    scene_manager.current_scene = nil
+    scene_manager.current_sequence_num = 0
+    scene_manager.current_sequence = nil
+    scene_manager.accepted_input = nil
+    halt_laserdisc()
+    tick_attract_mode(nil)  -- start right now.
+end
+
 local function game_over(won)
     DirkSimple.log("Game over!")
     -- !!! FIXME: do more here
@@ -128,17 +444,6 @@ local function kill_player()  -- !!! FIXME: this needs to display a message
     scene_manager.in_death_scene = true
     if scene_manager.current_sequence.death_start_frame ~= 0 then
         seek_laserdisc_to(scene_manager.current_sequence.death_start_frame)
-    end
-end
-
-local function tick_attract_mode(inputs)
-    -- !!! FIXME: need some graphics rendered here.
-    if scene_manager.in_attract_mode then
-        if inputs.pressed["start"] then
-            start_game()
-        elseif scene_manager.laserdisc_frame >= 1546 then
-            start_attract_mode(false)   -- if we're at the end of the attract mode clip, restart it.
-        end
     end
 end
 
@@ -174,12 +479,82 @@ local function tick_death_scene()
     end
 end
 
+local function draw_hud_lives_left()
+    local lives = scene_manager.lives_left
+    if lives > 6 then
+        lives = 6
+    end
+    draw_sprite_chars("cliffglyphs", 95, 0, 1, 1, 21, 0, mapcolor("black"))
+    draw_sprite_chars("cliffglyphs", 95, 0, 1, 1, 20, 0, mapcolor("black"))
+    draw_sprite_chars("cliffglyphs", 94, 0, 1, 1, 20, 0, mapcolor("purple"))
+    for i = 1,lives,1 do
+        draw_sprite_chars("cliffglyphs", 95, 0, 1, 1, 20-i, 0, mapcolor("black"))
+        draw_sprite_chars("cliffglyphs", 112, 0, 1, 1, 20-i, 0, mapcolor("purple"))
+    end
+    draw_sprite_chars("cliffglyphs", 95, 0, 1, 1, 20-(lives+1), 0, mapcolor("black"))
+    draw_sprite_chars("cliffglyphs", 60, 0, 1, 1, 20-(lives+1), 0, mapcolor("purple"))
+end
+
+local function draw_hud_current_score()
+    local score = "" .. scene_manager.current_score
+    local scorex = 10 - #score
+    for i = 1,#score+3,1 do  -- draw black background for text
+        draw_sprite_chars("cliffglyphs", 95, 0, 1, 1, (scorex-2) + i, 0, mapcolor("black"))
+    end
+    draw_text(score, scorex, y, mapcolor("purple"))
+    draw_sprite_chars("cliffglyphs", 60, 0, 1, 1, scorex - 1, 0, mapcolor("purple"))
+    draw_sprite_chars("cliffglyphs", 94, 0, 1, 1, scorex + #score, 0, mapcolor("purple"))
+end
+
+local function draw_hud_action_hint(actions)
+    if (actions == nil) or (#actions == 0) then
+        return
+    end
+
+    local hint = nil
+    local hintx = nil
+    if show_full_hints then
+        hint = ""
+        local comma = ""
+        for i,v in ipairs(actions) do
+            hint = hint .. comma .. v
+            comma = ", "
+        end
+        hintx = (40 - (#hint + 5)) / 2
+    else
+        for i,v in ipairs(actions) do
+            local input = v
+            if input == "up" or input == "down" or input == "left" or input == "right" then
+                hint = "STICK"
+                hintx = 15
+                break
+            elseif input == "hands" or input == "feet" then
+                hint = "ACTION"
+                hintx = 14
+                break
+            end
+        end
+    end
+
+    if hint ~= nil then
+        for i = 1,(#hint+5),1 do  -- draw black background for text
+            draw_sprite_chars("cliffglyphs", 95, 0, 1, 1, (hintx - 1) + i, 23, mapcolor("black"))
+        end
+        draw_sprite_chars("cliffglyphs", 60, 0, 1, 1, hintx, 23, mapcolor("purple"))
+        draw_text(hint, hintx + 2, 23, mapcolor("purple"))
+        draw_sprite_chars("cliffglyphs", 94, 0, 1, 1, hintx + #hint + 4, 23, mapcolor("purple"))
+    end
+end
+
 local function tick_game(inputs)
     -- if sequence is nil, we've run through all the moves for the scene and are just waiting on the scene to finish playing.
     local sequence = scene_manager.current_sequence
     local laserdisc_frame = scene_manager.laserdisc_frame
 
     --DirkSimple.log("TICK GAME: ticks=" .. scene_manager.current_scene_ticks .. ", laserdisc_frame=" .. laserdisc_frame)
+
+    draw_hud_lives_left()
+    draw_hud_current_score()
 
     -- see if it's time to shift to the next sequence.
     if (sequence ~= nil) and (laserdisc_frame >= sequence.end_frame) then
@@ -196,7 +571,7 @@ local function tick_game(inputs)
         sequence = scene_manager.current_sequence
 
         if sequence == nil then  -- did we run out of sequences?
-            DirkSimple.log("Finished all sequences in this scene!");
+            DirkSimple.log("Finished all sequences in this scene!")
         else
             local seqname = sequence.name
             if seqname ~= nil then
@@ -214,6 +589,7 @@ local function tick_game(inputs)
             kill_player()
             return
         else
+            draw_hud_action_hint(sequence.correct_moves)
             scene_manager.accepted_input = move_was_made(inputs, sequence.correct_moves)
             if scene_manager.accepted_input ~= nil then  -- correct move was just made!
                 scene_manager.current_score = scene_manager.current_score + 5000
@@ -236,7 +612,7 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
     scene_manager.current_scene_ticks = sequenceticks + scene_manager.unserialize_offset
     scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
 
-    if scene_manager.in_attract_mode then
+    if scene_manager.attract_mode_state ~= 0 then
         tick_attract_mode(inputs)
     elseif scene_manager.in_death_scene then
         tick_death_scene()
@@ -257,7 +633,7 @@ DirkSimple.serialize = function()
     state[#state + 1] = scene_manager.infinite_lives
     state[#state + 1] = scene_manager.lives_left
     state[#state + 1] = scene_manager.current_score
-    state[#state + 1] = scene_manager.in_attract_mode
+    state[#state + 1] = scene_manager.attract_mode_state
     state[#state + 1] = scene_manager.in_death_scene
     state[#state + 1] = scene_manager.last_seek
     state[#state + 1] = scene_manager.current_scene_num
@@ -278,7 +654,7 @@ DirkSimple.unserialize = function(state)
     scene_manager.infinite_lives = state[idx] ; idx = idx + 1
     scene_manager.lives_left = state[idx] ; idx = idx + 1
     scene_manager.current_score = state[idx] ; idx = idx + 1
-    scene_manager.in_attract_mode = state[idx] ; idx = idx + 1
+    scene_manager.attract_mode_state = state[idx] ; idx = idx + 1
     scene_manager.in_death_scene = state[idx] ; idx = idx + 1
     scene_manager.last_seek = state[idx] ; idx = idx + 1
     scene_manager.current_scene_num = state[idx] ; idx = idx + 1
@@ -303,7 +679,6 @@ end
 
 
 setup_scene_manager()  -- Call this during initial load to make sure the table is ready to go.
-
 
 
 -- The scene table!
