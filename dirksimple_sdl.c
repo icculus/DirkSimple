@@ -193,12 +193,6 @@ void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t heig
         sdlpanic("Failed to create laserdisc texture");
     }
 
-    // initialize the YUV texture to black.
-    Uint8 *pixels = DirkSimple_xcalloc(1, (width * height) + ((width * height) / 2));
-    SDL_memset(pixels + (width*height), 128, (width * height) / 2);
-    SDL_UpdateTexture(GLaserDiscTexture, NULL, pixels, width);  // make sure it's zeroed out.
-    free(pixels);
-
     GLaserDiscTextureWidth = width;
     GLaserDiscTextureHeight = height;
 }
@@ -240,15 +234,18 @@ void mainloop_shutdown(void)
 
 void DirkSimple_beginframe(void)
 {
-    SDL_assert(GRenderer);
-    SDL_RenderClear(GRenderer);
-    SDL_RenderCopy(GRenderer, GLaserDiscTexture, NULL, NULL);
+    if (GRenderer) {
+        SDL_RenderClear(GRenderer);
+        SDL_RenderCopy(GRenderer, GLaserDiscTexture, NULL, NULL);
+    }
 }
 
 void DirkSimple_clearscreen(uint8_t r, uint8_t g, uint8_t b)
 {
-    SDL_SetRenderDrawColor(GRenderer, r, g, b, 255);
-    SDL_RenderClear(GRenderer);
+    if (GRenderer) {
+        SDL_SetRenderDrawColor(GRenderer, r, g, b, 255);
+        SDL_RenderClear(GRenderer);
+    }
 }
 
 void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh, uint8_t rmod, uint8_t gmod, uint8_t bmod)
@@ -256,6 +253,10 @@ void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, in
     SDL_Texture *texture = (SDL_Texture *) sprite->platform_handle;
     const SDL_Rect srcrect = { sx, sy, sw, sh };
     const SDL_Rect dstrect = { dx, dy, dw, dh };
+
+    if (!GRenderer) {
+        return;
+    }
 
     if (texture == NULL) {
         texture = SDL_CreateTexture(GRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, sprite->width, sprite->height);
@@ -284,8 +285,9 @@ void DirkSimple_destroysprite(DirkSimple_Sprite *sprite)
 
 void DirkSimple_endframe(void)
 {
-    SDL_assert(GRenderer);
-    SDL_RenderPresent(GRenderer);
+    if (GRenderer) {
+        SDL_RenderPresent(GRenderer);
+    }
 }
 
 static SDL_bool mainloop_iteration(void)

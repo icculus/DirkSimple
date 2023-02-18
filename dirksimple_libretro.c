@@ -272,12 +272,14 @@ void DirkSimple_cleardiscaudio(void)
 
 void DirkSimple_beginframe(void)
 {
-    if (framebuffer) {
-        if (!laserdisc_frame) {
-            memset(framebuffer, '\0', framebuffer_height * framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
-        } else {
-            memcpy(framebuffer, laserdisc_frame, framebuffer_height * framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
-        }
+    if (!framebuffer) {
+        return;
+    }
+
+    if (!laserdisc_frame) {
+        memset(framebuffer, '\0', framebuffer_height * framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
+    } else {
+        memcpy(framebuffer, laserdisc_frame, framebuffer_height * framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
     }
 }
 
@@ -285,6 +287,10 @@ void DirkSimple_clearscreen(uint8_t r, uint8_t g, uint8_t b)
 {
     const int total = framebuffer_width * framebuffer_height;
     int i;
+
+    if (!framebuffer) {
+        return;
+    }
 
     if (pixfmt == DIRKSIMPLE_PIXFMT_RGB565) {
         const uint16_t rgb565 = ((((uint16_t) r) >> 3) << 11) | ((((uint16_t) g) >> 2) << 5) | (((uint16_t) b) >> 3);
@@ -319,6 +325,10 @@ void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, in
     const uint32_t *rgba = (const uint32_t *) sprite->rgba;
     int framebuffer_y = dy;
     int x, y;
+
+    if (!framebuffer) {
+        return;
+    }
 
     if (pixfmt == DIRKSIMPLE_PIXFMT_RGB565) {
         uint16_t *dst = (uint16_t *) framebuffer;

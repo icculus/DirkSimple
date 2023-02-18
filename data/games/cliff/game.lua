@@ -49,9 +49,9 @@ end
 
 local function halt_laserdisc()  -- !!! FIXME: this should really be an Engine function that actually halts playback.
     -- will suspend ticking until the seek completes and reset sequence tick count
-    scene_manager.last_seek = laserdisc_frame_to_ms(4563 - 6)   -- this just happens to be a black frame.
+    scene_manager.last_seek = -1
     scene_manager.unserialize_offset = 0
-    DirkSimple.show_single_frame(scene_manager.last_seek)
+    DirkSimple.halt_video()
 end
 
 local function setup_scene_manager()
@@ -610,7 +610,11 @@ end
 
 DirkSimple.tick = function(ticks, sequenceticks, inputs)
     scene_manager.current_scene_ticks = sequenceticks + scene_manager.unserialize_offset
-    scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
+    if scene_manager.last_seek == -1 then
+        scene_manager.laserdisc_frame = -1
+    else
+        scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
+    end
 
     if scene_manager.attract_mode_state ~= 0 then
         tick_attract_mode(inputs)
@@ -663,7 +667,6 @@ DirkSimple.unserialize = function(state)
     scene_manager.accepted_input = state[idx] ; idx = idx + 1
 
     scene_manager.unserialize_offset = scene_manager.current_scene_ticks
-    scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
 
     if scene_manager.current_scene_num ~= 0 then
         scene_manager.current_scene = scenes[scene_manager.current_scene_num]
@@ -672,7 +675,13 @@ DirkSimple.unserialize = function(state)
         end
     end
 
-    DirkSimple.start_clip(scene_manager.last_seek + scene_manager.unserialize_offset)
+    if last_seek == -1 then
+        scene_manager.laserdisc_frame = -1
+        halt_laserdisc()
+    else
+        scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
+        DirkSimple.start_clip(scene_manager.last_seek + scene_manager.unserialize_offset)
+    end
 
     return true
 end

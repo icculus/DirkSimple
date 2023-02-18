@@ -82,6 +82,7 @@ static uint32_t GFrameMS = 0;       // milliseconds each video frame takes.
 static int64_t GSeekToTicksOffset = 0;
 static uint64_t GClipStartMs = 0;   // Milliseconds into video stream that starts this clip.
 static uint64_t GClipStartTicks = 0;  // GTicks when clip started playing
+static int GHalted = 0;
 static int GShowingSingleFrame = 0;
 static unsigned int GSeekGeneration = 0;
 static int GNeedInitialLuaTick = 1;
@@ -90,6 +91,7 @@ static DirkSimple_Sprite *GSprites = NULL;
 static RenderCommand *GRenderCommands = NULL;
 static int GNumRenderCommands = 0;
 static int GNumAllocatedRenderCommands = 0;
+static uint8_t *GBlankVideoFrame = NULL;
 
 static void out_of_memory(void)
 {
@@ -533,14 +535,35 @@ void DirkSimple_debugger(void)
     luahook_DirkSimple_debugger(GLua);
 }
 
+static void DirkSimple_halt_video(void)
+{
+    if (GDecoder) {
+        DirkSimple_log("HALT VIDEO: GTicks %u", (unsigned int) GTicks);
+        GClipStartMs = 0;
+        GClipStartTicks = GTicks;
+        GHalted = 1;
+        GShowingSingleFrame = 0;
+        GSeekGeneration--;  // this just makes it throw away _anything_ until the next seek.
+        DirkSimple_cleardiscaudio();
+        DirkSimple_discvideo(GBlankVideoFrame);
+    }
+}
+
+static int luahook_DirkSimple_halt_video(lua_State *L)
+{
+    DirkSimple_halt_video();
+    return 0;
+}
+
 static void DirkSimple_show_single_frame(uint32_t startms)
 {
     if (GDecoder) {
-        DirkSimple_log("START SINGLE FRAME: GTicks %u, startms %u\n", (unsigned int) GTicks, (unsigned int) startms);
+        DirkSimple_log("START SINGLE FRAME: GTicks %u, startms %u", (unsigned int) GTicks, (unsigned int) startms);
         GSeekGeneration = THEORAPLAY_seek(GDecoder, startms);
         DirkSimple_cleardiscaudio();
         GClipStartMs = startms;
         GClipStartTicks = 0;
+        GHalted = 0;
         GShowingSingleFrame = 1;
     }
 }
@@ -561,6 +584,7 @@ static void DirkSimple_start_clip(uint32_t startms)
         DirkSimple_cleardiscaudio();
         GClipStartMs = startms;
         GClipStartTicks = 0;
+        GHalted = 0;
         GShowingSingleFrame = 0;
     }
 }
@@ -734,6 +758,7 @@ static void setup_lua(void)
     lua_newtable(GLua);
         set_cfunc(GLua, luahook_DirkSimple_show_single_frame, "show_single_frame");
         set_cfunc(GLua, luahook_DirkSimple_start_clip, "start_clip");
+        set_cfunc(GLua, luahook_DirkSimple_halt_video, "halt_video");
         set_cfunc(GLua, luahook_DirkSimple_log, "log");
         set_cfunc(GLua, luahook_panic, "panic");
         set_cfunc(GLua, luahook_DirkSimple_stackwalk, "stackwalk");
@@ -1056,6 +1081,7 @@ void DirkSimple_shutdown(void)
     GTicksOffset = 0;
     GSeekToTicksOffset = 0;
     GClipStartMs = 0xFFFFFFFF;
+    GHalted = 0;
     GShowingSingleFrame = 0;
     GClipStartTicks = 0;
     GSeekGeneration = 0;
@@ -1064,6 +1090,8 @@ void DirkSimple_shutdown(void)
     GDiscoveredVideoFormat = 0;
     GDiscoveredAudioFormat = 0;
     GPendingVideoFrame = NULL;
+    DirkSimple_free(GBlankVideoFrame);
+    GBlankVideoFrame = NULL;
     DirkSimple_free(GGameName);
     GGameName = NULL;
     DirkSimple_free(GGamePath);
@@ -1249,7 +1277,30 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         DirkSimple_log("Virtual laserdisc video format: %s, %dx%d, %ffps", pixfmtstr(video->format), (int) video->width, video->height, video->fps);
         DirkSimple_videoformat(gametitle, video->width, video->height, video->fps);
         DirkSimple_free(gametitle);
+
+        switch (video->format) {
+            case THEORAPLAY_VIDFMT_YV12:
+            case THEORAPLAY_VIDFMT_IYUV:
+                GBlankVideoFrame = DirkSimple_xcalloc(1, (video->width * video->height) + ((video->width * video->height) / 2));
+                memset(GBlankVideoFrame + (video->width * video->height), 128, (video->width * video->height) / 2);
+                break;
+
+            case THEORAPLAY_VIDFMT_RGB:
+                GBlankVideoFrame = DirkSimple_xcalloc(video->width * video->height, 3);
+                break;
+
+            case THEORAPLAY_VIDFMT_RGBA:
+            case THEORAPLAY_VIDFMT_BGRA:
+                GBlankVideoFrame = DirkSimple_xcalloc(video->width * video->height, sizeof (uint32_t));
+                break;
+
+            case THEORAPLAY_VIDFMT_RGB565:
+                GBlankVideoFrame = DirkSimple_xcalloc(video->width * video->height, sizeof (uint16_t));
+                break;
+        }
+
         THEORAPLAY_freeVideo(video);  // dump this, the game is going to seek at startup anyhow.
+        DirkSimple_discvideo(GBlankVideoFrame);
     }
 
     if (!GDiscoveredAudioFormat) {
@@ -1266,12 +1317,11 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         THEORAPLAY_freeAudio(audio);  // dump this, the game is going to seek at startup anyhow.
     }
 
-
     if (GTicksOffset == 0) {
-        if (monotonic_ms == 0) {
-            return;  // just let this tick up until we aren't zero.
+        if (monotonic_ms < 2) {
+            return;  // just let this tick up until subtracting 1 is still > 0.
         }
-        GTicksOffset = monotonic_ms;
+        GTicksOffset = monotonic_ms - 1;
     } else if (GTicksOffset > monotonic_ms) {
         DirkSimple_panic("Time ran backwards! Aborting!");
     }
@@ -1287,6 +1337,10 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
         call_lua_tick(L, 0, 0, 0);
     } else if (GClipStartTicks) {
         call_lua_tick(L, GTicks, (GTicks - GClipStartTicks), inputbits);
+    }
+
+    if (GHalted) {
+        return;  // video playback is halted? We've done the tick, just return now.
     }
 
     // the tick function demanded a seek, don't bother messing with the movie this frame.
