@@ -32,8 +32,7 @@ local default_highscores = {
 local scenes = nil  -- gets set up later in the file.
 local test_scene = nil  -- set to index of scene to test. nil otherwise!
 local test_sequence_num = nil  -- set to index of sequence to test. nil otherwise!
-test_scene = 1
-test_sequence = 4
+--test_scene = 1 ; test_sequence = 4
 
 -- GAME STATE
 local scene_manager = {}
@@ -53,7 +52,7 @@ local function seek_laserdisc_to(frame)
     DirkSimple.start_clip(scene_manager.last_seek)
 end
 
-local function halt_laserdisc()  -- !!! FIXME: this should really be an Engine function that actually halts playback.
+local function halt_laserdisc()
     -- will suspend ticking until the seek completes and reset sequence tick count
     scene_manager.last_seek = -1
     scene_manager.unserialize_offset = 0
@@ -65,6 +64,7 @@ local function setup_scene_manager()
     scene_manager.accepted_input = nil
     scene_manager.attract_mode_state = 0
     scene_manager.death_mode_state = 0
+    scene_manager.showing_scene_start = 0
     scene_manager.infinite_lives = false
     scene_manager.lives_left = starting_lives
     scene_manager.current_score = 0
@@ -217,14 +217,12 @@ local function start_scene(scenenum, sequencenum)
     scene_manager.current_sequence = scene_manager.current_scene.moves[sequencenum]
     scene_manager.accepted_input = nil
 
-    local startframe = 0
-    if start_of_scene then
-        start_frame = scene_manager.current_scene.start_frame
-    else
-        start_frame = scene_manager.current_sequence.start_frame
+    scene_manager.showing_scene_start = 1
+    if not start_of_scene then
+        scene_manager.showing_scene_start = 2
     end
 
-    seek_laserdisc_to(start_frame)
+    halt_laserdisc()  -- we'll restart the scene's footage after showing_scene_start is done
 end
 
 local function start_game()
@@ -490,20 +488,6 @@ local function draw_failure_screen(ticks)
     end
     draw_text("PLAYER #  1", 15, 9, mapcolor(fg))
     draw_text(msg, 4, 13, mapcolor(fg))
-
-
---[[
-    draw_text("G O O D   L U C K  ! ! !", 8, 13, mapcolor("white"))
-
-    local total = DirkSimple.truncate(ticks / 128) + 1
-    if total > 5 then
-        total = 5
-    end
-    for i = 1,total,1 do
-        draw_standard_rectangle(i-1, mapcolor("white"))
-    end
-]]--
-
 end
 
 local function tick_death_scene()
@@ -534,8 +518,7 @@ local function tick_death_scene()
     end
 end
 
-
-local function kill_player()  -- !!! FIXME: this needs to display a message
+local function kill_player()
     if scene_manager.infinite_lives then
         scene_manager.lives_left = starting_lives
     elseif scene_manager.lives_left > 0 then
@@ -643,12 +626,52 @@ local function draw_hud_action_hint(actions)
     end
 end
 
+local function draw_start_play_screen(ticks)
+    DirkSimple.clear_screen(mapcolor("dark_blue"))
+    draw_text("PLAYER #  1", 15, 9, mapcolor("white"))
+    local lives_left = scene_manager.lives_left
+    if lives_left == starting_lives then
+        draw_text("G O O D   L U C K  ! ! !", 8, 13, mapcolor("white"))
+    else
+        local scorestr = "" .. scene_manager.current_score
+        draw_text("YOUR SCORE IS", 7, 12, mapcolor("white"))
+        draw_text(scorestr, 21 + (8 - #scorestr), 12, mapcolor("white"))
+        local lives_left_msg = "You have   1 life left."
+        if lives_left > 1 then
+            lives_left_msg = "You have   " .. lives_left .. " lives left."
+        end
+        draw_text(lives_left_msg, 7, 14, mapcolor("white"))
+    end
+
+    local total = DirkSimple.truncate(ticks / 64) + 1
+    if total > 5 then
+        total = 5
+    end
+    for i = 1,total,1 do
+        draw_standard_rectangle(i-1, mapcolor("white"))
+    end
+end
+
 local function tick_game(inputs)
     -- if sequence is nil, we've run through all the moves for the scene and are just waiting on the scene to finish playing.
     local sequence = scene_manager.current_sequence
     local laserdisc_frame = scene_manager.laserdisc_frame
+    local ticks = scene_manager.current_scene_ticks
 
-    --DirkSimple.log("TICK GAME: ticks=" .. scene_manager.current_scene_ticks .. ", laserdisc_frame=" .. laserdisc_frame)
+    --DirkSimple.log("TICK GAME: ticks=" .. ticks .. ", laserdisc_frame=" .. laserdisc_frame)
+
+    if scene_manager.showing_scene_start > 0 then
+        draw_start_play_screen(ticks)
+        if ticks > 2000 then
+            if scene_manager.showing_scene_start == 1 then
+                seek_laserdisc_to(scene_manager.current_scene.start_frame)
+            else
+                seek_laserdisc_to(scene_manager.current_sequence.start_frame)
+            end
+            scene_manager.showing_scene_start = 0
+        end
+        return
+    end
 
     if show_lives_and_score then
         draw_hud_lives_left()
@@ -743,6 +766,7 @@ DirkSimple.serialize = function()
     state[#state + 1] = scene_manager.failures_in_a_row
     state[#state + 1] = scene_manager.attract_mode_state
     state[#state + 1] = scene_manager.death_mode_state
+    state[#state + 1] = scene_manager.showing_scene_start
     state[#state + 1] = scene_manager.last_seek
     state[#state + 1] = scene_manager.current_scene_num
     state[#state + 1] = scene_manager.current_sequence_num
@@ -767,6 +791,7 @@ DirkSimple.unserialize = function(state)
     scene_manager.failures_in_a_row = state[idx] ; idx = idx + 1
     scene_manager.attract_mode_state = state[idx] ; idx = idx + 1
     scene_manager.death_mode_state = state[idx] ; idx = idx + 1
+    scene_manager.showing_scene_start = state[idx] ; idx = idx + 1
     scene_manager.last_seek = state[idx] ; idx = idx + 1
     scene_manager.current_scene_num = state[idx] ; idx = idx + 1
     scene_manager.current_sequence_num = state[idx] ; idx = idx + 1
