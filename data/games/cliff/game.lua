@@ -279,7 +279,7 @@ local function tick_attract_mode(inputs)
             end
         end
     elseif scene_manager.attract_mode_state == 2 then  -- state == 2? Started actual laserdisc attract mode video playing, so our current_scene_ticks has reset.
-        if scene_manager.laserdisc_frame >= 100 then --1546 then
+        if scene_manager.laserdisc_frame >= 1546 then
             DirkSimple.clear_screen(mapcolor("dark_blue"))
             halt_laserdisc()
             scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to original game's credits page.
