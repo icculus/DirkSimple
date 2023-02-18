@@ -97,8 +97,8 @@ local function draw_sprite_chars(name, sx, sy, sw, sh, dx, dy, modr, modg, modb)
     local blockw = DirkSimple.video_width / 40.0
     dx = DirkSimple.truncate(DirkSimple.truncate(dx) * blockw)
     dy = DirkSimple.truncate((DirkSimple.truncate(dy) * blockh) + (DirkSimple.video_height * 0.10))
-    local dw = DirkSimple.truncate(DirkSimple.truncate(sw) * blockw)
-    local dh = DirkSimple.truncate(DirkSimple.truncate(sh) * blockh)
+    local dw = DirkSimple.truncate((sw * blockw) + 0.5)
+    local dh = DirkSimple.truncate((sh * blockh) + 0.5)
 
     -- convert from source blocks to pixels
     sx = DirkSimple.truncate(sx) * 8
