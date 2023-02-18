@@ -1222,7 +1222,7 @@ static void send_rendering_primitives(void)
     GNumRenderCommands = 0;
 }
 
-void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
+static void DirkSimple_tick_impl(uint64_t monotonic_ms, uint64_t inputbits)
 {
     lua_State *L = GLua;
     const THEORAPLAY_AudioPacket *audio = NULL;
@@ -1428,9 +1428,12 @@ void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
             }
         }
     }
+}
 
+void DirkSimple_tick(uint64_t monotonic_ms, uint64_t inputbits)
+{
+    DirkSimple_tick_impl(monotonic_ms, inputbits);
     send_rendering_primitives();
-
     GPreviousInputBits = inputbits;
 }
 
