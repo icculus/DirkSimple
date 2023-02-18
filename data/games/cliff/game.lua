@@ -65,6 +65,7 @@ local function setup_scene_manager()
     scene_manager.attract_mode_state = 0
     scene_manager.death_mode_state = 0
     scene_manager.showing_scene_start = 0
+    scene_manager.scene_start_tick_offset = 0
     scene_manager.infinite_lives = false
     scene_manager.lives_left = starting_lives
     scene_manager.current_score = 0
@@ -221,13 +222,12 @@ local function start_scene(scenenum, sequencenum)
     if not start_of_scene then
         scene_manager.showing_scene_start = 2
     end
-
-    halt_laserdisc()  -- we'll restart the scene's footage after showing_scene_start is done
 end
 
 local function start_game()
     DirkSimple.log("Start game!")
     setup_scene_manager()
+    halt_laserdisc()
     start_scene(1, 0)
 end
 
@@ -504,7 +504,7 @@ local function tick_death_scene()
     elseif scene_manager.death_mode_state == 2 then  -- showing the laserdisc death video clip.
         local end_frame = scene_manager.current_sequence.death_end_frame
         if not show_hanging_scene then
-            end_frame = end_frame - 255
+            end_frame = end_frame - 260
         end
         if scene_manager.laserdisc_frame >= end_frame then
             scene_manager.death_mode_state = 0  -- done.
@@ -512,7 +512,9 @@ local function tick_death_scene()
                 game_over(false)
             else
                 -- In Cliff Hanger, you have to complete each scene in order, before you can do a different one.
+                -- don't halt the laserdisc here, the audio from the death scene plays over the start screen.
                 start_scene(scene_manager.current_scene_num, scene_manager.current_sequence.restart_move)  -- move back to where the sequence prescribes.
+                scene_manager.scene_start_tick_offset = ticks
             end
         end
     end
@@ -626,32 +628,6 @@ local function draw_hud_action_hint(actions)
     end
 end
 
-local function draw_start_play_screen(ticks)
-    DirkSimple.clear_screen(mapcolor("dark_blue"))
-    draw_text("PLAYER #  1", 15, 9, mapcolor("white"))
-    local lives_left = scene_manager.lives_left
-    if lives_left == starting_lives then
-        draw_text("G O O D   L U C K  ! ! !", 8, 13, mapcolor("white"))
-    else
-        local scorestr = "" .. scene_manager.current_score
-        draw_text("YOUR SCORE IS", 7, 12, mapcolor("white"))
-        draw_text(scorestr, 21 + (8 - #scorestr), 12, mapcolor("white"))
-        local lives_left_msg = "You have   1 life left."
-        if lives_left > 1 then
-            lives_left_msg = "You have   " .. lives_left .. " lives left."
-        end
-        draw_text(lives_left_msg, 7, 14, mapcolor("white"))
-    end
-
-    local total = DirkSimple.truncate(ticks / 64) + 1
-    if total > 5 then
-        total = 5
-    end
-    for i = 1,total,1 do
-        draw_standard_rectangle(i-1, mapcolor("white"))
-    end
-end
-
 local function tick_game(inputs)
     -- if sequence is nil, we've run through all the moves for the scene and are just waiting on the scene to finish playing.
     local sequence = scene_manager.current_sequence
@@ -659,19 +635,6 @@ local function tick_game(inputs)
     local ticks = scene_manager.current_scene_ticks
 
     --DirkSimple.log("TICK GAME: ticks=" .. ticks .. ", laserdisc_frame=" .. laserdisc_frame)
-
-    if scene_manager.showing_scene_start > 0 then
-        draw_start_play_screen(ticks)
-        if ticks > 2000 then
-            if scene_manager.showing_scene_start == 1 then
-                seek_laserdisc_to(scene_manager.current_scene.start_frame)
-            else
-                seek_laserdisc_to(scene_manager.current_sequence.start_frame)
-            end
-            scene_manager.showing_scene_start = 0
-        end
-        return
-    end
 
     if show_lives_and_score then
         draw_hud_lives_left()
@@ -727,7 +690,51 @@ local function tick_game(inputs)
         if scene_manager.current_scene_num >= #scenes then  -- out of scenes? You won the game!
             game_over(true)
         else
+            halt_laserdisc()
             start_scene(scene_manager.current_scene_num + 1, 0)
+        end
+    end
+end
+
+local function draw_start_play_screen(ticks)
+    DirkSimple.clear_screen(mapcolor("dark_blue"))
+    draw_text("PLAYER #  1", 15, 9, mapcolor("white"))
+    local lives_left = scene_manager.lives_left
+    if lives_left == starting_lives then
+        draw_text("G O O D   L U C K  ! ! !", 8, 13, mapcolor("white"))
+    else
+        local scorestr = "" .. scene_manager.current_score
+        draw_text("YOUR SCORE IS", 7, 12, mapcolor("white"))
+        draw_text(scorestr, 21 + (8 - #scorestr), 12, mapcolor("white"))
+        local lives_left_msg = "You have   1 life left."
+        if lives_left > 1 then
+            lives_left_msg = "You have   " .. lives_left .. " lives left."
+        end
+        draw_text(lives_left_msg, 7, 14, mapcolor("white"))
+    end
+
+    local total = DirkSimple.truncate(ticks / 64) + 1
+    if total > 5 then
+        total = 5
+    end
+    for i = 1,total,1 do
+        draw_standard_rectangle(i-1, mapcolor("white"))
+    end
+end
+
+local function tick_scene_start()
+    if scene_manager.showing_scene_start > 0 then
+        local ticks = scene_manager.current_scene_ticks - scene_manager.scene_start_tick_offset
+        draw_start_play_screen(ticks)
+        if ticks > 2000 then
+            halt_laserdisc()  -- this just makes the engine replace the current frame of video with black
+            if scene_manager.showing_scene_start == 1 then
+                seek_laserdisc_to(scene_manager.current_scene.start_frame)
+            else
+                seek_laserdisc_to(scene_manager.current_sequence.start_frame)
+            end
+            scene_manager.showing_scene_start = 0
+            scene_manager.scene_start_tick_offset = 0
         end
     end
 end
@@ -746,6 +753,8 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
         tick_death_scene()
     elseif scene_manager.current_scene == nil then
         start_attract_mode(false)
+    elseif scene_manager.showing_scene_start > 0 then
+        tick_scene_start()
     else
         tick_game(inputs)
     end
@@ -767,6 +776,7 @@ DirkSimple.serialize = function()
     state[#state + 1] = scene_manager.attract_mode_state
     state[#state + 1] = scene_manager.death_mode_state
     state[#state + 1] = scene_manager.showing_scene_start
+    state[#state + 1] = scene_manager.scene_start_tick_offset
     state[#state + 1] = scene_manager.last_seek
     state[#state + 1] = scene_manager.current_scene_num
     state[#state + 1] = scene_manager.current_sequence_num
@@ -792,6 +802,7 @@ DirkSimple.unserialize = function(state)
     scene_manager.attract_mode_state = state[idx] ; idx = idx + 1
     scene_manager.death_mode_state = state[idx] ; idx = idx + 1
     scene_manager.showing_scene_start = state[idx] ; idx = idx + 1
+    scene_manager.scene_start_tick_offset = state[idx] ; idx = idx + 1
     scene_manager.last_seek = state[idx] ; idx = idx + 1
     scene_manager.current_scene_num = state[idx] ; idx = idx + 1
     scene_manager.current_sequence_num = state[idx] ; idx = idx + 1
