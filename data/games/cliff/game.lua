@@ -10,6 +10,8 @@ DirkSimple.gametitle = "Cliff Hanger"
 -- SOME GAME CONFIG STUFF
 local starting_lives = 6
 local show_full_hints = true
+local show_hanging_scene = false
+local should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable).
 
 local default_highscores = {
     { "JMH", 1000000 },
@@ -26,8 +28,10 @@ local default_highscores = {
 
 -- SOME INITIAL SETUP STUFF
 local scenes = nil  -- gets set up later in the file.
-local test_scene = nil  -- set to name of scene to test. nil otherwise!
---test_scene = 1
+local test_scene = nil  -- set to index of scene to test. nil otherwise!
+local test_sequence_num = nil  -- set to index of sequence to test. nil otherwise!
+test_scene = 1
+test_sequence = 4
 
 -- GAME STATE
 local scene_manager = {}
@@ -58,10 +62,13 @@ local function setup_scene_manager()
     scene_manager.initialized = true
     scene_manager.accepted_input = nil
     scene_manager.attract_mode_state = 0
-    scene_manager.in_death_scene = false
+    scene_manager.death_mode_state = 0
     scene_manager.infinite_lives = false
     scene_manager.lives_left = starting_lives
     scene_manager.current_score = 0
+    scene_manager.last_failed_scene = 0
+    scene_manager.last_failed_sequence = 0
+    scene_manager.failures_in_a_row = 0
     scene_manager.last_seek = 0
     scene_manager.current_scene = nil
     scene_manager.current_scene_num = 0
@@ -180,7 +187,10 @@ local function start_scene(scenenum, sequencenum)
     if test_scene ~= nil then
         scene_manager.infinite_lives = true
         scenenum = test_scene
-        sequencenum = 0
+        sequencenum = test_sequence
+        if sequencenum == nil then
+            sequencenum = 0
+        end
     end
 
     local start_of_scene = (sequencenum == 0)
@@ -432,6 +442,97 @@ local function game_over(won)
     start_attract_mode(true)
 end
 
+local failure_flashes = {  -- { foreground, background }
+    { "white", "dark_blue" },
+    { "white", "dark_red" },
+    { "dark_blue", "white" },
+    { "dark_red", "white" },
+    { "white", "dark_blue" },
+    { "white", "dark_red" },
+    { "white", "dark_blue" },
+    { "white", "dark_red" }
+}
+
+local function draw_failure_screen(ticks)
+    local actions = scene_manager.current_sequence.correct_moves
+    local msg = "Y O U ' V E   B L O W N   I T  !"
+    if (#actions > 0) and (should_have_hint > 0) and (scene_manager.failures_in_a_row >= should_have_hint) then
+        local input = actions[1]
+        if input == "up" then
+            msg = "      SHOULD HAVE GONE UP  !"
+        elseif input == "down" then
+            msg = "      SHOULD HAVE GONE DOWN  !"
+        elseif input == "left" then
+            msg = "      SHOULD HAVE GONE LEFT  !"
+        elseif input == "right" then
+            msg = "      SHOULD HAVE GONE RIGHT  !"
+        elseif input == "hands" then
+            msg = "   SHOULD HAVE USED YOUR HAND  !"
+        elseif input == "feet" then
+            msg = "   SHOULD HAVE USED YOUR FEET  !"
+        end
+    end
+
+    local flashidx = DirkSimple.truncate(ticks / 96) + 1
+    if flashidx > #failure_flashes then
+        flashidx = #failure_flashes
+    end
+    local flashcolor = failure_flashes[flashidx]
+    local fg = flashcolor[1]
+    local bg = flashcolor[2]
+
+    DirkSimple.clear_screen(mapcolor(bg))
+    for i = 1,40,1 do
+        draw_sprite_chars("cliffglyphs", 96, 0, 1, 1, i-1, 6, mapcolor(fg))
+        draw_sprite_chars("cliffglyphs", 96, 0, 1, 1, i-1, 16, mapcolor(fg))
+    end
+    draw_text("PLAYER #  1", 15, 9, mapcolor(fg))
+    draw_text(msg, 4, 13, mapcolor(fg))
+
+
+--[[
+    draw_text("G O O D   L U C K  ! ! !", 8, 13, mapcolor("white"))
+
+    local total = DirkSimple.truncate(ticks / 128) + 1
+    if total > 5 then
+        total = 5
+    end
+    for i = 1,total,1 do
+        draw_standard_rectangle(i-1, mapcolor("white"))
+    end
+]]--
+
+end
+
+local function tick_death_scene()
+    local ticks = scene_manager.current_scene_ticks
+
+    if scene_manager.death_mode_state == 0 then  -- not showing a death sequence.
+        return
+    elseif scene_manager.death_mode_state == 1 then  -- the "YOU'VE BLOWN IT" screen
+        draw_failure_screen(ticks)
+        if ticks >= 2000 then
+            scene_manager.death_mode_state = scene_manager.death_mode_state + 1  -- show laserdisc death video
+            seek_laserdisc_to(scene_manager.current_sequence.death_start_frame)
+        end
+    elseif scene_manager.death_mode_state == 2 then  -- showing the laserdisc death video clip.
+        local end_frame = scene_manager.current_sequence.death_end_frame
+        if not show_hanging_scene then
+            end_frame = end_frame - 255
+        end
+        if scene_manager.laserdisc_frame >= end_frame then
+            scene_manager.death_mode_state = 0  -- done.
+            if scene_manager.lives_left == 0 then
+                game_over(false)
+            else
+                -- In Cliff Hanger, you have to complete each scene in order, before you can do a different one.
+                start_scene(scene_manager.current_scene_num, scene_manager.current_sequence.restart_move)  -- move back to where the sequence prescribes.
+            end
+        end
+    end
+end
+
+
 local function kill_player()  -- !!! FIXME: this needs to display a message
     if scene_manager.infinite_lives then
         scene_manager.lives_left = starting_lives
@@ -441,10 +542,17 @@ local function kill_player()  -- !!! FIXME: this needs to display a message
 
     DirkSimple.log("Killing player (lives now left=" .. scene_manager.lives_left .. ")")
 
-    scene_manager.in_death_scene = true
-    if scene_manager.current_sequence.death_start_frame ~= 0 then
-        seek_laserdisc_to(scene_manager.current_sequence.death_start_frame)
+    if (scene_manager.last_failed_scene == scene_manager.current_scene_num) and (scene_manager.last_failed_sequence == scene_manager.current_sequence_num) then
+        scene_manager.failures_in_a_row = scene_manager.failures_in_a_row + 1
+    else
+        scene_manager.failures_in_a_row = 1
+        scene_manager.last_failed_scene = scene_manager.current_scene_num
+        scene_manager.last_failed_sequence = scene_manager.current_sequence_num
     end
+
+    scene_manager.death_mode_state = 1
+    halt_laserdisc()  -- set the scene tick count back to zero; ticking the death scene will start the disc once the initial message is done.
+    draw_failure_screen(0)
 end
 
 local function move_was_made(inputs, actions)
@@ -464,19 +572,6 @@ local function move_was_made(inputs, actions)
         end
     end
     return nil
-end
-
-local function tick_death_scene()
-    -- has death scene finished?
-    if scene_manager.laserdisc_frame >= scene_manager.current_sequence.death_end_frame then
-        scene_manager.in_death_scene = false
-        if scene_manager.lives_left == 0 then
-            game_over(false)
-        else
-            -- In Cliff Hanger, you have to complete each scene in order, before you can do a different one.
-            start_scene(scene_manager.current_scene_num, scene_manager.current_sequence.restart_move)  -- move back to where the sequence prescribes.
-        end
-    end
 end
 
 local function draw_hud_lives_left()
@@ -618,7 +713,7 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
 
     if scene_manager.attract_mode_state ~= 0 then
         tick_attract_mode(inputs)
-    elseif scene_manager.in_death_scene then
+    elseif scene_manager.death_mode_state ~= 0 then
         tick_death_scene()
     elseif scene_manager.current_scene == nil then
         start_attract_mode(false)
@@ -637,8 +732,11 @@ DirkSimple.serialize = function()
     state[#state + 1] = scene_manager.infinite_lives
     state[#state + 1] = scene_manager.lives_left
     state[#state + 1] = scene_manager.current_score
+    state[#state + 1] = scene_manager.last_failed_scene
+    state[#state + 1] = scene_manager.last_failed_sequence
+    state[#state + 1] = scene_manager.failures_in_a_row
     state[#state + 1] = scene_manager.attract_mode_state
-    state[#state + 1] = scene_manager.in_death_scene
+    state[#state + 1] = scene_manager.death_mode_state
     state[#state + 1] = scene_manager.last_seek
     state[#state + 1] = scene_manager.current_scene_num
     state[#state + 1] = scene_manager.current_sequence_num
@@ -658,8 +756,11 @@ DirkSimple.unserialize = function(state)
     scene_manager.infinite_lives = state[idx] ; idx = idx + 1
     scene_manager.lives_left = state[idx] ; idx = idx + 1
     scene_manager.current_score = state[idx] ; idx = idx + 1
+    scene_manager.last_failed_scene = state[idx] ; idx = idx + 1
+    scene_manager.last_failed_sequence = state[idx] ; idx = idx + 1
+    scene_manager.failures_in_a_row = state[idx] ; idx = idx + 1
     scene_manager.attract_mode_state = state[idx] ; idx = idx + 1
-    scene_manager.in_death_scene = state[idx] ; idx = idx + 1
+    scene_manager.death_mode_state = state[idx] ; idx = idx + 1
     scene_manager.last_seek = state[idx] ; idx = idx + 1
     scene_manager.current_scene_num = state[idx] ; idx = idx + 1
     scene_manager.current_sequence_num = state[idx] ; idx = idx + 1
