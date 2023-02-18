@@ -8,10 +8,12 @@
 DirkSimple.gametitle = "Cliff Hanger"
 
 -- SOME GAME CONFIG STUFF
-local starting_lives = 6
-local show_full_hints = true
-local show_hanging_scene = false
-local should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable).
+local starting_lives = 6  -- number of lives player gets at startup. Six was the maximum that arcade cabinet dip switches allowed.
+local show_hints = true  -- if true, overlay hints about the expected move at the bottom of the laserdisc video during scenes. This is often enabled in arcade cabinets' dip switches.
+local show_full_hints = true  -- if true, instead of "ACTION" or "STICK" it tells you the exact necessary move. The real version doesn't do this!
+local show_hanging_scene = false  -- They show Cliff getting hanged (get it, CLIFF HANGER?!?) after each failure and it takes forever and it is kinda disturbing. There's a dip switch to disable it. Set it to false to disable it here, too.
+local show_lives_and_score = true  -- if true, overlay current lives and score at top of laserdisc video during scenes. This is usually enabled in arcade cabinets' dip switches.
+local should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable, 1 shows on every failure).
 
 local default_highscores = {
     { "JMH", 1000000 },
@@ -648,8 +650,10 @@ local function tick_game(inputs)
 
     --DirkSimple.log("TICK GAME: ticks=" .. scene_manager.current_scene_ticks .. ", laserdisc_frame=" .. laserdisc_frame)
 
-    draw_hud_lives_left()
-    draw_hud_current_score()
+    if show_lives_and_score then
+        draw_hud_lives_left()
+        draw_hud_current_score()
+    end
 
     -- see if it's time to shift to the next sequence.
     if (sequence ~= nil) and (laserdisc_frame >= sequence.end_frame) then
@@ -684,7 +688,9 @@ local function tick_game(inputs)
             kill_player()
             return
         else
-            draw_hud_action_hint(sequence.correct_moves)
+            if show_hints then
+                draw_hud_action_hint(sequence.correct_moves)
+            end
             scene_manager.accepted_input = move_was_made(inputs, sequence.correct_moves)
             if scene_manager.accepted_input ~= nil then  -- correct move was just made!
                 scene_manager.current_score = scene_manager.current_score + 5000
