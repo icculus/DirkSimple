@@ -8,12 +8,14 @@
 DirkSimple.gametitle = "Cliff Hanger"
 
 -- SOME GAME CONFIG STUFF
-local starting_lives = 6  -- number of lives player gets at startup. Six was the maximum that arcade cabinet dip switches allowed.
+local starting_lives = 6  -- number of lives player gets at startup. Six was the maximum that arcade cabinet dip switches allowed. -1 sets this to infinite lives.
 local show_hints = true  -- if true, overlay hints about the expected move at the bottom of the laserdisc video during scenes. This is often enabled in arcade cabinets' dip switches.
 local show_full_hints = true  -- if true, instead of "ACTION" or "STICK" it tells you the exact necessary move. The real version doesn't do this!
 local show_hanging_scene = false  -- They show Cliff getting hanged (get it, CLIFF HANGER?!?) after each failure and it takes forever and it is kinda disturbing. There's a dip switch to disable it. Set it to false to disable it here, too.
 local show_lives_and_score = true  -- if true, overlay current lives and score at top of laserdisc video during scenes. This is usually enabled in arcade cabinets' dip switches.
 local should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable, 1 shows on every failure).
+local allow_buy_in = true  -- allow player to continue on game over?
+local god_mode = false  -- if true, game plays correct moves automatically, so you never fail.
 
 local default_highscores = {
     { "JMH", 1000000 },
@@ -32,7 +34,7 @@ local default_highscores = {
 local scenes = nil  -- gets set up later in the file.
 local test_scene = nil  -- set to index of scene to test. nil otherwise!
 local test_sequence_num = nil  -- set to index of sequence to test. nil otherwise!
---test_scene = 1 ; test_sequence = 4
+--test_scene = 5 ; test_sequence = 1
 
 -- GAME STATE
 local scene_manager = {}
@@ -64,9 +66,10 @@ local function setup_scene_manager()
     scene_manager.accepted_input = nil
     scene_manager.attract_mode_state = 0
     scene_manager.death_mode_state = 0
-    scene_manager.showing_scene_start = 0
+    scene_manager.scene_start_state = 0
     scene_manager.scene_start_tick_offset = 0
-    scene_manager.infinite_lives = false
+    scene_manager.game_over_state = 0
+    scene_manager.infinite_lives = (starting_lives == -1)
     scene_manager.lives_left = starting_lives
     scene_manager.current_score = 0
     scene_manager.last_failed_scene = 0
@@ -182,7 +185,7 @@ end
 
 local start_attract_mode = nil -- predeclare
 
-local attract_mode_flash_colors = {
+local attract_mode_flash_colors = {   -- just foreground
     "white", "light_yellow", "medium_red", "dark_yellow", "dark_blue", "dark_green", "light_green"
 }
 
@@ -218,9 +221,9 @@ local function start_scene(scenenum, sequencenum)
     scene_manager.current_sequence = scene_manager.current_scene.moves[sequencenum]
     scene_manager.accepted_input = nil
 
-    scene_manager.showing_scene_start = 1
+    scene_manager.scene_start_state = 1
     if not start_of_scene then
-        scene_manager.showing_scene_start = 2
+        scene_manager.scene_start_state = 2
     end
 end
 
@@ -229,6 +232,36 @@ local function start_game()
     setup_scene_manager()
     halt_laserdisc()
     start_scene(1, 0)
+end
+
+local function draw_high_scores(ticks)
+    DirkSimple.clear_screen(mapcolor("magenta"))
+
+    draw_rectangle(0, 0, 19, 22, mapcolor("white"))
+    draw_rectangle(20, 0, 18, 22, mapcolor("white"))
+    draw_text("The Highest Scores", 2, 1, mapcolor("white"))
+
+    -- this only shows the default scores for now. We could manage actual scores, though!
+    for i,v in ipairs(default_highscores) do
+        if ticks >= (i * 100) then
+            local score = "" .. v[2]
+            local y = 2 + (i * 2)
+            draw_text(v[1], 2, y, mapcolor("white"))
+            draw_text(score, 19 - #score, y, mapcolor("white"))
+        end
+    end
+
+    if ticks >= 1100 then
+        draw_text("High Scores Today", 22, 1, mapcolor("white"))
+        for i,v in ipairs(default_highscores) do
+            if ticks >= (1100 + (i * 100)) then
+                local score = "" .. v[2]
+                local y = 2 + (i * 2)
+                draw_text(v[1], 22, y, mapcolor("white"))
+                draw_text(score, 39 - #score, y, mapcolor("white"))
+            end
+        end
+    end
 end
 
 local function tick_attract_mode(inputs)
@@ -338,34 +371,7 @@ local function tick_attract_mode(inputs)
         end
     elseif scene_manager.attract_mode_state == 5 then  -- state == 5? High scores list.
         ticks = ticks - 11300  -- make this act like the state starts at tick 0
-        DirkSimple.clear_screen(mapcolor("magenta"))
-
-        draw_rectangle(0, 0, 19, 22, mapcolor("white"))
-        draw_rectangle(20, 0, 18, 22, mapcolor("white"))
-        draw_text("The Highest Scores", 2, 1, mapcolor("white"))
-
-        -- this only shows the default scores for now. We could manage actual scores, though!
-        for i,v in ipairs(default_highscores) do
-            if ticks >= (i * 100) then
-                local score = "" .. v[2]
-                local y = 2 + (i * 2)
-                draw_text(v[1], 2, y, mapcolor("white"))
-                draw_text(score, 19 - #score, y, mapcolor("white"))
-            end
-        end
-
-        if ticks >= 1100 then
-            draw_text("High Scores Today", 22, 1, mapcolor("white"))
-            for i,v in ipairs(default_highscores) do
-                if ticks >= (1100 + (i * 100)) then
-                    local score = "" .. v[2]
-                    local y = 2 + (i * 2)
-                    draw_text(v[1], 22, y, mapcolor("white"))
-                    draw_text(score, 39 - #score, y, mapcolor("white"))
-                end
-            end
-        end
-
+        draw_high_scores(ticks)
         if ticks >= 5000 then -- move on to next state.
             scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to instructions
         end
@@ -422,27 +428,28 @@ local function tick_attract_mode(inputs)
     end
 end
 
-start_attract_mode = function(after_game_over)
+start_attract_mode = function()
     DirkSimple.log("Starting attract mode")
+    setup_scene_manager()
     scene_manager.attract_mode_state = 1
-    scene_manager.current_scene_ticks = 0
-    scene_manager.current_scene_num = 0
-    scene_manager.current_scene = nil
-    scene_manager.current_sequence_num = 0
-    scene_manager.current_sequence = nil
-    scene_manager.accepted_input = nil
     halt_laserdisc()
     tick_attract_mode(nil)  -- start right now.
 end
 
 local function game_over(won)
     DirkSimple.log("Game over!")
-    -- !!! FIXME: do more here
     scene_manager.accepted_input = nil
-    start_attract_mode(true)
+    halt_laserdisc()  -- blank laserdisc frame, reset ticks.
+    if not won then
+        if allow_buy_in then
+            scene_manager.game_over_state = 1
+        else
+            scene_manager.game_over_state = 2
+        end
+    end
 end
 
-local failure_flashes = {  -- { foreground, background }
+local failure_flash_colors = {  -- { foreground, background }
     { "white", "dark_blue" },
     { "white", "dark_red" },
     { "dark_blue", "white" },
@@ -474,10 +481,10 @@ local function draw_failure_screen(ticks)
     end
 
     local flashidx = DirkSimple.truncate(ticks / 96) + 1
-    if flashidx > #failure_flashes then
-        flashidx = #failure_flashes
+    if flashidx > #failure_flash_colors then
+        flashidx = #failure_flash_colors
     end
-    local flashcolor = failure_flashes[flashidx]
+    local flashcolor = failure_flash_colors[flashidx]
     local fg = flashcolor[1]
     local bg = flashcolor[2]
 
@@ -677,9 +684,15 @@ local function tick_game(inputs)
             if show_hints then
                 draw_hud_action_hint(sequence.correct_moves)
             end
-            scene_manager.accepted_input = move_was_made(inputs, sequence.correct_moves)
-            if scene_manager.accepted_input ~= nil then  -- correct move was just made!
-                scene_manager.current_score = scene_manager.current_score + 5000
+            if #sequence.correct_moves > 0 then
+                if god_mode then
+                    scene_manager.accepted_input = sequence.correct_moves[1]
+                else
+                    scene_manager.accepted_input = move_was_made(inputs, sequence.correct_moves)
+                end
+                if scene_manager.accepted_input ~= nil then  -- correct move was just made!
+                    scene_manager.current_score = scene_manager.current_score + 5000
+                end
             end
         end
     end
@@ -723,18 +736,112 @@ local function draw_start_play_screen(ticks)
 end
 
 local function tick_scene_start()
-    if scene_manager.showing_scene_start > 0 then
+    if scene_manager.scene_start_state > 0 then
         local ticks = scene_manager.current_scene_ticks - scene_manager.scene_start_tick_offset
         draw_start_play_screen(ticks)
         if ticks > 2000 then
             halt_laserdisc()  -- this just makes the engine replace the current frame of video with black
-            if scene_manager.showing_scene_start == 1 then
+            if scene_manager.scene_start_state == 1 then
                 seek_laserdisc_to(scene_manager.current_scene.start_frame)
             else
                 seek_laserdisc_to(scene_manager.current_sequence.start_frame)
             end
-            scene_manager.showing_scene_start = 0
+            scene_manager.scene_start_state = 0
             scene_manager.scene_start_tick_offset = 0
+        end
+    end
+end
+
+local function draw_buy_in_screen(ticks, timeleft)
+    DirkSimple.clear_screen(mapcolor("magenta"))
+
+    local total = DirkSimple.truncate(ticks / 64) + 1
+    if total > 5 then
+        total = 5
+    end
+    for i = 1,total,1 do
+        draw_standard_rectangle(i-1, mapcolor("white"))
+    end
+
+    if ticks > 320 then
+        draw_text("PLAYER #  1", 15, 7, mapcolor("white"))
+        draw_text("If you wish to continue", 8, 9, mapcolor("white"))
+        draw_text("playing this level", 11, 10, mapcolor("white"))
+        draw_text("Press Player 1 button", 9, 14, mapcolor("white"))
+        draw_text("Time left to buy-in :  " .. timeleft, 8, 17, mapcolor("white"))
+    end
+end
+
+local game_over_flash_colors = {  -- { foreground, background }
+    { "black", "black" },
+    { "medium_green", "black" },
+    { "light_green", "black" },
+    { "dark_blue", "black" },
+    { "light_blue", "black" },
+    { "dark_red", "black" },
+    { "light_cyan", "black" },
+    { "medium_red", "black" },
+    { "light_red", "black" },
+    { "dark_yellow", "black" },
+    { "light_yellow", "black" },
+    { "dark_green", "black" },
+    { "magenta", "black" },
+    { "grey", "dark_blue" },
+    { "white", "dark_red" },
+    { "white", "dark_blue" },
+    { "white", "black" },
+    { "white", "black" },
+}
+
+local function draw_game_over_screen(ticks)
+    local flashidx = DirkSimple.truncate(ticks / 160) + 1
+    if flashidx > #game_over_flash_colors then
+        flashidx = #game_over_flash_colors
+    end
+    local flashcolor = game_over_flash_colors[flashidx]
+    local fg = flashcolor[1]
+    local bg = flashcolor[2]
+
+    DirkSimple.clear_screen(mapcolor(bg))
+    draw_text("******************", 12, 9, mapcolor(fg))
+    draw_text("*                *", 12, 10, mapcolor(fg))
+    draw_text("*  YOUR  GAME    *", 12, 11, mapcolor(fg))
+    draw_text("*                *", 12, 12, mapcolor(fg))
+    draw_text("* IS  NOW  OVER  *", 12, 13, mapcolor(fg))
+    draw_text("*                *", 12, 14, mapcolor(fg))
+    draw_text("******************", 12, 15, mapcolor(fg))
+end
+
+local function tick_game_over(inputs)
+    local ticks = scene_manager.current_scene_ticks
+    if scene_manager.game_over_state == 1 then  -- game_over_state == 1? "Buy in" mode, where they let you continue (for more money in the arcade, of course).
+        local timeleft = 9 - DirkSimple.truncate((ticks - 320) / 1000)
+
+        local showtimeleft = timeleft
+        if showtimeleft <= 0 then
+            showtimeleft = 1  -- bump so the last frame doesn't render to zero.
+        end
+        draw_buy_in_screen(ticks, showtimeleft)
+
+        if inputs ~= nil and inputs.pressed["start"] then  -- user decided to continue current game
+            scene_manager.lives_left = starting_lives
+            scene_manager.game_over_state = 0
+            start_scene(scene_manager.current_scene_num, scene_manager.current_sequence.restart_move)  -- move back to where the sequence prescribes.
+            scene_manager.scene_start_tick_offset = 0
+        elseif timeleft == 0 then
+            halt_laserdisc()  -- this just makes the tick count go back to zero.
+            scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to actual game over screen.
+        end
+    elseif scene_manager.game_over_state == 2 then  -- game_over_state == 2? Actual game over screen.
+        draw_game_over_screen(ticks)
+        if ticks >= ((160 * #game_over_flash_colors) + 2000) then
+            halt_laserdisc()  -- this just makes the tick count go back to zero.
+            scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to high score list
+        end
+    elseif scene_manager.game_over_state == 3 then  -- game_over_state == 3? Show high scores.
+        draw_high_scores(ticks)
+        if ticks >= 5000 then  -- we're done, go back to attract mode.
+            start_attract_mode()
         end
     end
 end
@@ -751,10 +858,12 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
         tick_attract_mode(inputs)
     elseif scene_manager.death_mode_state ~= 0 then
         tick_death_scene()
-    elseif scene_manager.current_scene == nil then
-        start_attract_mode(false)
-    elseif scene_manager.showing_scene_start > 0 then
+    elseif scene_manager.scene_start_state ~= 0 then
         tick_scene_start()
+    elseif scene_manager.game_over_state ~= 0 then
+        tick_game_over(inputs)
+    elseif scene_manager.current_scene == nil then
+        start_attract_mode()
     else
         tick_game(inputs)
     end
@@ -775,7 +884,8 @@ DirkSimple.serialize = function()
     state[#state + 1] = scene_manager.failures_in_a_row
     state[#state + 1] = scene_manager.attract_mode_state
     state[#state + 1] = scene_manager.death_mode_state
-    state[#state + 1] = scene_manager.showing_scene_start
+    state[#state + 1] = scene_manager.game_over_state
+    state[#state + 1] = scene_manager.scene_start_state
     state[#state + 1] = scene_manager.scene_start_tick_offset
     state[#state + 1] = scene_manager.last_seek
     state[#state + 1] = scene_manager.current_scene_num
@@ -801,7 +911,8 @@ DirkSimple.unserialize = function(state)
     scene_manager.failures_in_a_row = state[idx] ; idx = idx + 1
     scene_manager.attract_mode_state = state[idx] ; idx = idx + 1
     scene_manager.death_mode_state = state[idx] ; idx = idx + 1
-    scene_manager.showing_scene_start = state[idx] ; idx = idx + 1
+    scene_manager.game_over_state = state[idx] ; idx = idx + 1
+    scene_manager.scene_start_state = state[idx] ; idx = idx + 1
     scene_manager.scene_start_tick_offset = state[idx] ; idx = idx + 1
     scene_manager.last_seek = state[idx] ; idx = idx + 1
     scene_manager.current_scene_num = state[idx] ; idx = idx + 1
