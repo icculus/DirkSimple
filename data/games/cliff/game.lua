@@ -687,7 +687,7 @@ scenes = {
 
     -- scene 1
     {
-        scene_name = "Bank Heist",
+        scene_name = "Casino Heist",
         start_frame = 1547,
         end_frame = 3160,
         dunno1_frame = 0,
