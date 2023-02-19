@@ -440,12 +440,12 @@ local function game_over(won)
     DirkSimple.log("Game over!")
     scene_manager.accepted_input = nil
     halt_laserdisc()  -- blank laserdisc frame, reset ticks.
-    if not won then
-        if allow_buy_in then
-            scene_manager.game_over_state = 1
-        else
-            scene_manager.game_over_state = 2
-        end
+    if won then
+        scene_manager.game_over_state = 1
+    elseif allow_buy_in then
+        scene_manager.game_over_state = 2
+    else
+        scene_manager.game_over_state = 3
     end
 end
 
@@ -772,6 +772,59 @@ local function draw_buy_in_screen(ticks, timeleft)
     end
 end
 
+local function draw_congrats_screen(ticks)
+    if ticks < (96 * 64) then
+        local fg = "light_blue"
+        local bg = "light_red"
+        DirkSimple.clear_screen(mapcolor(bg))
+        local segment = DirkSimple.truncate(ticks / 96) % 3
+        if segment == 0 then
+            draw_text("*  *  *  *  *  *  *  *  *", 7, 9, mapcolor(fg))
+            draw_text("                         ", 7, 10, mapcolor(fg))
+            draw_text("*    CONGRATULATIONS     ", 7, 11, mapcolor(fg))
+            draw_text("                        *", 7, 12, mapcolor(fg))
+            draw_text("    YOU HAVE COMPLETED   ", 7, 13, mapcolor(fg))
+            draw_text("*     THIS CHALLENGE     ", 7, 14, mapcolor(fg))
+            draw_text("                        *", 7, 15, mapcolor(fg))
+            draw_text("  *  *  *  *  *  *  *    ", 7, 16, mapcolor(fg))
+        elseif segment == 1 then
+            draw_text(" *  *  *  *  *  *  *  *  ", 7, 9, mapcolor(fg))
+            draw_text("*                       *", 7, 10, mapcolor(fg))
+            draw_text("     CONGRATULATIONS     ", 7, 11, mapcolor(fg))
+            draw_text("                         ", 7, 12, mapcolor(fg))
+            draw_text("*   YOU HAVE COMPLETED  *", 7, 13, mapcolor(fg))
+            draw_text("      THIS CHALLENGE     ", 7, 14, mapcolor(fg))
+            draw_text("                         ", 7, 15, mapcolor(fg))
+            draw_text("*  *  *  *  *  *  *  *  *", 7, 16, mapcolor(fg))
+        elseif segment == 2 then
+            draw_text("  *  *  *  *  *  *  *  * ", 7, 9, mapcolor(fg))
+            draw_text("                         ", 7, 10, mapcolor(fg))
+            draw_text("     CONGRATULATIONS    *", 7, 11, mapcolor(fg))
+            draw_text("*                        ", 7, 12, mapcolor(fg))
+            draw_text("    YOU HAVE COMPLETED   ", 7, 13, mapcolor(fg))
+            draw_text("      THIS CHALLENGE    *", 7, 14, mapcolor(fg))
+            draw_text("*                        ", 7, 15, mapcolor(fg))
+            draw_text("*  *  *  *  *  *  *  *   ", 7, 16, mapcolor(fg))
+        end
+    else
+        local fg = "white"
+        local bg = "dark_blue"
+        if ticks < ((96 * 64) + (32 * 30)) then
+            if (DirkSimple.truncate(ticks  / 32) % 2) == 1 then
+                bg = "dark_red"
+            end
+        end
+        draw_text("*************************", 7, 9, mapcolor(fg))
+        draw_text("*                       *", 7, 10, mapcolor(fg))
+        draw_text("*    CONGRATULATIONS    *", 7, 11, mapcolor(fg))
+        draw_text("*                       *", 7, 12, mapcolor(fg))
+        draw_text("*   YOU HAVE COMPLETED  *", 7, 13, mapcolor(fg))
+        draw_text("*     THIS CHALLENGE    *", 7, 14, mapcolor(fg))
+        draw_text("*                       *", 7, 15, mapcolor(fg))
+        draw_text("*************************", 7, 16, mapcolor(fg))
+    end
+end
+
 local game_over_flash_colors = {  -- { foreground, background }
     { "black", "black" },
     { "medium_green", "black" },
@@ -814,7 +867,13 @@ end
 
 local function tick_game_over(inputs)
     local ticks = scene_manager.current_scene_ticks
-    if scene_manager.game_over_state == 1 then  -- game_over_state == 1? "Buy in" mode, where they let you continue (for more money in the arcade, of course).
+    if scene_manager.game_over_state == 1 then  -- game_over_state == 1? You won!
+        draw_congrats_screen(ticks)
+        if ticks >= (((96 * 64) + (32 * 30)) + 2000) then
+            halt_laserdisc()  -- this just makes the tick count go back to zero.
+            scene_manager.game_over_state = scene_manager.game_over_state + 2  -- skip over buy-in, there's no game left to continue.
+        end
+    elseif scene_manager.game_over_state == 2 then  -- game_over_state == 2? "Buy in" mode, where they let you continue (for more money in the arcade, of course).
         local timeleft = 9 - DirkSimple.truncate((ticks - 320) / 1000)
 
         local showtimeleft = timeleft
@@ -832,13 +891,13 @@ local function tick_game_over(inputs)
             halt_laserdisc()  -- this just makes the tick count go back to zero.
             scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to actual game over screen.
         end
-    elseif scene_manager.game_over_state == 2 then  -- game_over_state == 2? Actual game over screen.
+    elseif scene_manager.game_over_state == 3 then  -- game_over_state == 3? Actual game over screen.
         draw_game_over_screen(ticks)
         if ticks >= ((160 * #game_over_flash_colors) + 2000) then
             halt_laserdisc()  -- this just makes the tick count go back to zero.
             scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to high score list
         end
-    elseif scene_manager.game_over_state == 3 then  -- game_over_state == 3? Show high scores.
+    elseif scene_manager.game_over_state == 4 then  -- game_over_state == 4? Show high scores.
         draw_high_scores(ticks)
         if ticks >= 5000 then  -- we're done, go back to attract mode.
             start_attract_mode()
