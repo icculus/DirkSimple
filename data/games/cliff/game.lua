@@ -10,7 +10,7 @@ DirkSimple.gametitle = "Cliff Hanger"
 -- SOME GAME CONFIG STUFF
 local starting_lives = 6  -- number of lives player gets at startup. Six was the maximum that arcade cabinet dip switches allowed. -1 sets this to infinite lives.
 local show_hints = true  -- if true, overlay hints about the expected move at the bottom of the laserdisc video during scenes. This is often enabled in arcade cabinets' dip switches.
-local show_full_hints = true  -- if true, instead of "ACTION" or "STICK" it tells you the exact necessary move. The real version doesn't do this!
+local show_full_hints = false  -- if true, instead of "ACTION" or "STICK" it tells you the exact necessary move. The real version doesn't do this!
 local show_hanging_scene = false  -- They show Cliff getting hanged (get it, CLIFF HANGER?!?) after each failure and it takes forever and it is kinda disturbing. There's a dip switch to disable it. Set it to false to disable it here, too.
 local show_lives_and_score = true  -- if true, overlay current lives and score at top of laserdisc video during scenes. This is usually enabled in arcade cabinets' dip switches.
 local should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable, 1 shows on every failure).
