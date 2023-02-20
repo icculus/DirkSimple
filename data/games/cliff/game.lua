@@ -44,9 +44,9 @@ local today_highscores = nil  -- set up later in the file
 
 -- FUNCTIONS
 
--- Cliff Hanger counts frames at 30fps, not 23.976fps like Dragon's Lair.
+-- Cliff Hanger counts frames at 29.97fps, not 23.976fps like Dragon's Lair.
 local function laserdisc_frame_to_ms(frame)
-    return ((frame / 30.0) * 1000.0)
+    return (frame / 29.97) * 1000.0
 end
 
 local function seek_laserdisc_to(frame)
@@ -1002,7 +1002,7 @@ DirkSimple.tick = function(ticks, sequenceticks, inputs)
     if scene_manager.last_seek == -1 then
         scene_manager.laserdisc_frame = -1
     else
-        scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
+        scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 29.97)) + 6
     end
 
     if scene_manager.attract_mode_state ~= 0 then
@@ -1094,7 +1094,7 @@ DirkSimple.unserialize = function(state)
         scene_manager.laserdisc_frame = -1
         halt_laserdisc()
     else
-        scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 30.0)) + 6
+        scene_manager.laserdisc_frame = ((scene_manager.last_seek + scene_manager.current_scene_ticks) / (1000.0 / 29.97)) + 6
         DirkSimple.start_clip(scene_manager.last_seek + scene_manager.unserialize_offset)
     end
 
