@@ -38,6 +38,8 @@ local test_sequence_num = nil  -- set to index of sequence to test. nil otherwis
 
 -- GAME STATE
 local scene_manager = {}
+local alltime_highscores = nil  -- set up later in the file
+local today_highscores = nil  -- set up later in the file
 
 
 -- FUNCTIONS
@@ -69,6 +71,9 @@ local function setup_scene_manager()
     scene_manager.scene_start_state = 0
     scene_manager.scene_start_tick_offset = 0
     scene_manager.game_over_state = 0
+    scene_manager.player_initials = { ' ', ' ', ' ' }
+    scene_manager.player_initials_entered = 0
+    scene_manager.player_initials_selected_glyph = 0
     scene_manager.infinite_lives = (starting_lives == -1)
     scene_manager.lives_left = starting_lives
     scene_manager.current_score = 0
@@ -85,7 +90,7 @@ local function setup_scene_manager()
     scene_manager.unserialize_offset = 0
 end
 
--- Cliff Hanger only draws "characters" to grid on the screen. It could not
+-- Cliff Hanger only draws "characters" to a grid on the screen. It could not
 -- draw outside the grid (one character filled a cell, you couldn't draw
 -- in the middle to straddle two cells, which means you could not position
 -- anything by pixel position if it didn't align to the grid. Think of it
@@ -242,7 +247,7 @@ local function draw_high_scores(ticks)
     draw_text("The Highest Scores", 2, 1, mapcolor("white"))
 
     -- this only shows the default scores for now. We could manage actual scores, though!
-    for i,v in ipairs(default_highscores) do
+    for i,v in ipairs(alltime_highscores) do
         if ticks >= (i * 100) then
             local score = "" .. v[2]
             local y = 2 + (i * 2)
@@ -253,7 +258,7 @@ local function draw_high_scores(ticks)
 
     if ticks >= 1100 then
         draw_text("High Scores Today", 22, 1, mapcolor("white"))
-        for i,v in ipairs(default_highscores) do
+        for i,v in ipairs(today_highscores) do
             if ticks >= (1100 + (i * 100)) then
                 local score = "" .. v[2]
                 local y = 2 + (i * 2)
@@ -865,6 +870,54 @@ local function draw_game_over_screen(ticks)
     draw_text("******************", 12, 15, mapcolor(fg))
 end
 
+local initial_entry_string = "abcdefghijklmnopqrstuvwxyz *?";  -- everything but the backspace at the end
+local function draw_highscore_entry_screen()
+    local scorestr = "" .. scene_manager.current_score
+    local fg = "dark_red"
+    local selected = scene_manager.player_initials_selected_glyph
+    local backspace = 63  -- glyph index
+    local caret = 62  -- glyph index
+
+    DirkSimple.clear_screen(mapcolor("black"))
+    draw_text("CONGRATULATIONS PLAYER 1", 8, 1, mapcolor(fg))
+    draw_text("YOUR SCORE", 9, 3, mapcolor(fg))
+    draw_text(scorestr, 20 + (8 - #scorestr), 3, mapcolor(fg))
+    draw_text("IS IN THE TOP TEN SCORES", 8, 5, mapcolor(fg))
+    draw_text("PLEASE ENTER YOUR INITIALS", 7, 8, mapcolor(fg))
+    draw_text(initial_entry_string, 5, 11, mapcolor(fg))
+    draw_sprite_chars("cliffglyphs", backspace, 0, 1, 1, 34, 11, mapcolor(fg))
+    draw_sprite_chars("cliffglyphs", caret, 0, 1, 1, 5 + selected, 12, mapcolor(fg))
+    draw_rectangle(18, 13, 3, 1, mapcolor(fg))
+
+    for i = 1,scene_manager.player_initials_entered,1 do
+        draw_text(scene_manager.player_initials[i], 18+i, 14, mapcolor(fg))
+    end
+
+    if scene_manager.player_initials_entered < 3 then
+        local x = 18+scene_manager.player_initials_entered+1
+        if selected == 29 then  -- backspace?
+            draw_sprite_chars("cliffglyphs", backspace, 0, 1, 1, x, 14, mapcolor(fg))
+        else
+            draw_text(initial_entry_string:sub(selected + 1, selected + 1), x, 14, mapcolor(fg))
+        end
+    end
+
+    draw_text("YOU CAN USE", 14, 17, mapcolor(fg))
+    draw_text("THE JOYSTICK TO SELECT LETTERS", 5, 19, mapcolor(fg))
+    draw_text("BUT YOU MUST USE", 12, 21, mapcolor(fg))
+    draw_text("YOUR HANDS TO ENTER THEM.", 7, 23, mapcolor(fg))
+end
+
+local function insert_highscore(list, name, score)
+    for i,v in ipairs(list) do
+        if score > v[2] then
+            table.insert(list, i, { name, score })
+            table.remove(list)
+            break
+        end
+    end
+end
+
 local function tick_game_over(inputs)
     local ticks = scene_manager.current_scene_ticks
     if scene_manager.game_over_state == 1 then  -- game_over_state == 1? You won!
@@ -891,13 +944,52 @@ local function tick_game_over(inputs)
             halt_laserdisc()  -- this just makes the tick count go back to zero.
             scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to actual game over screen.
         end
-    elseif scene_manager.game_over_state == 3 then  -- game_over_state == 3? Actual game over screen.
+    elseif scene_manager.game_over_state == 3 then  -- game_over_state == 3? Decide if this was a high score.
+        scene_manager.game_over_state = scene_manager.game_over_state + 1  -- Maybe move on to entering player initials.
+        if scene_manager.current_score < today_highscores[#today_highscores][2] then  -- today's lowest highscore must be lower than any alltime high score, so we don't check that.
+            scene_manager.game_over_state = scene_manager.game_over_state + 1  -- skip initial entry, go right to game over.
+        end
+        return tick_game_over(inputs)  -- do it right now.
+    elseif scene_manager.game_over_state == 4 then  -- game_over_state == 4? User is entering initials.
+        if inputs.pressed["left"] then
+            if scene_manager.player_initials_selected_glyph == 0 then
+                scene_manager.player_initials_selected_glyph = 29
+            else
+                scene_manager.player_initials_selected_glyph = scene_manager.player_initials_selected_glyph - 1
+            end
+        end
+        if inputs.pressed["right"] then
+            scene_manager.player_initials_selected_glyph = (scene_manager.player_initials_selected_glyph + 1) % 30
+        end
+        if inputs.pressed["action"] then
+            local selected = scene_manager.player_initials_selected_glyph
+            if selected == 29 then  -- backspace?
+                if scene_manager.player_initials_entered > 0 then
+                    scene_manager.player_initials[scene_manager.player_initials_entered] = ' '
+                    scene_manager.player_initials_entered = scene_manager.player_initials_entered - 1
+                end
+            else
+                scene_manager.player_initials_entered = scene_manager.player_initials_entered + 1
+                scene_manager.player_initials[scene_manager.player_initials_entered] = initial_entry_string:sub(selected + 1, selected + 1);
+                if scene_manager.player_initials_entered == 3 then
+                    local finalstr = scene_manager.player_initials[1] .. scene_manager.player_initials[2] .. scene_manager.player_initials[3]
+                    finalstr = finalstr:upper()
+                    DirkSimple.log("Player entered high score initials '" .. finalstr .. "' for a score of " .. scene_manager.current_score)
+                    insert_highscore(alltime_highscores, finalstr, scene_manager.current_score)
+                    insert_highscore(today_highscores, finalstr, scene_manager.current_score)
+                    halt_laserdisc()  -- this just makes the tick count go back to zero.
+                    scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to actual Game Over.
+                end
+            end
+        end
+        draw_highscore_entry_screen()
+    elseif scene_manager.game_over_state == 5 then  -- game_over_state == 5? Actual game over screen.
         draw_game_over_screen(ticks)
         if ticks >= ((160 * #game_over_flash_colors) + 2000) then
             halt_laserdisc()  -- this just makes the tick count go back to zero.
             scene_manager.game_over_state = scene_manager.game_over_state + 1  -- move on to high score list
         end
-    elseif scene_manager.game_over_state == 4 then  -- game_over_state == 4? Show high scores.
+    elseif scene_manager.game_over_state == 6 then  -- game_over_state == 6? Show high scores.
         draw_high_scores(ticks)
         if ticks >= 5000 then  -- we're done, go back to attract mode.
             start_attract_mode()
@@ -944,6 +1036,11 @@ DirkSimple.serialize = function()
     state[#state + 1] = scene_manager.attract_mode_state
     state[#state + 1] = scene_manager.death_mode_state
     state[#state + 1] = scene_manager.game_over_state
+    state[#state + 1] = scene_manager.player_initials[1]:byte()
+    state[#state + 1] = scene_manager.player_initials[2]:byte()
+    state[#state + 1] = scene_manager.player_initials[3]:byte()
+    state[#state + 1] = scene_manager.player_initials_entered
+    state[#state + 1] = scene_manager.player_initials_selected_glyph
     state[#state + 1] = scene_manager.scene_start_state
     state[#state + 1] = scene_manager.scene_start_tick_offset
     state[#state + 1] = scene_manager.last_seek
@@ -971,6 +1068,11 @@ DirkSimple.unserialize = function(state)
     scene_manager.attract_mode_state = state[idx] ; idx = idx + 1
     scene_manager.death_mode_state = state[idx] ; idx = idx + 1
     scene_manager.game_over_state = state[idx] ; idx = idx + 1
+    scene_manager.player_initials[1] = string.char(state[idx]) ; idx = idx + 1
+    scene_manager.player_initials[2] = string.char(state[idx]) ; idx = idx + 1
+    scene_manager.player_initials[3] = string.char(state[idx]) ; idx = idx + 1
+    scene_manager.player_initials_entered = state[idx] ; idx = idx + 1
+    scene_manager.player_initials_selected_glyph = state[idx] ; idx = idx + 1
     scene_manager.scene_start_state = state[idx] ; idx = idx + 1
     scene_manager.scene_start_tick_offset = state[idx] ; idx = idx + 1
     scene_manager.last_seek = state[idx] ; idx = idx + 1
@@ -1001,6 +1103,20 @@ end
 
 
 setup_scene_manager()  -- Call this during initial load to make sure the table is ready to go.
+
+local function initialize_highscore()
+    local retval = {}
+    for i,v in ipairs(default_highscores) do
+        retval[i] = {}
+        retval[i][1] = default_highscores[i][1]
+        retval[i][2] = default_highscores[i][2]
+    end
+    return retval
+end
+
+alltime_highscores = initialize_highscore()
+today_highscores = initialize_highscore()
+
 
 
 -- The scene table!
