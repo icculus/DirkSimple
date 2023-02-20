@@ -267,7 +267,7 @@ end
 local function tick_attract_mode(inputs)
     -- !!! FIXME: if someone wants to make this frame-perfect, feel free to adjust all the magic tick values in this function.
     local ticks = scene_manager.current_scene_ticks
-    if scene_manager.attract_mode_state == 1 then  -- state == 1? Showing initial intro before laserdisc starts playing. current_scene_ticks will reset at that point.
+    if scene_manager.attract_mode_state == 1 then  -- state == 1? Showing initial intro before laserdisc starts playing.
         if ticks <= 2000 then  -- Sliding in initial logo.
             DirkSimple.clear_screen(mapcolor("black"))
             draw_sprite_chars("logo", 0, 0, 20, 10, 31 - (31 * (ticks / 2000)), 0, mapcolor("light_blue"))
@@ -311,7 +311,7 @@ local function tick_attract_mode(inputs)
                 draw_text("FREE PLAY", 15, 23, mapcolor(fg))
             end
         end
-    elseif scene_manager.attract_mode_state == 2 then  -- state == 2? Started actual laserdisc attract mode video playing, so our current_scene_ticks has reset.
+    elseif scene_manager.attract_mode_state == 2 then  -- state == 2? Started actual laserdisc attract mode video playing.
         if scene_manager.laserdisc_frame >= 1546 then
             DirkSimple.clear_screen(mapcolor("dark_blue"))
             halt_laserdisc()
@@ -345,10 +345,10 @@ local function tick_attract_mode(inputs)
         end
 
         if ticks >= 6300 then -- move on to next state.
+            halt_laserdisc()  -- just reset ticks for next state
             scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to DirkSimple credits page.
         end
     elseif scene_manager.attract_mode_state == 4 then  -- state == 4? Added a DirkSimple credits page.
-        ticks = ticks - 6300  -- make this act like the state starts at tick 0
         DirkSimple.clear_screen(mapcolor("medium_red"))
         draw_text("Rebuilt for DirkSimple By", 7, 7, mapcolor("white"))
         if ticks >= 1000 then
@@ -367,16 +367,16 @@ local function tick_attract_mode(inputs)
             end
         end
         if ticks >= 4000 then -- move on to next state.
+            halt_laserdisc()  -- just reset ticks for next state
             scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to high scores.
         end
     elseif scene_manager.attract_mode_state == 5 then  -- state == 5? High scores list.
-        ticks = ticks - 11300  -- make this act like the state starts at tick 0
         draw_high_scores(ticks)
         if ticks >= 5000 then -- move on to next state.
+            halt_laserdisc()  -- just reset ticks for next state
             scene_manager.attract_mode_state = scene_manager.attract_mode_state + 1  -- move on to instructions
         end
     elseif scene_manager.attract_mode_state == 6 then  -- state == 6? Instructions.
-        ticks = ticks - 16300  -- make this act like the state starts at tick 0
         DirkSimple.clear_screen(mapcolor("dark_blue"))
         if ticks >= 128 then
             draw_text("Move the joystick in the", 8, 3, mapcolor("white"))
@@ -419,7 +419,7 @@ local function tick_attract_mode(inputs)
         end
         if ticks >= 12522 then
             scene_manager.attract_mode_state = 1  -- restart attract mode.
-            halt_laserdisc()  -- just to restart the ticks.
+            halt_laserdisc()  -- just reset ticks for next state
         end
     end
 
