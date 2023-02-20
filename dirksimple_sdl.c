@@ -235,6 +235,7 @@ void mainloop_shutdown(void)
 void DirkSimple_beginframe(void)
 {
     if (GRenderer) {
+        SDL_SetRenderDrawColor(GRenderer, 0, 0, 0, 255);
         SDL_RenderClear(GRenderer);
         SDL_RenderCopy(GRenderer, GLaserDiscTexture, NULL, NULL);
     }
