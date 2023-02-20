@@ -655,7 +655,7 @@ local function tick_game(inputs)
 
     -- see if it's time to shift to the next sequence.
     if (sequence ~= nil) and (laserdisc_frame >= sequence.end_frame) then
-        if (scene_manager.accepted_input == nil) and (sequence.correct_moves ~= nil) and (#sequence.correct_moves ~= 0) then
+        if (scene_manager.accepted_input == nil) and (sequence.correct_moves ~= nil) and (#sequence.correct_moves ~= 0) and (not god_mode) then
             -- uhoh, player did nothing, they blew it.
             kill_player()
             return
@@ -682,7 +682,7 @@ local function tick_game(inputs)
 
     -- are we in the window for moves in this sequence?
     if (sequence ~= nil) and (scene_manager.accepted_input == nil) and (laserdisc_frame >= sequence.start_frame) then
-        if move_was_made(inputs, sequence.incorrect_moves) then
+        if move_was_made(inputs, sequence.incorrect_moves) and (not god_mode) then
             kill_player()
             return
         else
