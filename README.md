@@ -84,10 +84,9 @@ The libretro core will not work if these files are missing!
 ## What about other games?
 
 We now support [Cliff Hanger](https://en.wikipedia.org/wiki/Cliff_Hanger_(video_game))!
-Gameplay is near-identical to the original arcade experience. Point the program
-at "cliff.ogv" and enjoy!
+Gameplay is near-identical to the original arcade experience. Point the program at "cliff.ogv" and enjoy!
 
-I would like to add other games tos DirkSimple. For many of
+I would like to add other games to DirkSimple. For many of
 the popular ones, like Space Ace, most of the work is just filling in a table
 of scenes, their timings and recognized player actions. For others (like
 Cobra Command), it'll take some extensions to this engine that are planned
