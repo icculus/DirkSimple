@@ -156,8 +156,9 @@ add_library(dirksimple-lua STATIC
     thirdparty/lua/src/loadlib.c
 )
 set_target_properties(dirksimple-lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_POSIX=1")
-target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_ULONGJMP=1")
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_POSIX=1")
+endif()
 
 if(DIRKSIMPLE_SDL)
     find_package(SDL2 REQUIRED)
