@@ -156,7 +156,7 @@ add_library(dirksimple-lua STATIC
     thirdparty/lua/src/loadlib.c
 )
 set_target_properties(dirksimple-lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_MKSTEMP=1")  # as opposed to tmpnam(), yuck!
+target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_POSIX=1")
 target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_ULONGJMP=1")
 
 if(DIRKSIMPLE_SDL)
