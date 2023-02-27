@@ -44,7 +44,7 @@ if(MSVC)
     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
-    if(NOT EMSCRIPTEN)
+    if(NOT EMSCRIPTEN AND NOT ANDROID)
         set(USE_PTHREAD TRUE)
     endif()
 endif()

@@ -778,9 +778,14 @@
 ** without modifying the main part of the file.
 */
 
-
-
-
+#ifdef ANDROID
+#undef lua_getlocaledecpoint
+#define lua_getlocaledecpoint() '.'
+/* Android API >= 24 supports fseeko() and friends, but just to keep this compatible, use the ANSI C functions instead of POSIX */
+#define l_fseek(f,o,w)		fseek(f,o,w)
+#define l_ftell(f)		ftell(f)
+#define l_seeknum		long
+#endif
 
 #endif
 
