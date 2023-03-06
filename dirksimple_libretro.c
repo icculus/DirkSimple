@@ -46,6 +46,8 @@ static int audio_channels = 0;
 static int audio_freq = 0;
 static DirkSimpleAudioQueue audio_queue_head;
 static DirkSimpleAudioQueue *audio_queue_tail = &audio_queue_head;
+static int num_cvars = 0;
+static struct retro_variable *cvars = NULL;
 
 static void post_notification(const char *msgstr, const unsigned int duration)
 {
@@ -544,6 +546,21 @@ static uint64_t get_current_inputbits(void)
     return joypad_inputbits | keyboard_inputbits;
 }
 
+static void check_variables(void)
+{
+    const char *prefix = "dirksimple";
+    const size_t slen = strlen(prefix) + strlen(DirkSimple_gamename()) + 2;
+    int i;
+    DirkSimple_log("Libretro variables have been updated!");
+    for (i = 0; i < num_cvars; i++) {
+        struct retro_variable var = { cvars[i].key, NULL };
+        if ((environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var)) && (var.value != NULL)) {
+            const char *key = var.key + slen;
+            DirkSimple_setcvar(key, var.value);
+        }
+    }
+}
+
 void retro_run(void)
 {
     setjmp(panic_jmpbuf);  // this will set panic_triggered before the longjmp.
@@ -551,8 +568,7 @@ void retro_run(void)
     if (!panic_triggered) {  // don't run if we're exploded before.
         bool updated = false;
         if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated) {
-            // !!! FIXME: ?
-            //check_variables();
+            check_variables();
         }
 
         DirkSimple_tick(runtime_usecs / 1000, get_current_inputbits());
@@ -585,6 +601,37 @@ void retro_run(void)
         }
     }
     video_cb(framebuffer, framebuffer_width, framebuffer_height, framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
+}
+
+static void free_cvars(void)
+{
+    int i;
+    for (i = 0; i < num_cvars; i++) {
+        DirkSimple_free((char *) cvars[i].key);
+        DirkSimple_free((char *) cvars[i].value);
+    }
+    DirkSimple_free(cvars);
+    num_cvars = 0;
+    cvars = NULL;
+}
+
+void DirkSimple_registercvar(const char *gamename, const char *name, const char *desc, const char *valid_values)
+{
+    const char *prefix = "dirksimple";
+    const size_t keyslen = strlen(prefix) + strlen(gamename) + strlen(name) + 3;
+    const size_t valuelen = strlen(desc) + strlen(valid_values) + 3;
+    char *key;
+    char *value;
+    cvars = (struct retro_variable *) DirkSimple_xrealloc(cvars, sizeof (struct retro_variable) * (num_cvars + 2));
+    key = DirkSimple_xmalloc(keyslen);
+    value = DirkSimple_xmalloc(valuelen);
+    snprintf(key, keyslen, "%s_%s_%s", prefix, gamename, name);
+    snprintf(value, valuelen, "%s; %s", desc, valid_values);
+    cvars[num_cvars].key = key;
+    cvars[num_cvars].value = value;
+    cvars[num_cvars + 1].key = NULL;
+    cvars[num_cvars + 1].value = NULL;
+    num_cvars++;
 }
 
 static bool set_pixfmt(enum retro_pixel_format fmt)
@@ -625,8 +672,16 @@ bool retro_load_game(const struct retro_game_info *info)
         basedir = DirkSimple_xmalloc(slen);
         snprintf(basedir, slen, "%s%sDirkSimple%s", sysdir, DIRSEP, DIRSEP);
 
+        free_cvars();
+
         // DirkSimple_startup cleans up previous runs automatically.
         DirkSimple_startup(basedir, info->path, NULL, pixfmt);
+
+        // we should have collected the cvars by now.
+        if (num_cvars > 0) {
+            environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, cvars);
+            check_variables();  // set the defaults right away.
+        }
 
         while (!framebuffer_width || !audio_channels) {
             DirkSimple_tick(0, 0);  // spin here until we either panic or have the av dimensions.
@@ -653,6 +708,7 @@ void retro_unload_game(void)
     DirkSimple_cleardiscaudio();
     audio_channels = 0;
     audio_freq = 0;
+    free_cvars();
 }
 
 void retro_reset(void)

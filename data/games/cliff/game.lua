@@ -7,27 +7,27 @@
 
 DirkSimple.gametitle = "Cliff Hanger"
 
--- SOME GAME CONFIG STUFF
-local starting_lives = 6  -- number of lives player gets at startup. Six was the maximum that arcade cabinet dip switches allowed. -1 sets this to infinite lives.
+-- CVARS
+local starting_lives = 6  -- number of lives player gets at startup. Six was the maximum that arcade cabinet dip switches allowed.
+local infinite_lives = false  -- set to true to not lose a life on failure.
+local show_lives_and_score = true  -- if true, overlay current lives and score at top of laserdisc video during scenes. This is usually enabled in arcade cabinets' dip switches.
 local show_hints = true  -- if true, overlay hints about the expected move at the bottom of the laserdisc video during scenes. This is often enabled in arcade cabinets' dip switches.
 local show_full_hints = false  -- if true, instead of "ACTION" or "STICK" it tells you the exact necessary move. The real version doesn't do this!
 local show_hanging_scene = false  -- They show Cliff getting hanged (get it, CLIFF HANGER?!?) after each failure and it takes forever and it is kinda disturbing. There's a dip switch to disable it. Set it to false to disable it here, too.
-local show_lives_and_score = true  -- if true, overlay current lives and score at top of laserdisc video during scenes. This is usually enabled in arcade cabinets' dip switches.
-local should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable, 1 shows on every failure).
+local show_should_have_hint = 3  -- show "SHOULD HAVE USED FEET" etc after X failures in a row (zero to disable, 1 shows on every failure).
 local allow_buy_in = true  -- allow player to continue on game over?
 local god_mode = false  -- if true, game plays correct moves automatically, so you never fail.
 
-local default_highscores = {
-    { "JMH", 1000000 },
-    { "PMR", 90000 },
-    { "EMJ", 80000 },
-    { "APH", 70000 },
-    { "VAV", 60000 },
-    { "MAS", 50000 },
-    { "JON", 40000 },
-    { "WHO", 30000 },
-    { "HP?", 20000 },
-    { "JIM", 10000 }
+DirkSimple.cvars = {
+    { name="starting_lives", desc="Number of lives player starts with", values="6|5|4|3|2|1", setter=function(name, value) starting_lives = DirkSimple.to_int(value) end },
+    { name="infinite_lives", desc="Don't lose a life when failing", values="false|true", setter=function(name, value) infinite_lives = DirkSimple.to_bool(value) end },
+    { name="show_lives_and_score", desc="Show score and lives remaining at top of screen", values="true|false", setter=function(name, value) show_lives_and_score = DirkSimple.to_bool(value) end },
+    { name="show_hints", desc="Show hints at bottom of screen about expected moves", values="true|false", setter=function(name, value) show_hints = DirkSimple.to_bool(value) end },
+    { name="show_full_hints", desc="Show exact required moves on the HUD", values="false|true", setter=function(name, value) show_full_hints = DirkSimple.to_bool(value) end },
+    { name="show_hanging_scene", desc="Show Cliff being hanged after each failure", values="false|true", setter=function(name, value) show_hanging_scene = DirkSimple.to_bool(value) end },
+    { name="show_should_have_hint", desc="Show the correct choice after X failures in a row", values="3|2|always|never", setter=function(name, value) if value == "always" then value = 1 elseif value == "never" then value = 0 else value = DirkSimple.to_int(value) end show_should_have_hint = value end },
+    { name="allow_buy_in", desc="Allow player to continue on game over", values="true|false", setter=function(name, value) allow_buy_in = DirkSimple.to_bool(value) end },
+    { name="god_mode", desc="Game plays itself perfectly, never failing", values="false|true", setter=function(name, value) god_mode = DirkSimple.to_bool(value) end }
 }
 
 -- SOME INITIAL SETUP STUFF
@@ -74,7 +74,6 @@ local function setup_scene_manager()
     scene_manager.player_initials = { ' ', ' ', ' ' }
     scene_manager.player_initials_entered = 0
     scene_manager.player_initials_selected_glyph = 0
-    scene_manager.infinite_lives = (starting_lives == -1)
     scene_manager.lives_left = starting_lives
     scene_manager.current_score = 0
     scene_manager.last_failed_scene = 0
@@ -196,7 +195,6 @@ local attract_mode_flash_colors = {   -- just foreground
 
 local function start_scene(scenenum, sequencenum)
     if test_scene ~= nil then
-        scene_manager.infinite_lives = true
         scenenum = test_scene
         sequencenum = test_sequence
         if sequencenum == nil then
@@ -468,7 +466,7 @@ local failure_flash_colors = {  -- { foreground, background }
 local function draw_failure_screen(ticks)
     local actions = scene_manager.current_sequence.correct_moves
     local msg = "Y O U ' V E   B L O W N   I T  !"
-    if (#actions > 0) and (should_have_hint > 0) and (scene_manager.failures_in_a_row >= should_have_hint) then
+    if (#actions > 0) and (show_should_have_hint > 0) and (scene_manager.failures_in_a_row >= show_should_have_hint) then
         local input = actions[1]
         if input == "up" then
             msg = "      SHOULD HAVE GONE UP  !"
@@ -533,9 +531,7 @@ local function tick_death_scene()
 end
 
 local function kill_player()
-    if scene_manager.infinite_lives then
-        scene_manager.lives_left = starting_lives
-    elseif scene_manager.lives_left > 0 then
+    if (not infinite_lives) and (test_scene == nil) then
         scene_manager.lives_left = scene_manager.lives_left - 1
     end
 
@@ -1026,8 +1022,7 @@ DirkSimple.serialize = function()
     end
 
     local state = {}
-    state[#state + 1] = 1   -- current serialization version
-    state[#state + 1] = scene_manager.infinite_lives
+    state[#state + 1] = 2   -- current serialization version
     state[#state + 1] = scene_manager.lives_left
     state[#state + 1] = scene_manager.current_score
     state[#state + 1] = scene_manager.last_failed_scene
@@ -1059,7 +1054,7 @@ DirkSimple.unserialize = function(state)
 
     local idx = 1
     local version = state[idx] ; idx = idx + 1
-    scene_manager.infinite_lives = state[idx] ; idx = idx + 1
+    if version == 1 then idx = idx + 1 end  -- this was scene_manager.infinite_lives, but that's a cvar now.
     scene_manager.lives_left = state[idx] ; idx = idx + 1
     scene_manager.current_score = state[idx] ; idx = idx + 1
     scene_manager.last_failed_scene = state[idx] ; idx = idx + 1
@@ -1103,6 +1098,19 @@ end
 
 
 setup_scene_manager()  -- Call this during initial load to make sure the table is ready to go.
+
+local default_highscores = {
+    { "JMH", 1000000 },
+    { "PMR", 90000 },
+    { "EMJ", 80000 },
+    { "APH", 70000 },
+    { "VAV", 60000 },
+    { "MAS", 50000 },
+    { "JON", 40000 },
+    { "WHO", 30000 },
+    { "HP?", 20000 },
+    { "JIM", 10000 }
+}
 
 local function initialize_highscore()
     local retval = {}

@@ -98,6 +98,7 @@ extern const char *DirkSimple_datadir(void);  // root of all DirkSimple data
 //  success. Call DirkSimple_free() on the return value when done with it.
 extern uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h);
 
+extern void DirkSimple_setcvar(const char *name, const char *newvalue);
 
 // Your platform layer implements these, which dirksimple.c calls into...
 
@@ -185,6 +186,9 @@ extern void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int
 
 // This is just to clear out any `platform_handle` stuff. The engine cleans up the rest.
 extern void DirkSimple_destroysprite(DirkSimple_Sprite *sprite);
+
+// copy these strings if you need to keep them.
+extern void DirkSimple_registercvar(const char *gamename, const char *name, const char *desc, const char *valid_values);
 
 #endif // INCL_DIRKSIMPLE_PLATFORM_H
 

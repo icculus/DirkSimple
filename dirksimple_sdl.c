@@ -453,6 +453,11 @@ static void emscripten_mainloop(void)
 }
 #endif
 
+void DirkSimple_registercvar(const char *gamename, const char *name, const char *desc, const char *valid_values)
+{
+    // we don't care about this atm.
+}
+
 int main(int argc, char **argv)
 {
     const char *gamepath = NULL;
@@ -491,6 +496,8 @@ int main(int argc, char **argv)
                 GWantFullscreen = SDL_TRUE;
             } else if (SDL_strcmp(arg, "windowed") == 0) {
                 GWantFullscreen = SDL_FALSE;
+            } else if (SDL_strcmp(arg, "set") == 0) {
+                i += 2;  // eat the next two args.
             }
         } else {
             if (gamepath == NULL) {
@@ -532,6 +539,22 @@ int main(int argc, char **argv)
 
     SDL_free(basedir);
     SDL_free(foundpath);
+
+    // cvars are registered now, go ahead and set anything from the command line.
+    for (i = 1; i < (argc - 2); i++) {
+        const char *arg = argv[i];
+        if (*arg == '-') {
+            while (*arg == '-') {
+                arg++;
+            }
+
+            if (SDL_strcmp(arg, "set") == 0) {
+                const char *cvarname = argv[++i];
+                const char *cvarvalue = argv[++i];
+                DirkSimple_setcvar(cvarname, cvarvalue);
+            }
+        }
+    }
 
 #if defined(__EMSCRIPTEN__)
     emscripten_set_main_loop(emscripten_mainloop, 0, 1);

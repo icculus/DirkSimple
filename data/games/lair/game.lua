@@ -7,8 +7,16 @@
 
 DirkSimple.gametitle = "Dragon's Lair"
 
--- SOME GAME CONFIG STUFF
+-- CVARS
 local starting_lives = 5
+local infinite_lives = false  -- set to true to not lose a life on failure.
+local god_mode = false  -- if true, game plays correct moves automatically, so you never fail.
+
+DirkSimple.cvars = {
+    { name="starting_lives", desc="Number of lives player starts with", values="5|4|3|2|1", setter=function(name, value) starting_lives = DirkSimple.to_int(value) end },
+    { name="infinite_lives", desc="Don't lose a life when failing", values="false|true", setter=function(name, value) infinite_lives = DirkSimple.to_bool(value) end },
+    { name="god_mode", desc="Game plays itself perfectly, never failing", values="false|true", setter=function(name, value) god_mode = DirkSimple.to_bool(value) end }
+}
 
 
 -- SOME INITIAL SETUP STUFF
@@ -97,7 +105,6 @@ end
 
 local function choose_next_scene(is_resurrection)
     if test_scene_name ~= nil then
-        scene_manager.infinite_lives = true
         start_scene(test_scene_name, is_resurrection)
         return
     end
@@ -232,9 +239,7 @@ local function start_game()
 end
 
 local function kill_player()
-    if scene_manager.infinite_lives then
-        scene_manager.lives_left = starting_lives
-    elseif scene_manager.lives_left > 0 then
+    if (not infinite_lives) and (not scene_manager.infinite_lives) and (test_scene == nil) then
         scene_manager.lives_left = scene_manager.lives_left - 1
     end
 
@@ -258,7 +263,11 @@ local function check_actions(inputs)
             -- ignore if not in the time window for this input.
             if (scene_manager.current_sequence_ticks >= v.from) and (scene_manager.current_sequence_ticks <= v.to) then
                 local input = v.input
-                if inputs.pressed[input] then  -- we got one!
+                if god_mode and (v.nextsequence ~= nil) and (scene_manager.current_scene ~= nil) and (not scene_manager.current_scene[v.nextsequence].kills_player) then
+                    DirkSimple.log("(god mode) accepted action '" .. input .. "' at " .. tostring(scene_manager.current_sequence_ticks / 1000.0))
+                    accepted_input = v
+                    return true
+                elseif inputs.pressed[input] then  -- we got one!
                     DirkSimple.log("accepted action '" .. input .. "' at " .. tostring(scene_manager.current_sequence_ticks / 1000.0))
                     accepted_input = v
                     return true

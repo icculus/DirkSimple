@@ -602,6 +602,34 @@ static int luahook_DirkSimple_truncate(lua_State *L)
     return 1;
 }
 
+static int luahook_DirkSimple_to_int(lua_State *L)
+{
+    if (lua_isstring(L, 1)) {
+        lua_pushinteger(L, atoi(lua_tostring(L, 1)));
+    } else if (lua_isboolean(L, 1)) {
+        lua_pushinteger(L, lua_toboolean(L, 1) ? 1 : 0);
+    } else if (lua_isnumber(L, 1)) {
+        lua_pushinteger(L, (lua_Integer) lua_tonumber(L, 1));
+    } else {
+        lua_pushinteger(L, 0);
+    }
+    return 1;
+}
+
+static int luahook_DirkSimple_to_bool(lua_State *L)
+{
+    if (lua_isstring(L, 1)) {
+        lua_pushboolean(L, (strcmp(lua_tostring(L, 1), "true") == 0));
+    } else if (lua_isboolean(L, 1)) {
+        lua_pushboolean(L, lua_toboolean(L, 1));
+    } else if (lua_isnumber(L, 1)) {
+        lua_pushboolean(L, (lua_tonumber(L, 1) != 0));
+    } else {
+        lua_pushboolean(L, 0);
+    }
+    return 1;
+}
+
 static void register_lua_libs(lua_State *L)
 {
     // We always need the string and base libraries (although base has a
@@ -727,6 +755,121 @@ static void load_lua_gamecode(lua_State *L, const char *gamedir)
     lua_pop(L, 1);   // dump stackwalker.
 }
 
+static void do_cvar_registration(const char *name, const char *desc, const char *values)
+{
+    if (name && desc && values) {
+        DirkSimple_log("Registering cvar '%s' (%s), valid values are '%s'", name, desc, values);
+        DirkSimple_registercvar(GGameName, name, desc, values);
+    }
+}
+
+static void register_cvars(lua_State *L)
+{
+    if (L) {
+        lua_getglobal(L, DIRKSIMPLE_LUA_NAMESPACE);
+        if (lua_istable(L, -1)) {  // namespace is sane?
+            lua_getfield(L, -1, "cvars");
+            if (lua_istable(L, -1)) {  // if not a table, maybe unsupported by this game
+                lua_pushnil(L);  // first key for iteration...
+                while (lua_next(L, -2)) { // replaces key, pushes value.
+                    if (lua_istable(L, -1)) {
+                        const char *cvar_name = NULL;
+                        const char *cvar_desc = NULL;
+                        const char *cvar_values = NULL;
+                        lua_getfield(L, -1, "name");
+                        cvar_name = lua_tostring(L, -1);
+                        lua_getfield(L, -2, "desc");
+                        cvar_desc = lua_tostring(L, -1);
+                        lua_getfield(L, -3, "values");
+                        cvar_values = lua_tostring(L, -1);
+                        do_cvar_registration(cvar_name, cvar_desc, cvar_values);
+                        lua_pop(L, 3);  // dump name, desc, values
+                    }
+                    lua_pop(L, 1);  // remove table, keep key for next iteration.
+                }
+            }
+            lua_pop(L, 1);  // pop the cvars table
+        }
+        lua_pop(L, 1);  // pop the namespace
+    }
+
+    // !!! FIXME: register engine-level cvars here.
+}
+
+// setter lua function is on top of the Lua stack. This function will pop it.
+static void set_lua_cvar(lua_State *L, const char *name, const char *valid_values, const char *newvalue)
+{
+    const size_t slenvalid = strlen(valid_values);
+    const size_t slennew = strlen(newvalue);
+    const char *ptr;
+
+    if (slenvalid < slennew) {
+        lua_pop(L, 1);  // pop the setter
+        return;  // newvalue can't be listed in valid_values, it's bigger than the valid list string.
+    }
+
+    ptr = strstr(valid_values, newvalue);
+    if (!ptr) {
+        lua_pop(L, 1);  // pop the setter
+        return;  // not listed in valid_values
+    }
+
+    if ( (slenvalid == slennew) ||  // matches entire string
+         ((ptr == valid_values) && (valid_values[slennew] == '|')) ||   // matches start of string
+         ((ptr > valid_values) && (ptr[-1] == '|') && ((ptr[slennew] == '|') || (ptr[slennew] == '\0'))) ) {  // matches middle or end of string
+        // it's valid, pass it to Lua.
+        lua_pushstring(L, name);
+        lua_pushstring(L, newvalue);
+        lua_call(L, 2, 0);
+    }
+}
+
+void DirkSimple_setcvar(const char *name, const char *newvalue)
+{
+    lua_State *L = GLua;
+    if (L) {
+        lua_getglobal(L, DIRKSIMPLE_LUA_NAMESPACE);
+        if (lua_istable(L, -1)) {  // namespace is sane?
+            lua_getfield(L, -1, "cvars");
+            if (lua_istable(L, -1)) {  // if not a table, maybe unsupported by this game
+                lua_pushnil(L);  // first key for iteration...
+                while (lua_next(L, -2)) { // replaces key, pushes value.
+                    int endloop = 0;
+                    if (lua_istable(L, -1)) {
+                        const char *cvarname;
+                        lua_getfield(L, -1, "name");
+                        cvarname = lua_tostring(L, -1);
+                        if (cvarname && (strcmp(cvarname, name) == 0)) {
+                            const char *values;
+                            lua_getfield(L, -2, "values");
+                            values = lua_tostring(L, -1);
+                            if (values) {
+                                lua_getfield(L, -3, "setter");
+                                if (lua_isfunction(L, -1)) {
+                                    set_lua_cvar(L, name, values, newvalue);
+                                } else {
+                                    lua_pop(L, 1);  // pop the setter
+                                }
+                                endloop = 1;  // we're done.
+                            }
+                            lua_pop(L, 1);  // pop the values
+                        }
+                        lua_pop(L, 1);  // pop the name
+                    }
+                    lua_pop(L, 1);  // pop the table, keep key for next iteration.
+
+                    if (endloop) {
+                        lua_pop(L, 1);  // dump key, too.
+                        break;
+                    }
+                }
+            }
+            lua_pop(L, 1);  // pop the cvars table
+        }
+        lua_pop(L, 1);  // pop the namespace
+    }
+}
+
 // Sets t[sym]=f, where t is on the top of the Lua stack.
 static void set_cfunc(lua_State *L, lua_CFunction f, const char *sym)
 {
@@ -764,6 +907,8 @@ static void setup_lua(void)
         set_cfunc(GLua, luahook_DirkSimple_stackwalk, "stackwalk");
         set_cfunc(GLua, luahook_DirkSimple_debugger, "debugger");
         set_cfunc(GLua, luahook_DirkSimple_truncate, "truncate");
+        set_cfunc(GLua, luahook_DirkSimple_to_int, "to_int");
+        set_cfunc(GLua, luahook_DirkSimple_to_bool, "to_bool");
         set_cfunc(GLua, luahook_DirkSimple_clear_screen, "clear_screen");
         set_cfunc(GLua, luahook_DirkSimple_draw_sprite, "draw_sprite");
         set_string(GLua, "", "gametitle");
@@ -771,6 +916,8 @@ static void setup_lua(void)
     lua_setglobal(GLua, DIRKSIMPLE_LUA_NAMESPACE);
 
     load_lua_gamecode(GLua, GGameDir);
+
+    register_cvars(GLua);
 
     collect_lua_garbage(GLua);  // get rid of old init crap we don't need.
 }
