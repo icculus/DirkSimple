@@ -424,7 +424,7 @@ void retro_get_system_info(struct retro_system_info *info)
 {
     memset(info, 0, sizeof (*info));
     info->library_name     = "dirksimple";
-    info->library_version  = "0.2";
+    info->library_version  = "0.3";
     info->need_fullpath    = true;  // don't make libretro cache a multi-gigabyte movie file in RAM.  :)
     info->valid_extensions = "ogv|dirksimple";  // we'll just let .dirksimple exist as an extension for convenience, but it's just the same Ogg Theora file.
  }
