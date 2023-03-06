@@ -200,7 +200,7 @@ if(DIRKSIMPLE_SDL)
            COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/data" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/data"
            COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_BINARY_DIR}/dirksimple" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/MacOS/dirksimple"
            COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mac-appbundle-info.plist" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Info.plist"
-           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/icon.icns" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/DirkSimple.icns"
+           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/misc/icon.icns" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/DirkSimple.icns"
        )
    endif()
 endif()
@@ -208,6 +208,7 @@ endif()
 if(DIRKSIMPLE_LIBRETRO)
     add_library(dirksimple_libretro SHARED dirksimple.c dirksimple_libretro.c)
     target_include_directories(dirksimple_libretro PRIVATE
+        thirdparty/libretro
         thirdparty/lua/src
         thirdparty/theoraplay
     )
