@@ -268,7 +268,9 @@ void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int sw, in
         }
         sprite->platform_handle = texture;
         SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        #if SDL_VERSION_ATLEAST(2.0.12)  /* GitHub Actions has an ancient SDL, apparently... */
         SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+        #endif
         SDL_UpdateTexture(texture, NULL, sprite->rgba, sprite->width * 4);
     }
 
