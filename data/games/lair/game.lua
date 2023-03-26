@@ -11,11 +11,13 @@ DirkSimple.gametitle = "Dragon's Lair"
 local starting_lives = 5
 local infinite_lives = false  -- set to true to not lose a life on failure.
 local god_mode = false  -- if true, game plays correct moves automatically, so you never fail.
+local play_sounds = true  -- if true, beeps and buzzes play when appropriate, otherwise, skipped.
 
 DirkSimple.cvars = {
     { name="starting_lives", desc="Number of lives player starts with", values="5|4|3|2|1", setter=function(name, value) starting_lives = DirkSimple.to_int(value) end },
     { name="infinite_lives", desc="Don't lose a life when failing", values="false|true", setter=function(name, value) infinite_lives = DirkSimple.to_bool(value) end },
-    { name="god_mode", desc="Game plays itself perfectly, never failing", values="false|true", setter=function(name, value) god_mode = DirkSimple.to_bool(value) end }
+    { name="god_mode", desc="Game plays itself perfectly, never failing", values="false|true", setter=function(name, value) god_mode = DirkSimple.to_bool(value) end },
+    { name="play_sounds", desc="Play input sounds", values="true|false", setter=function(name, value) play_sounds = DirkSimple.to_bool(value) end }
 }
 
 
@@ -28,10 +30,25 @@ local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
 local current_ticks = 0
 local current_inputs = nil
 local accepted_input = nil
+local play_sound_cooldown = 0
 local scene_manager = nil
 
 
 -- FUNCTIONS
+
+local function play_sound(name)
+    if not play_sounds then
+        return  -- beeps and buzzes disabled.
+    end
+
+    -- Don't let a sound play more than once every 200ms. I don't know if
+    -- this is what Dragon's Lair actually does, but this prevents it from
+    -- getting totally annoying.
+    if play_sound_cooldown < current_ticks then  -- eligible to play again?
+        play_sound_cooldown = current_ticks + 200
+        DirkSimple.play_sound(name)
+    end
+end
 
 local function laserdisc_frame_to_ms(frame)
     return ((frame / 23.976) * 1000.0)
@@ -253,6 +270,12 @@ local function kill_player()
 end
 
 local function check_actions(inputs)
+    -- we don't care about inserting coins, but we'll play the sound if you
+    -- hit the coinslot button.
+    if inputs.pressed["coinslot"] then
+        play_sound("coinslot")
+    end
+
     if accepted_input ~= nil then
         return true  -- ignore all input until end of sequence.
     end
@@ -270,11 +293,23 @@ local function check_actions(inputs)
                 elseif inputs.pressed[input] then  -- we got one!
                     DirkSimple.log("accepted action '" .. input .. "' at " .. tostring(scene_manager.current_sequence_ticks / 1000.0))
                     accepted_input = v
+                    if input ~= "start" then
+                        play_sound("accept")
+                    end
                     return true
                 end
             end
         end
-        -- !!! FIXME: make buzzing sound to signify input wasn't accepted?
+    end
+
+    -- if we don't have an accepted input but something was pressed,
+    --  play the rejection buzz sound. Wrong inputs that lead to death
+    --  still play the accepted sound, even though the input results in
+    --  a failure state.
+    if accepted_input == nil then
+        if inputs.pressed["up"] or inputs.pressed["down"] or inputs.pressed["left"] or inputs.pressed["right"] or inputs.pressed["action"] then
+            play_sound("reject")
+        end
     end
 
     return false
@@ -405,6 +440,11 @@ DirkSimple.unserialize = function(state)
             end
         end
     end
+
+    -- We don't (currently) serialize wave playback state (but we could,
+    --  if DirkSimple.play_sound took a starting offset). So just reset the
+    --  cooldown clock to allow a new buzz to play right away, for now.
+    play_sound_cooldown = 0
 
     return true
 end
