@@ -187,6 +187,29 @@ extern void DirkSimple_drawsprite(DirkSimple_Sprite *sprite, int sx, int sy, int
 // This is just to clear out any `platform_handle` stuff. The engine cleans up the rest.
 extern void DirkSimple_destroysprite(DirkSimple_Sprite *sprite);
 
+
+typedef struct DirkSimple_Wave DirkSimple_Wave;
+
+// this always comes through in the same format as the laserdisc audio.
+struct DirkSimple_Wave
+{
+    char *name;
+    int numframes;
+    float *pcm;
+    uint64_t duration_ticks;
+    uint64_t ticks_when_available;
+    void *platform_handle;
+    DirkSimple_Wave *next;
+};
+
+// Platform layer should build out any thing it needs and cache them on
+//  `platform_handle`, then mix the wave as requested over the latest laserdisc audio.
+// This is always in the same format as the laserdisc audio (same channels, same samplerate, etc).
+extern void DirkSimple_playwave(DirkSimple_Wave *wave);
+
+// This is just to clear out any `platform_handle` stuff. The engine cleans up the rest.
+extern void DirkSimple_destroywave(DirkSimple_Wave *wave);
+
 // copy these strings if you need to keep them.
 extern void DirkSimple_registercvar(const char *gamename, const char *name, const char *desc, const char *valid_values);
 

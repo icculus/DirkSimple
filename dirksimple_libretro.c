@@ -22,13 +22,22 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
     va_end(va);
 }
 
-typedef struct DirkSimpleAudioQueue
+typedef struct DirkSimpleDiscAudioQueue
 {
-    struct DirkSimpleAudioQueue *next;
+    struct DirkSimpleDiscAudioQueue *next;
     int num_samples;
-    int16_t samples[];
-} DirkSimpleAudioQueue;
+    float samples[];
+} DirkSimpleDiscAudioQueue;
 
+typedef struct DirkSimplePlayingWave
+{
+    DirkSimple_Wave *wave;
+    int framepos;
+    struct DirkSimplePlayingWave *next;
+} DirkSimplePlayingWave;
+
+
+// !!! FIXME: can we make these GCamelCase like the rest of DirkSimple?
 static bool panic_triggered = false;
 static jmp_buf panic_jmpbuf;
 static retro_usec_t prev_runtime_usecs = 0;
@@ -44,8 +53,9 @@ static uint32_t framebuffer_height = 0;
 static double framebuffer_fps = 0.0;
 static int audio_channels = 0;
 static int audio_freq = 0;
-static DirkSimpleAudioQueue audio_queue_head;
-static DirkSimpleAudioQueue *audio_queue_tail = &audio_queue_head;
+static DirkSimpleDiscAudioQueue disc_audio_queue_head;
+static DirkSimpleDiscAudioQueue *disc_audio_queue_tail = &disc_audio_queue_head;
+static DirkSimplePlayingWave *playing_waves = NULL;
 static int num_cvars = 0;
 static struct retro_variable *cvars = NULL;
 
@@ -211,8 +221,12 @@ DirkSimple_Io *DirkSimple_openfile_read(const char *path)
 
 void DirkSimple_audioformat(int channels, int freq)
 {
-    audio_channels = channels;
-    audio_freq = freq;
+    if (channels > 2) {  // this is all we handle atm.
+        DirkSimple_panic("Laserdisc audio must have mono or stereo channels!");
+    } else {
+        audio_channels = channels;
+        audio_freq = freq;
+    }
 }
 
 void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t height, double fps)
@@ -234,42 +248,40 @@ void DirkSimple_discaudio(const float *pcm, int numframes)
 {
     int i;
     const int total = numframes * 2;
-    DirkSimpleAudioQueue *item = (DirkSimpleAudioQueue *) DirkSimple_xmalloc(sizeof (DirkSimpleAudioQueue) + (total * sizeof (int16_t)));
-    int16_t *dst = item->samples;
+    DirkSimpleDiscAudioQueue *item = (DirkSimpleDiscAudioQueue *) DirkSimple_xmalloc(sizeof (DirkSimpleDiscAudioQueue) + (total * sizeof (float)));
+    float *dst = item->samples;
 
     item->num_samples = total;
     item->next = NULL;
 
     if (audio_channels == 1) {  // convert from mono to stereo.
         for (i = 0; i < numframes; i++) {
-            dst[0] = dst[1] = (int16_t) (pcm[i] * 32767.0f);
+            dst[0] = dst[1] = pcm[i];
             dst += 2;
         }
     } else if (audio_channels == 2) {
-        for (i = 0; i < total; i++) {
-            dst[i] = (int16_t) (pcm[i] * 32767.0f);
-        }
+        memcpy(dst, pcm, total * sizeof (float));
     } else {
         DirkSimple_free(item);
         return;  // oh well.
     }
 
-    audio_queue_tail->next = item;
-    audio_queue_tail = item;
+    disc_audio_queue_tail->next = item;
+    disc_audio_queue_tail = item;
 }
 
 void DirkSimple_cleardiscaudio(void)
 {
-    DirkSimpleAudioQueue *i;
-    DirkSimpleAudioQueue *next;
+    DirkSimpleDiscAudioQueue *i;
+    DirkSimpleDiscAudioQueue *next;
 
-    for (i = audio_queue_head.next; i != NULL; i = next) {
+    for (i = disc_audio_queue_head.next; i != NULL; i = next) {
         next = i->next;
         DirkSimple_free(i);
     }
     
-    audio_queue_head.next = NULL;
-    audio_queue_tail = &audio_queue_head;
+    disc_audio_queue_head.next = NULL;
+    disc_audio_queue_tail = &disc_audio_queue_head;
 }
 
 void DirkSimple_beginframe(void)
@@ -409,6 +421,33 @@ void DirkSimple_endframe(void)
 {
     // nothing to do here, we'll send the data at the end of retro_run.
 }
+
+void DirkSimple_playwave(DirkSimple_Wave *wave)
+{
+    DirkSimplePlayingWave *pw = DirkSimple_xmalloc(sizeof (DirkSimplePlayingWave));
+    pw->wave = wave;
+    pw->framepos = 0;
+    pw->next = playing_waves;
+    playing_waves = pw;
+
+    // waves are converted by the lower level to match audio_channels, but libretro wants to be fed stereo. Convert once if necessary.
+    if ((audio_channels == 1) && (wave->platform_handle == NULL)) {
+        const int numframes = wave->numframes;
+        float *dst = (float *) DirkSimple_xmalloc(numframes * 2 * sizeof (float));
+        const float *src = wave->pcm;
+        wave->platform_handle = dst;
+        for (int i = 0; i < numframes; i++, dst += 2) {
+            dst[0] = dst[1] = src[i];
+        }
+    }
+}
+
+void DirkSimple_destroywave(DirkSimple_Wave *wave)
+{
+    DirkSimple_free(wave->platform_handle);
+    wave->platform_handle = NULL;
+}
+
 
 void retro_init(void) {}
 void retro_deinit(void) {}
@@ -576,6 +615,99 @@ static void check_variables(void)
     }
 }
 
+static void feed_audio(void)
+{
+    // Feed some more audio to the frontend for playback.
+
+    // mix 3K samples of audio and attempt to feed it to the system.
+    // 3K == 1.5 stereo frames per frame, which at 30fps is slightly more
+    // than you need to not starve at 44.1KHz.
+    static float fl32buf[1024 * 3];   // make this static in case the system has a pathologically small stack. This function isn't ever reentered afaik.
+    int space_left = sizeof (fl32buf);
+    int space_used = 0;
+    for (DirkSimpleDiscAudioQueue *i = disc_audio_queue_head.next; space_left && (i != NULL); i = i->next) {
+        // disc audio is always converted to stereo during DirkSimple_discaudio(), which is what we always feed libretro.
+        const int avail = i->num_samples * sizeof (float);
+        const int cpy = (avail < space_left) ? avail : space_left;
+        memcpy(fl32buf + (space_used / sizeof (float)), i->samples, cpy);
+        space_left -= cpy;
+        space_used += cpy;
+    }
+
+    if (space_left) {   // silence what we can't fill with disc audio.
+        memset(fl32buf + (space_used / sizeof (float)), '\0', space_left);
+    }
+
+    space_used /= sizeof (float);  // convert bytes to samples.
+
+    // mix in playing sounds on top of disc audio...
+    const int totalbufsamples = (int) (sizeof (fl32buf) / sizeof (fl32buf[0]));
+    for (DirkSimplePlayingWave *pw = playing_waves; pw != NULL; pw = pw->next) {
+        const float *src = (pw->wave->platform_handle ? ((float *) pw->wave->platform_handle) : pw->wave->pcm) + (pw->framepos * audio_channels);
+        if (pw->framepos <= pw->wave->numframes) {
+            // wave audio is always converted to stereo during DirkSimple_playwave(), which is what we always feed libretro.
+            const int avail = ((int) ((pw->wave->numframes - pw->framepos) * 2));
+            const int cpy = (avail < totalbufsamples) ? avail : totalbufsamples;
+            for (int i = 0; i < cpy; i++) {
+                fl32buf[i] += src[i];
+            }
+            if (cpy > space_used) {
+                space_used = cpy;
+            }
+        }
+    }
+
+    // now that we're mixed, convert everything to sint16, which is what libretro wants.
+    const float *src = fl32buf;
+    int16_t *i16pcm = (int16_t *) fl32buf;  // reuse the space from fl32buf and convert to sint16 in-place.
+    for (int i = 0; i < space_used; i++) {
+        i16pcm[i] = (int16_t) (src[i] * 32767.0f);
+    }
+
+    // we've mixed our audio, submit it to the system.
+    size_t frames_consumed = audio_batch_cb(i16pcm, space_used / 2);  // divide by 2: stereo samples to frames
+    //DirkSimple_log("Submitted %d frames, system consumed %d", (int) (space_used / 2), (int) frames_consumed);
+    if (frames_consumed) {
+        // update our audio data for what the system actually accepted.
+        DirkSimplePlayingWave *pw = playing_waves;
+        DirkSimplePlayingWave *prev = NULL;
+        while (pw) {
+            DirkSimplePlayingWave *next = pw->next;
+            pw->framepos += frames_consumed;
+
+            // done with this sound? Take it out of the playing list.
+            if (pw->framepos >= pw->wave->numframes) {
+                if (prev) {
+                    prev->next = next;
+                } else {
+                    playing_waves = next;
+                }
+                DirkSimple_free(pw);
+            }
+            prev = pw;
+            pw = next;
+        }
+
+        DirkSimpleDiscAudioQueue *next = NULL;
+        for (DirkSimpleDiscAudioQueue *i = disc_audio_queue_head.next; (frames_consumed > 0) && (i != NULL); i = next) {
+            const int avail = i->num_samples / 2;  // frames available here.
+            next = i->next;
+            if (frames_consumed >= avail) {
+                frames_consumed -= avail;
+                disc_audio_queue_head.next = next;
+                if (disc_audio_queue_tail == i) {
+                    disc_audio_queue_tail = &disc_audio_queue_head;
+                }
+                DirkSimple_free(i);
+            } else {
+                memmove(&i->samples[0], &i->samples[frames_consumed*2], (i->num_samples - (frames_consumed * 2)) * sizeof (float));
+                i->num_samples -= frames_consumed * 2;
+                frames_consumed = 0;  // this finishes it off.
+            }
+        }
+    }
+}
+
 void retro_run(void)
 {
     setjmp(panic_jmpbuf);  // this will set panic_triggered before the longjmp.
@@ -587,33 +719,7 @@ void retro_run(void)
         }
 
         DirkSimple_tick(runtime_usecs / 1000, get_current_inputbits());
-
-        // Feed some more audio to the frontend for playback.
-        // !!! FIXME: This is kinda hacky, but it works well enough for now.
-        int sent_sample_frames = 0;
-        DirkSimpleAudioQueue *i;
-        DirkSimpleAudioQueue *next;
-        for (i = audio_queue_head.next; i != NULL; i = next) {
-            const int num_frames = i->num_samples / 2;
-            next = i->next;
-            const size_t rc = audio_batch_cb(i->samples, num_frames);
-            if (rc == 0) { // maybe the buffer is full?
-                break;
-            } else if (rc < (size_t) num_frames) {
-                memmove(&i->samples[0], &i->samples[rc*2], (i->num_samples - (rc*2)) * sizeof (int16_t));
-                i->num_samples -= rc*2;
-                break;
-            }
-            audio_queue_head.next = next;
-            if (audio_queue_tail == i) {
-                audio_queue_tail = &audio_queue_head;
-            }
-            DirkSimple_free(i);
-            sent_sample_frames += num_frames;
-            if (sent_sample_frames >= 1024) {
-                break;
-            }
-        }
+        feed_audio();
     }
     video_cb(framebuffer, framebuffer_width, framebuffer_height, framebuffer_width * ((pixfmt == DIRKSIMPLE_PIXFMT_RGB565) ? sizeof (uint16_t) : sizeof (uint32_t)));
 }
@@ -723,6 +829,13 @@ void retro_unload_game(void)
     DirkSimple_cleardiscaudio();
     audio_channels = 0;
     audio_freq = 0;
+
+    while (playing_waves != NULL) {
+        DirkSimplePlayingWave *next = playing_waves->next;
+        DirkSimple_free(playing_waves);
+        playing_waves = next;
+    }
+
     free_cvars();
 }
 

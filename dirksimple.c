@@ -45,6 +45,7 @@ typedef enum RenderPrimitive
 {
     RENDPRIM_CLEAR,
     RENDPRIM_SPRITE,
+    RENDPRIM_SOUND,
 } RenderPrimitive;
 
 typedef struct RenderCommand
@@ -62,6 +63,10 @@ typedef struct RenderCommand
             int32_t sx, sy, sw, sh, dx, dy, dw, dh;
             uint8_t r, g, b;
         } sprite;
+        struct
+        {
+            char name[32];
+        } sound;
     } data;
 } RenderCommand;
 
@@ -76,6 +81,8 @@ static lua_State *GLua = NULL;
 static uint64_t GPreviousInputBits = 0;
 static int GDiscoveredVideoFormat = 0;
 static int GDiscoveredAudioFormat = 0;
+static int GAudioChannels = 0;
+static int GAudioFreq = 0;
 static uint64_t GTicks = 0;         // Current ticks into the game, increases each iteration.
 static uint64_t GTicksOffset = 0;   // offset from monotonic clock where we started.
 static uint32_t GFrameMS = 0;       // milliseconds each video frame takes.
@@ -88,6 +95,7 @@ static unsigned int GSeekGeneration = 0;
 static int GNeedInitialLuaTick = 1;
 static const THEORAPLAY_VideoFrame *GPendingVideoFrame = NULL;
 static DirkSimple_Sprite *GSprites = NULL;
+static DirkSimple_Wave *GWaves = NULL;
 static RenderCommand *GRenderCommands = NULL;
 static int GNumRenderCommands = 0;
 static int GNumAllocatedRenderCommands = 0;
@@ -182,10 +190,32 @@ static void theoraplayiobridge_close(THEORAPLAY_Io *io)
     return dio->close(dio);
 }
 
-static uint8_t *invalid_bmp(const char *fname, const char *err)
+static uint8_t *invalid_media(const char *fname, const char *err)
 {
     DirkSimple_log("Failed to load '%s': %s", fname, err);
     return NULL;
+}
+
+uint8_t *DirkSimple_loadmedia(const char *fname, long *flen)
+{
+    DirkSimple_Io *io = DirkSimple_openfile_read(fname);
+    if (!io) {
+        return invalid_media(fname, "Couldn't open file for reading");
+    }
+
+    *flen = io->streamlen(io);
+    uint8_t *fbuf = (uint8_t *) DirkSimple_malloc(*flen);
+    if (!fbuf) {
+        return invalid_media(fname, "Out of memory");
+    }
+
+    const long br = io->read(io, fbuf, *flen);
+    io->close(io);
+    if (br != *flen) {
+        DirkSimple_free(fbuf);
+        return invalid_media(fname, "couldn't read whole file into memory");
+    }
+    return fbuf;
 }
 
 static uint32_t readui32le(const uint8_t **pptr)
@@ -215,44 +245,44 @@ static uint8_t *loadbmp_from_memory(const char *fname, const uint8_t *buf, int b
     *_w = *_h = 0;
 
     if (buflen < 50) {
-        return invalid_bmp(fname, "Not a .BMP file");
+        return invalid_media(fname, "Not a .BMP file");
     }
 
     if ((ptr[0] != 'B') || (ptr[1] != 'M')) {
-        return invalid_bmp(fname, "Not a .BMP file");
+        return invalid_media(fname, "Not a .BMP file");
     }
     ptr += 10;
     const uint32_t offset_bits = readui32le(&ptr);
     const uint32_t infolen = readui32le(&ptr);
     if (offset_bits > buflen) {
-        return invalid_bmp(fname, "Incomplete or corrupt .BMP file");
+        return invalid_media(fname, "Incomplete or corrupt .BMP file");
     } else if ((infolen + 10) > buflen) {
-        return invalid_bmp(fname, "Incomplete or corrupt .BMP file");
+        return invalid_media(fname, "Incomplete or corrupt .BMP file");
     } else if (infolen < 40) {  // not a standard BITMAPINFOHEADER.
-        return invalid_bmp(fname, "Unsupported .BMP format");
+        return invalid_media(fname, "Unsupported .BMP format");
     } else if (infolen == 64) {  // this is some ancient, incompatible OS/2 thing.
-        return invalid_bmp(fname, "Unsupported .BMP format");
+        return invalid_media(fname, "Unsupported .BMP format");
     }
 
     const uint32_t bmpwidth = readui32le(&ptr);
     const uint32_t bmpheight = readui32le(&ptr);
     if ((bmpwidth > 1024) || (bmpheight > 1024)) {
-        return invalid_bmp(fname, "Image is too big");  // this is just an arbitrary limit.
+        return invalid_media(fname, "Image is too big");  // this is just an arbitrary limit.
     } else if ((bmpwidth == 0) || (bmpheight == 0)) {
-        return invalid_bmp(fname, "Image is zero pixels in size");
+        return invalid_media(fname, "Image is zero pixels in size");
     } else if ((offset_bits + (bmpwidth * bmpheight * 4)) > buflen) {
-        return invalid_bmp(fname, "Incomplete or corrupt .BMP file");
+        return invalid_media(fname, "Incomplete or corrupt .BMP file");
     }
 
     ptr += 2;  // skip planes
     const uint16_t bitcount = readui16le(&ptr);
     if (bitcount != 32) {
-        return invalid_bmp(fname, "Only 32bpp .BMP files supported");
+        return invalid_media(fname, "Only 32bpp .BMP files supported");
     }
 
     const uint32_t compression = readui32le(&ptr);
     if ((compression != 0) && (compression != 3)) {
-        return invalid_bmp(fname, "Only uncompressed RGB .BMP files supported");
+        return invalid_media(fname, "Only uncompressed RGB .BMP files supported");
     }
 
     // we don't check the color masks; we assume they match what we want,
@@ -277,29 +307,18 @@ static uint8_t *loadbmp_from_memory(const char *fname, const uint8_t *buf, int b
 
 uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h)
 {
-    DirkSimple_Io *io = DirkSimple_openfile_read(fname);
-    if (!io) {
-        return invalid_bmp(fname, "Couldn't open file for reading");
-    }
-
-    const long flen = io->streamlen(io);
-    uint8_t *fbuf = (uint8_t *) DirkSimple_malloc(flen);
-    if (!fbuf) {
-        return invalid_bmp(fname, "Out of memory");
-    }
-
-    const long br = io->read(io, fbuf, flen);
-    io->close(io);
-    if (br != flen) {
-        DirkSimple_free(fbuf);
-        return invalid_bmp(fname, "couldn't read whole file into memory");
-    }
-
+    long flen = 0;
+    uint8_t *fbuf = DirkSimple_loadmedia(fname, &flen);
     uint8_t *pixels = loadbmp_from_memory(fname, fbuf, flen, _w, _h);
     DirkSimple_free(fbuf);
-
     return (uint8_t *) pixels;
 }
+
+
+// !!! FIXME: we should probably cache all sprites and waves we see in the
+// !!! FIXME: game's dir during DirkSimple_startup. There are only a handful
+// !!! FIXME: of them, we might as well just load them all upfront instead of
+// !!! FIXME: risking a stall on the first use.
 
 static DirkSimple_Sprite *get_cached_sprite(const char *name)
 {
@@ -353,6 +372,230 @@ static DirkSimple_Sprite *get_cached_sprite(const char *name)
     GSprites = sprite;
 
     return sprite;
+}
+
+/* this is an extremely simple, low-quality converter, because presumably we're dealing with simple, low-quality audio. */
+static float *convertwav(const char *fname, float *pcm, int *_frames, int havechannels, int havefreq, int wantchannels, int wantfreq)
+{
+    const int frames = *_frames;
+    float *dst;
+    float *src;
+    float *retval = NULL;
+    float *rechanneled = NULL;
+
+    DirkSimple_log("Convert audio from '%s': %d frames, %d channels, %dHz -> %d channels, %dHz", fname, frames, havechannels, havefreq, wantchannels, wantfreq);
+
+    if (havechannels == wantchannels) {
+        rechanneled = pcm;
+    } else {
+        dst = rechanneled = (float *) DirkSimple_xmalloc(sizeof (float) * frames * wantchannels);
+        src = pcm;
+        if ((havechannels == 1) && (wantchannels == 2)) {
+            for (int i = 0; i < frames; i++, dst += 2) {
+                dst[0] = dst[1] = src[i];
+            }
+        } else if ((havechannels == 2) && (wantchannels == 1)) {
+            for (int i = 0; i < frames; i++, src += 2) {
+                *(dst++) = (src[0] + src[1]) * 0.5f;
+            }
+        } else {
+            DirkSimple_free(rechanneled);
+            return (float *) invalid_media(fname, "Unsupported audio channel count");
+        }
+    }
+
+    if (havefreq == wantfreq) {
+        retval = rechanneled;
+    } else {
+        const float scale = ((float) havefreq) / ((float) wantfreq);
+        const int newframes = (int) (((float) frames) * (1.0f / scale));
+        dst = retval = (float *) DirkSimple_xmalloc(sizeof (float) * newframes * wantchannels);
+        src = rechanneled;
+
+        if (wantchannels == 1) {
+            float prev = src[0];
+            for (int i = 0; i < newframes; i++) {
+                const int newframe = (int) (((float) i) * scale);
+                const float newval = src[newframe];
+                *(dst++) = (prev + newval) * 0.5f;
+                prev = newval;
+            }
+        } else if (wantchannels == 2) {
+            float prevl = src[0];
+            float prevr = src[1];
+            for (int i = 0; i < newframes; i++) {
+                const int newframe = ((int) (((float) i) * scale)) * 2;
+                const float newl = src[newframe];
+                const float newr = src[newframe+1];
+                *(dst++) = (prevl + newl) * 0.5f;
+                *(dst++) = (prevr + newr) * 0.5f;
+                prevl = newl;
+                prevr = newr;
+            }
+        } else {
+            if (rechanneled != pcm) {
+                DirkSimple_free(rechanneled);
+            }
+            DirkSimple_free(retval);
+            return (float *) invalid_media(fname, "Unsupported audio channel count");
+        }
+
+        if (rechanneled != pcm) {
+            DirkSimple_free(rechanneled);
+        }
+
+        *_frames = newframes;
+    }
+
+    return retval;
+}
+
+static float *loadwav_from_memory(const char *fname, const uint8_t *buf, int buflen, int *_frames, int *_channels, int *_freq)
+{
+    const uint8_t *ptr = buf;
+
+    if (buflen < 50) {
+        return (float *) invalid_media(fname, "Not a .WAV file");
+    }
+
+    if ((ptr[0] != 'R') || (ptr[1] != 'I') || (ptr[2] != 'F') || (ptr[3] != 'F')) {
+        return (float *) invalid_media(fname, "Not a .WAV file");
+    }
+
+    ptr += 8;  // skip RIFF and size of file in bytes
+
+    if ((ptr[0] != 'W') || (ptr[1] != 'A') || (ptr[2] != 'V') || (ptr[3] != 'E')) {
+        return (float *) invalid_media(fname, "Not a .WAV file");
+    }
+    ptr += 4;
+
+    if ((ptr[0] != 'f') || (ptr[1] != 'm') || (ptr[2] != 't') || (ptr[3] != ' ')) {
+        return (float *) invalid_media(fname, "Didn't get expected 'fmt ' tag");
+    }
+    ptr += 4;
+
+    const uint32_t fmtlen = readui32le(&ptr);
+    const uint16_t fmttype = readui16le(&ptr);
+    const uint16_t chans = readui16le(&ptr);
+    const uint32_t samplerate = readui32le(&ptr);
+
+    if (fmtlen != 16) {  /* Just handling an exact format for simplicity. */
+        return (float *) invalid_media(fname, "Unexpected .WAV fmt chunk length");
+    } else if (fmttype != 3) {  /* must be float32 encoded for simplicity. */
+        return (float *) invalid_media(fname, "Only float32 PCM .WAV files supported");
+    } else if ((chans != 1) && (chans != 2)) {
+        return (float *) invalid_media(fname, "Only stereo and mono .WAV files supported");
+    }
+
+    ptr += 8;  // don't care about the next two fields.
+
+    // skip until we find the data chunk and assume everything else is unnecessary.  :O
+    uint32_t datalen;
+    while ((ptr[0] != 'd') || (ptr[1] != 'a') || (ptr[2] != 't') || (ptr[3] != 'a')) {
+        //DirkSimple_log("CHUNK %c%c%c%c", (char) ptr[0], (char) ptr[1], (char) ptr[2], (char) ptr[3]);
+        ptr += 4;
+        datalen = readui32le(&ptr);
+        //DirkSimple_log("CHUNKLEN %d", (int) datalen);
+        if (datalen > (buflen - ((ptr - buf)))) {
+            return (float *) invalid_media(fname, "Unexpected .WAV data chunk length");
+        }
+        ptr += datalen;
+    }
+    ptr += 4;
+
+    datalen = readui32le(&ptr);
+    if (datalen > (buflen - ((ptr - buf)))) {
+        return (float *) invalid_media(fname, "Unexpected .WAV data chunk length");
+    }
+
+    const int frames = (int) ((datalen / sizeof (float)) / chans);
+    datalen = frames * sizeof (float) * chans;  // so this chops off half-frames.
+    *_frames = frames;
+    *_channels = (int) chans;
+    *_freq = (int) samplerate;
+    float *pcm = (float *) DirkSimple_xmalloc(datalen);
+    memcpy(pcm, ptr, datalen);
+    return pcm;
+}
+
+float *DirkSimple_loadwav(const char *fname, int *_numframes, const int wantchannels, int wantfreq)
+{
+    long flen = 0;
+    int havechannels = 0;
+    int havefreq = 0;
+    int frames = 0;
+    uint8_t *fbuf = DirkSimple_loadmedia(fname, &flen);
+    float *pcm = loadwav_from_memory(fname, fbuf, flen, &frames, &havechannels, &havefreq);
+    DirkSimple_free(fbuf);
+    if (pcm) {
+        float *cvtpcm = convertwav(fname, pcm, &frames, havechannels, havefreq, wantchannels, wantfreq);
+        if (cvtpcm != pcm) {
+            DirkSimple_free(pcm);
+            pcm = cvtpcm;
+        }
+    }
+    *_numframes = frames;
+    return pcm;
+}
+
+static DirkSimple_Wave *get_cached_wave(const char *name)
+{
+    DirkSimple_Wave *wave = NULL;
+    int frames = 0;
+
+    if (!GAudioChannels || !GAudioFreq) {
+        DirkSimple_log("Attempting to use wave '%s' before laserdisc is ready!", name);
+        return NULL;
+    }
+
+    // lowercase the name, just in case.
+    char *loweredname = DirkSimple_xstrdup(name);
+    int i;
+    for (i = 0; name[i]; i++) {
+        char ch = name[i];
+        if ((ch >= 'A') && (ch <= 'Z')) {
+            loweredname[i] = ch - ('A' - 'a');
+        }
+    }
+    name = loweredname;
+
+    for (wave = GWaves; wave != NULL; wave = wave->next) {
+        if (strcmp(wave->name, loweredname) == 0) {
+            DirkSimple_free(loweredname);
+            return wave;  // already cached.
+        }
+    }
+
+    // not cached yet, load it from disk.
+    const size_t slen = strlen(GGameDir) + strlen(name) + 8;
+    char *fname = (char *) DirkSimple_xmalloc(slen);
+    snprintf(fname, slen, "%s%s.wav", GGameDir, name);
+
+    float *pcm = DirkSimple_loadwav(fname, &frames, GAudioChannels, GAudioFreq);
+    if (pcm) {
+        DirkSimple_log("Loaded wave '%s': %d channels, %dHz", fname, GAudioChannels, GAudioFreq);
+    }
+
+    DirkSimple_free(fname);
+
+    if (!pcm) {
+        char errmsg[128];
+        snprintf(errmsg, sizeof (errmsg), "Failed to load needed wave '%s'. Check your installation?", name);
+        DirkSimple_panic(errmsg);
+    }
+
+    wave = (DirkSimple_Wave *) DirkSimple_xmalloc(sizeof (DirkSimple_Wave));
+    wave->name = loweredname;
+    wave->numframes = frames;
+    wave->pcm = pcm;
+    wave->duration_ticks = (uint64_t) ((((float) frames) / ((float) GAudioFreq)) * 1000.0f);
+    wave->ticks_when_available = 0;
+    wave->platform_handle = NULL;
+    wave->next = GWaves;
+
+    GWaves = wave;
+
+    return wave;
 }
 
 // Allocator interface for internal Lua use.
@@ -719,6 +962,13 @@ static int luahook_DirkSimple_draw_sprite(lua_State *L)
     return 0;
 }
 
+static int luahook_DirkSimple_play_sound(lua_State *L)
+{
+    RenderCommand *cmd = new_render_command(RENDPRIM_SOUND);
+    snprintf(cmd->data.sound.name, sizeof (cmd->data.sound.name), "%s", lua_tostring(L, 1));
+    return 0;
+}
+
 static void load_lua_gamecode(lua_State *L, const char *gamedir)
 {
     int rc;
@@ -911,6 +1161,7 @@ static void setup_lua(void)
         set_cfunc(GLua, luahook_DirkSimple_to_bool, "to_bool");
         set_cfunc(GLua, luahook_DirkSimple_clear_screen, "clear_screen");
         set_cfunc(GLua, luahook_DirkSimple_draw_sprite, "draw_sprite");
+        set_cfunc(GLua, luahook_DirkSimple_play_sound, "play_sound");
         set_string(GLua, "", "gametitle");
         set_string(GLua, GLuaLicense, "lua_license");  // just so deadcode elimination can't remove this string from the binary.
     lua_setglobal(GLua, DIRKSIMPLE_LUA_NAMESPACE);
@@ -1216,6 +1467,17 @@ void DirkSimple_shutdown(void)
     }
     GSprites = NULL;
 
+    DirkSimple_Wave *wave;
+    DirkSimple_Wave *wavenext;
+    for (wave = GWaves; wave != NULL; wave = wavenext) {
+        wavenext = wave->next;
+        DirkSimple_destroywave(wave);
+        DirkSimple_free(wave->name);
+        DirkSimple_free(wave->pcm);
+        DirkSimple_free(wave);
+    }
+    GWaves = NULL;
+
     DirkSimple_free(GRenderCommands);
     GRenderCommands = NULL;
     GNumRenderCommands = 0;
@@ -1236,6 +1498,8 @@ void DirkSimple_shutdown(void)
     GPreviousInputBits = 0;
     GDiscoveredVideoFormat = 0;
     GDiscoveredAudioFormat = 0;
+    GAudioChannels = 0;
+    GAudioFreq = 0;
     GPendingVideoFrame = NULL;
     DirkSimple_free(GBlankVideoFrame);
     GBlankVideoFrame = NULL;
@@ -1359,6 +1623,9 @@ static void send_rendering_primitives(void)
                                       cmd->data.sprite.dx, cmd->data.sprite.dy, cmd->data.sprite.dw, cmd->data.sprite.dh,
                                       cmd->data.sprite.r, cmd->data.sprite.g, cmd->data.sprite.b);
                 break;
+            case RENDPRIM_SOUND:
+                DirkSimple_playwave(get_cached_wave(cmd->data.sound.name));
+                break;
             default:
                 DirkSimple_panic("Unexpected rendering primitive");
                 break;
@@ -1459,6 +1726,8 @@ static void DirkSimple_tick_impl(uint64_t monotonic_ms, uint64_t inputbits)
             return;  // still waiting on audio to arrive so we can figure out format.
         }
         GDiscoveredAudioFormat = 1;
+        GAudioChannels = audio->channels;
+        GAudioFreq = audio->freq;
         DirkSimple_log("Virtual laserdisc audio format: float32, %d channels, %dHz", (int) audio->channels, (int) audio->freq);
         DirkSimple_audioformat(audio->channels, audio->freq);
         THEORAPLAY_freeAudio(audio);  // dump this, the game is going to seek at startup anyhow.

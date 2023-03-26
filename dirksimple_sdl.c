@@ -21,6 +21,13 @@ typedef struct SaveSlot
     uint8_t *data;
 } SaveSlot;
 
+typedef struct PlayingWave
+{
+    DirkSimple_Wave *wave;
+    int framepos;
+    struct PlayingWave *next;
+} PlayingWave;
+
 static SDL_Window *GWindow = NULL;
 static SDL_Renderer *GRenderer = NULL;
 static SDL_Texture *GLaserDiscTexture = NULL;
@@ -33,6 +40,8 @@ static uint8_t GSaveSlot = 0;
 static SaveSlot GSaveData[8];
 static uint64_t GKeyInputBits = 0;
 static SDL_bool GWantFullscreen = SDL_FALSE;
+static PlayingWave *GPlayingWaves = NULL;
+static SDL_AudioStream *GDiscAudioStream = NULL;
 
 void *DirkSimple_malloc(size_t len) { return SDL_malloc(len); }
 void *DirkSimple_calloc(size_t nmemb, size_t len) { return SDL_calloc(nmemb, len); }
@@ -107,6 +116,40 @@ DirkSimple_Io *DirkSimple_openfile_read(const char *path)
     return io;
 }
 
+static void SDLCALL audio_callback(void *userdata, Uint8 *stream, int len)
+{
+    PlayingWave *pw = GPlayingWaves;
+    PlayingWave *prev = NULL;
+    const int chans = GAudioChannels;
+    const int got = SDL_AudioStreamGet(GDiscAudioStream, stream, len);  // just fill in as much disc audio as possible.
+
+    if (got < len) {
+        SDL_memset(stream + got, '\0', len - got);
+    }
+
+    while (pw) {
+        PlayingWave *next = pw->next;
+        if (pw->framepos <= pw->wave->numframes) {
+            const int avail = (int) ((pw->wave->numframes - pw->framepos) * chans * sizeof (float));
+            const Uint32 cpy = SDL_min(len, avail);
+            SDL_MixAudioFormat(stream, (const Uint8 *) (pw->wave->pcm + (pw->framepos * chans)), AUDIO_F32SYS, cpy, SDL_MIX_MAXVOLUME);
+            pw->framepos += (cpy / chans) / sizeof (float);
+        }
+
+        // done with this sound? Take it out of the playing list.
+        if (pw->framepos >= pw->wave->numframes) {
+            if (prev) {
+                prev->next = next;
+            } else {
+                GPlayingWaves = next;
+            }
+            DirkSimple_free(pw);
+        }
+        prev = pw;
+        pw = next;
+    }
+}
+
 void DirkSimple_audioformat(int channels, int freq)
 {
     SDL_AudioSpec spec;
@@ -115,13 +158,26 @@ void DirkSimple_audioformat(int channels, int freq)
     spec.format = AUDIO_F32SYS;
     spec.channels = channels;
     spec.samples = 1024;
-    spec.callback = NULL;
+    spec.callback = audio_callback;
+
+    // this does no conversion, we're just using it as a data queue.
+    GDiscAudioStream = SDL_NewAudioStream(spec.format, spec.channels, spec.freq, spec.format, spec.channels, spec.freq);
+    if (!GDiscAudioStream) {
+        DirkSimple_log("Failed to create disc audio stream: %s", SDL_GetError());
+        DirkSimple_log("Going on without sound!");
+        return;
+    }
+
     GAudioChannels = channels;
     GAudioDeviceID = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0);
     if (GAudioDeviceID == 0) {
         DirkSimple_log("Audio device open failed: %s", SDL_GetError());
         DirkSimple_log("Going on without sound!");
+        SDL_FreeAudioStream(GDiscAudioStream);
+        GDiscAudioStream = NULL;
+        return;
     }
+
     SDL_PauseAudioDevice(GAudioDeviceID, 0);
 }
 
@@ -204,30 +260,41 @@ void DirkSimple_discvideo(const uint8_t *iyuv)
 
 void DirkSimple_discaudio(const float *pcm, int numframes)
 {
-    SDL_QueueAudio(GAudioDeviceID, pcm, numframes * sizeof (float) * GAudioChannels);
+    SDL_LockAudioDevice(GAudioDeviceID);
+    SDL_AudioStreamPut(GDiscAudioStream, pcm, numframes * sizeof (float) * GAudioChannels);
+    SDL_UnlockAudioDevice(GAudioDeviceID);
 }
 
 void DirkSimple_cleardiscaudio(void)
 {
-    if (GAudioDeviceID) {
-        SDL_ClearQueuedAudio(GAudioDeviceID);
-    }
+    SDL_LockAudioDevice(GAudioDeviceID);
+    SDL_AudioStreamClear(GDiscAudioStream);
+    SDL_UnlockAudioDevice(GAudioDeviceID);
 }
 
 void mainloop_shutdown(void)
 {
-    DirkSimple_shutdown();
-
     SDL_DestroyTexture(GLaserDiscTexture);
     SDL_DestroyRenderer(GRenderer);
     SDL_DestroyWindow(GWindow);
 
     SDL_CloseAudioDevice(GAudioDeviceID);
 
+    SDL_FreeAudioStream(GDiscAudioStream);
+    GDiscAudioStream = NULL;
+
+    while (GPlayingWaves != NULL) {
+        PlayingWave *next = GPlayingWaves->next;
+        DirkSimple_free(GPlayingWaves);
+        GPlayingWaves = next;
+    }
+
     if (GGameController) {
         SDL_GameControllerClose(GGameController);
         GGameController = NULL;
     }
+
+    DirkSimple_shutdown();
 
     SDL_Quit();
 }
@@ -292,6 +359,23 @@ void DirkSimple_endframe(void)
         SDL_RenderPresent(GRenderer);
     }
 }
+
+void DirkSimple_playwave(DirkSimple_Wave *wave)
+{
+    PlayingWave *pw = DirkSimple_xmalloc(sizeof (PlayingWave));
+    SDL_LockAudioDevice(GAudioDeviceID);
+    pw->wave = wave;
+    pw->framepos = 0;
+    pw->next = GPlayingWaves;
+    GPlayingWaves = pw;
+    SDL_UnlockAudioDevice(GAudioDeviceID);
+}
+
+void DirkSimple_destroywave(DirkSimple_Wave *wave)
+{
+    // does nothing at the moment.
+}
+
 
 static SDL_bool mainloop_iteration(void)
 {
