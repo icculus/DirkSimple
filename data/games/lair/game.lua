@@ -308,7 +308,9 @@ local function check_actions(inputs)
     --  a failure state.
     if accepted_input == nil then
         if inputs.pressed["up"] or inputs.pressed["down"] or inputs.pressed["left"] or inputs.pressed["right"] or inputs.pressed["action"] then
-            play_sound("reject")
+            if scene_manager.current_scene_name ~= "attract_mode" then  -- don't buzz in attract mode.
+                play_sound("reject")
+            end
         end
     end
 
