@@ -199,7 +199,7 @@ if(DIRKSIMPLE_SDL)
            COMMAND ${CMAKE_COMMAND} ARGS -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources"
            COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/data" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/data"
            COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_BINARY_DIR}/dirksimple" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/MacOS/dirksimple"
-           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/mac-appbundle-info.plist" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Info.plist"
+           COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/misc/mac-appbundle-info.plist" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Info.plist"
            COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/misc/icon.icns" "${CMAKE_CURRENT_BINARY_DIR}/DirkSimple.app/Contents/Resources/DirkSimple.icns"
        )
    endif()
