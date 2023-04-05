@@ -2511,6 +2511,7 @@ scenes = {
 
         seq8 = {
             start_time = time_laserdisc_frame(22418),
+            kills_player = true,
             timeout = { when=time_to_ms(1, 41), nextsequence="seq6" }
         },
 
@@ -4154,6 +4155,7 @@ scenes = {
 
         seq7 = {
             start_time = time_laserdisc_frame(9821),
+            kills_player = true,
             timeout = { when=time_to_ms(1, 180), nextsequence="seq8" }
         },
 
