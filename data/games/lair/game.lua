@@ -24,7 +24,7 @@ DirkSimple.cvars = {
 -- SOME INITIAL SETUP STUFF
 local scenes = nil  -- gets set up later in the file.
 local test_scene_name = nil  -- set to name of scene to test. nil otherwise!
---test_scene_name = "bower"
+--test_scene_name = "the_dragons_lair"
 
 -- GAME STATE
 local current_ticks = 0
@@ -107,16 +107,27 @@ local function start_scene(scenename, is_resurrection)
     start_sequence(sequencename)
 end
 
-local function start_attract_mode(after_game_over)
-    start_scene('attract_mode', after_game_over)
+local function start_attract_mode(after_losing_game_over)
+    start_scene('attract_mode', after_losing_game_over)
 end
 
 local function game_over(won)
-    DirkSimple.log("Game over!")
-    if (scene_manager.current_scene ~= nil) and (scene_manager.current_scene.game_over ~= nil) then
-        start_sequence("game_over")
+    DirkSimple.log("Game over! won=" .. tostring(won))
+
+    if (won) then
+        -- The arcade version, at least as far as I can see on DAPHNE runs on YouTube,
+        -- puts up a frame of Dirk+Daphne in a heart, a few frames from the end
+        -- of the video, for about 10 seconds. Then it drops directly into attract mode.
+        -- I've added this single frame of animation to the scene data (where
+        -- maybe it was already in the original ROM?), so all we need to do here
+        -- is kick out to attract mode and call it a day.
+        start_attract_mode(false)
     else
-        start_attract_mode(true)
+        if (scene_manager.current_scene ~= nil) and (scene_manager.current_scene.game_over ~= nil) then
+            start_sequence("game_over")
+        else
+            start_attract_mode(true)
+        end
     end
 end
 
@@ -4635,7 +4646,13 @@ scenes = {
 
         seq13 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(18, 101), nextsequence=nil }
+            timeout = { when=time_to_ms(18, 501), nextsequence="endgame" }
+        },
+
+        endgame = {  -- show dirk and daphne in a heart for ten seconds before ending the game.
+            start_time = time_laserdisc_frame(31178),
+            is_single_frame = true,
+            timeout = { when=time_to_ms(10, 0), nextsequence=nil },
         },
 
         seq14 = {
