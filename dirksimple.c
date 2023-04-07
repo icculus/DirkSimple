@@ -14,6 +14,7 @@
 #include "lualib.h"
 
 #define DIRKSIMPLE_LUA_NAMESPACE "DirkSimple"
+#define DIRKSIMPLE_FAKE_DISC_LAG_TICKS 800
 
 // "included in all copies or substantial portions of the Software"
 static const char *GLuaLicense =
@@ -91,6 +92,8 @@ static uint64_t GClipStartMs = 0;   // Milliseconds into video stream that start
 static uint64_t GClipStartTicks = 0;  // GTicks when clip started playing
 static int GHalted = 0;
 static int GShowingSingleFrame = 0;
+static int GFakeDiscLag = 0;
+static uint64_t GDiscLagUntilTicks = 0;
 static unsigned int GSeekGeneration = 0;
 static int GNeedInitialLuaTick = 1;
 static const THEORAPLAY_VideoFrame *GPendingVideoFrame = NULL;
@@ -808,6 +811,10 @@ static void DirkSimple_show_single_frame(uint32_t startms)
         GClipStartTicks = 0;
         GHalted = 0;
         GShowingSingleFrame = 1;
+        if (GFakeDiscLag) {
+            DirkSimple_discvideo(GBlankVideoFrame);
+            GDiscLagUntilTicks = GTicks + DIRKSIMPLE_FAKE_DISC_LAG_TICKS;
+        }
     }
 }
 
@@ -829,6 +836,10 @@ static void DirkSimple_start_clip(uint32_t startms)
         GClipStartTicks = 0;
         GHalted = 0;
         GShowingSingleFrame = 0;
+        if (GFakeDiscLag) {
+            DirkSimple_discvideo(GBlankVideoFrame);
+            GDiscLagUntilTicks = GTicks + DIRKSIMPLE_FAKE_DISC_LAG_TICKS;
+        }
     }
 }
 
@@ -1501,6 +1512,8 @@ void DirkSimple_shutdown(void)
     GAudioChannels = 0;
     GAudioFreq = 0;
     GPendingVideoFrame = NULL;
+    GFakeDiscLag = 0;
+    GDiscLagUntilTicks = 0;
     DirkSimple_free(GBlankVideoFrame);
     GBlankVideoFrame = NULL;
     DirkSimple_free(GGameName);
@@ -1780,6 +1793,13 @@ static void DirkSimple_tick_impl(uint64_t monotonic_ms, uint64_t inputbits)
         //else if (GPendingVideoFrame->playms < GClipStartMs) { DirkSimple_log("Dumping video frame from before clip start time (%u vs %u)", (unsigned int) GPendingVideoFrame->playms, (unsigned int) GClipStartMs); }
         THEORAPLAY_freeVideo(GPendingVideoFrame);
         GPendingVideoFrame = THEORAPLAY_getVideo(GDecoder);
+    }
+
+    if (GDiscLagUntilTicks) {
+        if (GDiscLagUntilTicks > GTicks) {
+            return;  // we're faking the stall while the laserdisc player seeks to a new position. Done for now.
+        }
+        GDiscLagUntilTicks = 0;
     }
 
     // has seek completed? Sync us back up.
