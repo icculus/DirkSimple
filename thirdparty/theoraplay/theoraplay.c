@@ -730,14 +730,15 @@ static int PumpDecoder(TheoraDecoder *ctx, int desired_frames)
                             } // else
                             ctx->videolisttail = item;
                             ctx->videocount++;
-                            Mutex_Unlock(ctx->lock);
 
-                            had_new_video_frames = 1;
                             desired_frames--;
 
                             // if we're full, consider this a full pump.
                             if (ctx->videocount >= ctx->maxframes)
                                 desired_frames = 0;
+                            Mutex_Unlock(ctx->lock);
+
+                            had_new_video_frames = 1;
                         } // if
                     } // if
                 } // if
