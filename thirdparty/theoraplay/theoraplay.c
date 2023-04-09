@@ -878,7 +878,7 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecodeFile(const char *fname,
 
     THEORAPLAY_IoUserData *userdata = (THEORAPLAY_IoUserData *) (io + 1);  /* we allocated it right after the Io interface */
 
-    memcpy(&userdata->allocator, allocator, sizeof (THEORAPLAY_allocator));
+    memcpy(&userdata->allocator, allocator, sizeof (THEORAPLAY_Allocator));
 
     userdata->f = fopen(fname, "rb");
     if (userdata->f == NULL)
