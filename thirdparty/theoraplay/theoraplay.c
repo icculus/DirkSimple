@@ -29,7 +29,7 @@
 #include <unistd.h>
 #define sleepms(x) usleep((x) * 1000)
 #define THEORAPLAY_THREAD_T    pthread_t
-#define THEORAPLAY_MUTEX_T     pthread_mutex_t
+#define THEORAPLAY_MUTEX_T     pthread_mutex_t *
 #endif
 
 #ifndef THEORAPLAY_ONLY_SINGLE_THREADED
@@ -216,12 +216,11 @@ static inline int Thread_Create(TheoraDecoder *ctx, void *(*routine) (void*))
 static inline void Thread_Join(THEORAPLAY_THREAD_T thread)
 {
 }
-static inline int Mutex_Create(TheoraDecoder *ctx)
+static inline THEORAPLAY_MUTEX_T Mutex_Create(TheoraDecoder *ctx)
 {
-    ctx->lock = 1;
-    return 0;
+    return (THEORAPLAY_MUTEX_T) (size_t) 0x0001;
 }
-static inline void Mutex_Destroy(THEORAPLAY_MUTEX_T mutex)
+static inline void Mutex_Destroy(TheoraDecoder *ctx, THEORAPLAY_MUTEX_T mutex)
 {
 }
 static inline void Mutex_Lock(THEORAPLAY_MUTEX_T mutex)
@@ -248,12 +247,11 @@ static inline void Thread_Join(THEORAPLAY_THREAD_T thread)
     WaitForSingleObject(thread, INFINITE);
     CloseHandle(thread);
 }
-static inline int Mutex_Create(TheoraDecoder *ctx)
+static inline THEORAPLAY_MUTEX_T Mutex_Create(TheoraDecoder *ctx)
 {
-    ctx->lock = CreateMutex(NULL, FALSE, NULL);
-    return (ctx->lock == NULL);
+    return CreateMutex(NULL, FALSE, NULL);
 }
-static inline void Mutex_Destroy(THEORAPLAY_MUTEX_T mutex)
+static inline void Mutex_Destroy(TheoraDecoder *ctx, THEORAPLAY_MUTEX_T mutex)
 {
     CloseHandle(mutex);
 }
@@ -274,21 +272,31 @@ static inline void Thread_Join(THEORAPLAY_THREAD_T thread)
 {
     pthread_join(thread, NULL);
 }
-static inline int Mutex_Create(TheoraDecoder *ctx)
+static inline THEORAPLAY_MUTEX_T Mutex_Create(TheoraDecoder *ctx)
 {
-    return pthread_mutex_init(&ctx->lock, NULL);
+    THEORAPLAY_MUTEX_T retval = (THEORAPLAY_MUTEX_T) ctx->allocator.allocate(&ctx->allocator, sizeof (*retval));
+    if (retval) {
+        if (pthread_mutex_init(retval, NULL) != 0) {
+            ctx->allocator.deallocate(&ctx->allocator, retval);
+            retval = NULL;
+        }
+    }
+    return retval;
 }
-static inline void Mutex_Destroy(THEORAPLAY_MUTEX_T mutex)
+static inline void Mutex_Destroy(TheoraDecoder *ctx, THEORAPLAY_MUTEX_T mutex)
 {
-    pthread_mutex_destroy(&mutex);
+    if (mutex) {
+        pthread_mutex_destroy(mutex);
+        ctx->allocator.deallocate(&ctx->allocator, mutex);
+    }
 }
 static inline void Mutex_Lock(THEORAPLAY_MUTEX_T mutex)
 {
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(mutex);
 }
 static inline void Mutex_Unlock(THEORAPLAY_MUTEX_T mutex)
 {
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(mutex);
 }
 #endif
 
@@ -964,16 +972,19 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
         return (THEORAPLAY_Decoder *) ctx;
     else
     {
-        if (Mutex_Create(ctx) == 0)
+        ctx->lock = Mutex_Create(ctx);
+        if (ctx->lock)
         {
             ctx->thread_created = (Thread_Create(ctx, WorkerThread) == 0);
             if (ctx->thread_created)
                 return (THEORAPLAY_Decoder *) ctx;
-            Mutex_Destroy(ctx->lock);
+            Mutex_Destroy(ctx, ctx->lock);
         } // if
     } // else
 
 startdecode_failed:
+    if (ctx->lock)
+        Mutex_Destroy(ctx, ctx->lock);
     io->close(io);
     allocator->deallocate(allocator, ctx);
     return NULL;
@@ -990,7 +1001,7 @@ void THEORAPLAY_stopDecode(THEORAPLAY_Decoder *decoder)
     {
         ctx->halt = 1;
         Thread_Join(ctx->worker);
-        Mutex_Destroy(ctx->lock);
+        Mutex_Destroy(ctx, ctx->lock);
     } // if
 
     VideoFrame *videolist = ctx->videolist;
