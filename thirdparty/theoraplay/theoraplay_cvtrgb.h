@@ -22,6 +22,7 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
     // These constants apparently work for NTSC _and_ PAL/SECAM.
     const float yoffset = 16.0f;
     const float yexcursion = 219.0f;
+    const float yfactor = 255.0f / yexcursion;
     const float cboffset = 128.0f;
     const float cbexcursion = 224.0f;
     const float croffset = 128.0f;
@@ -40,6 +41,10 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
         const unsigned char *py = ycbcr[0].data + yoff;
         const unsigned char *pcb = ycbcr[1].data + cboff;
         const unsigned char *pcr = ycbcr[2].data + cboff;
+        const float krfactor = 255.0f * (2.0f * (1.0f - kr)) / crexcursion;
+        const float kbfactor = 255.0f * (2.0f * (1.0f - kb)) / cbexcursion;
+        const float green_krfactor = kr / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kr)) / crexcursion;
+        const float green_kbfactor = kb / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kb)) / cbexcursion;
         int posy;
 
         for (posy = 0; posy < h; posy++)
@@ -49,16 +54,16 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
             posx = 0;
             for (poshalfx = 0; poshalfx < halfw; poshalfx++, posx += 2)
             {
-                const float y1 = (((float) py[posx]) - yoffset) / yexcursion;
-                const float y2 = (((float) py[posx+1]) - yoffset) / yexcursion;
-                const float pb = (((float) pcb[poshalfx]) - cboffset) / cbexcursion;
-                const float pr = (((float) pcr[poshalfx]) - croffset) / crexcursion;
-                const float r1 = (y1 + (2.0f * (1.0f - kr) * pr)) * 255.0f;
-                const float g1 = (y1 - ((2.0f * (((1.0f - kb) * kb) / ((1.0f - kb) - kr))) * pb) - ((2.0f * (((1.0f - kr) * kr) / ((1.0f - kb) - kr))) * pr)) * 255.0f;
-                const float b1 = (y1 + (2.0f * (1.0f - kb) * pb)) * 255.0f;
-                const float r2 = (y2 + (2.0f * (1.0f - kr) * pr)) * 255.0f;
-                const float g2 = (y2 - ((2.0f * (((1.0f - kb) * kb) / ((1.0f - kb) - kr))) * pb) - ((2.0f * (((1.0f - kr) * kr) / ((1.0f - kb) - kr))) * pr)) * 255.0f;
-                const float b2 = (y2 + (2.0f * (1.0f - kb) * pb)) * 255.0f;
+                const float y1 = (((float) py[posx]) - yoffset) * yfactor;
+                const float y2 = (((float) py[posx+1]) - yoffset) * yfactor;
+                const float pb = (((float) pcb[poshalfx]) - cboffset);
+                const float pr = (((float) pcr[poshalfx]) - croffset);
+                const float r1 = y1 + (pr * krfactor);
+                const float g1 = y1 - ((green_krfactor * pr) + (green_kbfactor * kb));
+                const float b1 = y1 + (pb * kbfactor);
+                const float r2 = y2 + (pr * krfactor);
+                const float g2 = y2 - ((green_krfactor * pr) + (green_kbfactor * kb));
+                const float b2 = y2 + (pb * kbfactor);
                 THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
                 THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
             } // for
