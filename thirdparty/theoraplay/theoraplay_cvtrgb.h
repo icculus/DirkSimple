@@ -58,6 +58,20 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
                 const int y2 = ((py[posx+1] - yoffset) * yfactor) >> FIXED_POINT_BITS;
                 const int pb = pcb[poshalfx] - cbcroffset;
                 const int pr = pcr[poshalfx] - cbcroffset;
+
+#if 0  /* !!! FIXME: weirdly, this is _slower_ than calculating the same thing multiple times in the #else block. */
+                const int pb_factored = ((pb * kbfactor) >> FIXED_POINT_BITS);
+                const int pr_factored = ((pr * krfactor) >> FIXED_POINT_BITS);
+                const int pg_factored = (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
+                const int r1 = y1 + pr_factored;
+                const int g1 = y1 - pg_factored;
+                const int b1 = y1 + pb_factored;
+                THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
+                const int r2 = y2 + pr_factored;
+                const int g2 = y2 - pg_factored;
+                const int b2 = y2 + pb_factored;
+                THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
+#else
                 const int r1 = y1 + ((pr * krfactor) >> FIXED_POINT_BITS);
                 const int g1 = y1 - (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
                 const int b1 = y1 + ((pb * kbfactor) >> FIXED_POINT_BITS);
@@ -66,6 +80,7 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
                 const int b2 = y2 + ((pb * kbfactor) >> FIXED_POINT_BITS);
                 THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
                 THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
+#endif
             } // for
 
             // adjust to the start of the next line.
