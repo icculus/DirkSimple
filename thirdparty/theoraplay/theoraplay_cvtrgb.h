@@ -20,13 +20,11 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
     // http://www.theora.org/doc/Theora.pdf, 1.1 spec,
     //  chapter 4.2 (Y'CbCr -> Y'PbPr -> R'G'B')
     // These constants apparently work for NTSC _and_ PAL/SECAM.
-    const float yoffset = 16.0f;
-    const float yexcursion = 219.0f;
-    const float yfactor = 255.0f / yexcursion;
-    const float cboffset = 128.0f;
-    const float cbexcursion = 224.0f;
-    const float croffset = 128.0f;
-    const float crexcursion = 224.0f;
+    const int yexcursion = 219;
+    const int cbexcursion = 224;  // !!! FIXME: this is the same as the cr version, should we mush this into one crcbexcursion var?
+    const int crexcursion = 224;
+    const int cboffset = 128;   // !!! FIXME: this is the same as the cr version, should we mush this into one crcboffset var?
+    const int croffset = 128;
     const float kr = 0.299f;
     const float kb = 0.114f;
 
@@ -41,10 +39,14 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
         const unsigned char *py = ycbcr[0].data + yoff;
         const unsigned char *pcb = ycbcr[1].data + cboff;
         const unsigned char *pcr = ycbcr[2].data + cboff;
-        const float krfactor = 255.0f * (2.0f * (1.0f - kr)) / crexcursion;
-        const float kbfactor = 255.0f * (2.0f * (1.0f - kb)) / cbexcursion;
-        const float green_krfactor = kr / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kr)) / crexcursion;
-        const float green_kbfactor = kb / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kb)) / cbexcursion;
+
+        const int FIXED_POINT_BITS = 7;
+        const int yoffset = 16;
+        const int yfactor = (int) ((255.0f / yexcursion) * (1<<FIXED_POINT_BITS));
+        const int krfactor = (int) ((255.0f * (2.0f * (1.0f - kr)) / crexcursion) * (1<<FIXED_POINT_BITS));
+        const int kbfactor = (int) ((255.0f * (2.0f * (1.0f - kb)) / cbexcursion) * (1<<FIXED_POINT_BITS));
+        const int green_krfactor = (int) ((kr / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kr)) / crexcursion) * (1<<FIXED_POINT_BITS));
+        const int green_kbfactor = (int) ((kb / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kb)) / cbexcursion) * (1<<FIXED_POINT_BITS));
         int posy;
 
         for (posy = 0; posy < h; posy++)
@@ -54,16 +56,16 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
             posx = 0;
             for (poshalfx = 0; poshalfx < halfw; poshalfx++, posx += 2)
             {
-                const float y1 = (((float) py[posx]) - yoffset) * yfactor;
-                const float y2 = (((float) py[posx+1]) - yoffset) * yfactor;
-                const float pb = (((float) pcb[poshalfx]) - cboffset);
-                const float pr = (((float) pcr[poshalfx]) - croffset);
-                const float r1 = y1 + (pr * krfactor);
-                const float g1 = y1 - ((green_krfactor * pr) + (green_kbfactor * kb));
-                const float b1 = y1 + (pb * kbfactor);
-                const float r2 = y2 + (pr * krfactor);
-                const float g2 = y2 - ((green_krfactor * pr) + (green_kbfactor * kb));
-                const float b2 = y2 + (pb * kbfactor);
+                const int y1 = ((py[posx] - yoffset) * yfactor) >> FIXED_POINT_BITS;
+                const int y2 = ((py[posx+1] - yoffset) * yfactor) >> FIXED_POINT_BITS;
+                const int pb = pcb[poshalfx] - cboffset;
+                const int pr = pcr[poshalfx] - croffset;
+                const int r1 = y1 + ((pr * krfactor) >> FIXED_POINT_BITS);
+                const int g1 = y1 - (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
+                const int b1 = y1 + ((pb * kbfactor) >> FIXED_POINT_BITS);
+                const int r2 = y2 + ((pr * krfactor) >> FIXED_POINT_BITS);
+                const int g2 = y2 - (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
+                const int b2 = y2 + ((pb * kbfactor) >> FIXED_POINT_BITS);
                 THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
                 THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
             } // for
