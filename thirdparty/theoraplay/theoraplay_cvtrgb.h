@@ -33,6 +33,7 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
     if (pixels)
     {
         unsigned char *dst = pixels;
+        unsigned char *dst2 = dst + THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, 1);
         const int ystride = ycbcr[0].stride;
         const int cbstride = ycbcr[1].stride;
         const unsigned char *py;
@@ -70,16 +71,15 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
             pcr = ycbcr[2].data + cboff;
         }
 
-        for (posy = 0; posy < h; posy++)
+        for (posy = 0; posy < h; posy += 2)
         {
-            int posx, poshalfx;
+            int posx = 0;
+            int poshalfx;
 
-            posx = 0;
             for (poshalfx = 0; poshalfx < halfw; poshalfx++, posx += 2)
             {
                 const int pb = pcb[poshalfx] - cbcroffset;
                 const int pr = pcr[poshalfx] - cbcroffset;
-#if 0
                 const int pb_factored = ((pb * kbfactor) >> FIXED_POINT_BITS);
                 const int pr_factored = ((pr * krfactor) >> FIXED_POINT_BITS);
                 const int pg_factored = (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
@@ -88,37 +88,38 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
                     const int r1 = y1 + pr_factored;
                     const int g1 = y1 - pg_factored;
                     const int b1 = y1 + pb_factored;
-                    THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
+                    THEORAPLAY_CVT_RGB_OUTPUT(dst, r1, g1, b1);
                 }
                 {
                     const int y2 = ((py[posx+1] - yoffset) * yfactor) >> FIXED_POINT_BITS;
                     const int r2 = y2 + pr_factored;
                     const int g2 = y2 - pg_factored;
                     const int b2 = y2 + pb_factored;
-                    THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
-                }
-#else
-                {
-                    const int y1 = ((py[posx] - yoffset) * yfactor) >> FIXED_POINT_BITS;
-                    const int r1 = y1 + ((pr * krfactor) >> FIXED_POINT_BITS);
-                    const int g1 = y1 - (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
-                    const int b1 = y1 + ((pb * kbfactor) >> FIXED_POINT_BITS);
-                    THEORAPLAY_CVT_RGB_OUTPUT(r1, g1, b1);
+                    THEORAPLAY_CVT_RGB_OUTPUT(dst, r2, g2, b2);
                 }
                 {
-                    const int y2 = ((py[posx+1] - yoffset) * yfactor) >> FIXED_POINT_BITS;
-                    const int r2 = y2 + ((pr * krfactor) >> FIXED_POINT_BITS);
-                    const int g2 = y2 - (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
-                    const int b2 = y2 + ((pb * kbfactor) >> FIXED_POINT_BITS);
-                    THEORAPLAY_CVT_RGB_OUTPUT(r2, g2, b2);
+                    const int y3 = ((py[ystride+posx] - yoffset) * yfactor) >> FIXED_POINT_BITS;
+                    const int r3 = y3 + pr_factored;
+                    const int g3 = y3 - pg_factored;
+                    const int b3 = y3 + pb_factored;
+                    THEORAPLAY_CVT_RGB_OUTPUT(dst2, r3, g3, b3);
                 }
-#endif
+                {
+                    const int y4 = ((py[ystride+posx+1] - yoffset) * yfactor) >> FIXED_POINT_BITS;
+                    const int r4 = y4 + pr_factored;
+                    const int g4 = y4 - pg_factored;
+                    const int b4 = y4 + pb_factored;
+                    THEORAPLAY_CVT_RGB_OUTPUT(dst2, r4, g4, b4);
+                }
             } // for
 
+            dst += THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, 1);
+            dst2 += THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, 1);
+
             // adjust to the start of the next line.
-            py += ystride;
-            pcb += cbstride * (posy % 2);
-            pcr += crstride * (posy % 2);
+            py += ystride * 2;
+            pcb += cbstride;
+            pcr += crstride;
         } // for
     } // if
 

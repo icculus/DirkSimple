@@ -97,7 +97,7 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
 // RGB
 #define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGB
 #define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 3)
-#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+#define THEORAPLAY_CVT_RGB_OUTPUT(dst, r, g, b) { \
     *(dst++) = (unsigned char) ((r < 0) ? 0 : (r > 255) ? 255 : r); \
     *(dst++) = (unsigned char) ((g < 0) ? 0 : (g > 255) ? 255 : g); \
     *(dst++) = (unsigned char) ((b < 0) ? 0 : (b > 255) ? 255 : b); \
@@ -107,7 +107,7 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
 // RGBA
 #define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGBA
 #define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 4)
-#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+#define THEORAPLAY_CVT_RGB_OUTPUT(dst, r, g, b) { \
     *(dst++) = (unsigned char) ((r < 0) ? 0 : (r > 255) ? 255 : r); \
     *(dst++) = (unsigned char) ((g < 0) ? 0 : (g > 255) ? 255 : g); \
     *(dst++) = (unsigned char) ((b < 0) ? 0 : (b > 255) ? 255 : b); \
@@ -118,7 +118,7 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
 // BGRA
 #define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToBGRA
 #define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 4)
-#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+#define THEORAPLAY_CVT_RGB_OUTPUT(dst, r, g, b) { \
     *(dst++) = (unsigned char) ((b < 0) ? 0 : (b > 255) ? 255 : b); \
     *(dst++) = (unsigned char) ((g < 0) ? 0 : (g > 255) ? 255 : g); \
     *(dst++) = (unsigned char) ((r < 0) ? 0 : (r > 255) ? 255 : r); \
@@ -129,7 +129,7 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
 // RGB565
 #define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGB565
 #define THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, h) ((w) * (h) * 2)
-#define THEORAPLAY_CVT_RGB_OUTPUT(r, g, b) { \
+#define THEORAPLAY_CVT_RGB_OUTPUT(dst, r, g, b) { \
     unsigned short *dst16 = (unsigned short *) dst; \
     const int r5 = ((r < 0) ? 0 : (r > 255) ? 255 : r) >> 3; \
     const int g6 = ((g < 0) ? 0 : (g > 255) ? 255 : g) >> 2; \
