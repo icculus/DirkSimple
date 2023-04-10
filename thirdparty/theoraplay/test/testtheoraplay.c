@@ -58,6 +58,10 @@ int main(int argc, char **argv)
             vidfmt = THEORAPLAY_VIDFMT_RGB;
         else if (strcmp(argv[i], "--rgba") == 0)
             vidfmt = THEORAPLAY_VIDFMT_RGBA;
+        else if (strcmp(argv[i], "--bgra") == 0)
+            vidfmt = THEORAPLAY_VIDFMT_BGRA;
+        else if (strcmp(argv[i], "--rgb565") == 0)
+            vidfmt = THEORAPLAY_VIDFMT_RGB565;
         else if (strcmp(argv[i], "--yv12") == 0)
             vidfmt = THEORAPLAY_VIDFMT_YV12;
         else
