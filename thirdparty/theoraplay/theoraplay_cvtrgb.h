@@ -21,10 +21,8 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
     //  chapter 4.2 (Y'CbCr -> Y'PbPr -> R'G'B')
     // These constants apparently work for NTSC _and_ PAL/SECAM.
     const int yexcursion = 219;
-    const int cbexcursion = 224;  // !!! FIXME: this is the same as the cr version, should we mush this into one crcbexcursion var?
-    const int crexcursion = 224;
-    const int cboffset = 128;   // !!! FIXME: this is the same as the cr version, should we mush this into one crcboffset var?
-    const int croffset = 128;
+    const int cbcrexcursion = 224;
+    const int cbcroffset = 128;
     const float kr = 0.299f;
     const float kb = 0.114f;
 
@@ -43,10 +41,10 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
         const int FIXED_POINT_BITS = 7;
         const int yoffset = 16;
         const int yfactor = (int) ((255.0f / yexcursion) * (1<<FIXED_POINT_BITS));
-        const int krfactor = (int) ((255.0f * (2.0f * (1.0f - kr)) / crexcursion) * (1<<FIXED_POINT_BITS));
-        const int kbfactor = (int) ((255.0f * (2.0f * (1.0f - kb)) / cbexcursion) * (1<<FIXED_POINT_BITS));
-        const int green_krfactor = (int) ((kr / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kr)) / crexcursion) * (1<<FIXED_POINT_BITS));
-        const int green_kbfactor = (int) ((kb / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kb)) / cbexcursion) * (1<<FIXED_POINT_BITS));
+        const int krfactor = (int) ((255.0f * (2.0f * (1.0f - kr)) / cbcrexcursion) * (1<<FIXED_POINT_BITS));
+        const int kbfactor = (int) ((255.0f * (2.0f * (1.0f - kb)) / cbcrexcursion) * (1<<FIXED_POINT_BITS));
+        const int green_krfactor = (int) ((kr / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kr)) / cbcrexcursion) * (1<<FIXED_POINT_BITS));
+        const int green_kbfactor = (int) ((kb / ((1.0f - kb) - kr) * 255.0f * (2.0f * (1.0f - kb)) / cbcrexcursion) * (1<<FIXED_POINT_BITS));
         int posy;
 
         for (posy = 0; posy < h; posy++)
@@ -58,8 +56,8 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
             {
                 const int y1 = ((py[posx] - yoffset) * yfactor) >> FIXED_POINT_BITS;
                 const int y2 = ((py[posx+1] - yoffset) * yfactor) >> FIXED_POINT_BITS;
-                const int pb = pcb[poshalfx] - cboffset;
-                const int pr = pcr[poshalfx] - croffset;
+                const int pb = pcb[poshalfx] - cbcroffset;
+                const int pr = pcr[poshalfx] - cbcroffset;
                 const int r1 = y1 + ((pr * krfactor) >> FIXED_POINT_BITS);
                 const int g1 = y1 - (((green_krfactor * pr) + (green_kbfactor * pb)) >> FIXED_POINT_BITS);
                 const int b1 = y1 + ((pb * kbfactor) >> FIXED_POINT_BITS);
