@@ -501,7 +501,13 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
   yplane_sz=yhstride*(size_t)yheight;
   cplane_sz=chstride*(size_t)cheight;
   yoffset=OC_UMV_PADDING+OC_UMV_PADDING*(ptrdiff_t)yhstride;
+  if ((((size_t) yoffset) % OC_UMV_PADDING) != 0) {
+    yoffset += OC_UMV_PADDING - (((size_t) yoffset) % OC_UMV_PADDING);
+  }
   coffset=(OC_UMV_PADDING>>hdec)+(OC_UMV_PADDING>>vdec)*(ptrdiff_t)chstride;
+  if ((((size_t) coffset) % OC_UMV_PADDING) != 0) {
+    coffset += OC_UMV_PADDING - (((size_t) coffset) % OC_UMV_PADDING);
+  }
   ref_frame_sz=yplane_sz+2*cplane_sz;
   ref_frame_data_sz=_nrefs*ref_frame_sz;
   /*Check for overflow.
@@ -510,7 +516,7 @@ static int oc_state_ref_bufs_init(oc_theora_state *_state,int _nrefs){
    ref_frame_sz<yplane_sz||ref_frame_data_sz/_nrefs!=ref_frame_sz){
     return TH_EIMPL;
   }
-  ref_frame_data=_ogg_malloc(ref_frame_data_sz);
+  ref_frame_data=_ogg_malloc(ref_frame_data_sz+(OC_UMV_PADDING * 3));
   frag_buf_offs=_state->frag_buf_offs=
    _ogg_malloc(_state->nfrags*sizeof(*frag_buf_offs));
   if(ref_frame_data==NULL||frag_buf_offs==NULL){
