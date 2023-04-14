@@ -10,6 +10,35 @@
 #error Do not include this in your app. It is used internally by TheoraPlay.
 #endif
 
+/* vzip1q (etc) is an arm64 thing, annoyingly, but you can __builtin_shuffle to get a working vzip.8 opcode on older ARMs. */
+#if THEORAPLAY_CVT_RGB_USE_NEON && !defined(__aarch64__)
+#  ifndef THEORAPLAY_NEON_ARM64_FALLBACKS
+#    define THEORAPLAY_NEON_ARM64_FALLBACKS 1
+#    ifdef __clang__
+#      define vzip1q_u8(a, b) (__builtin_shufflevector((a), (b), 0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23))
+#      define vzip2q_u8(a, b) (__builtin_shufflevector((a), (b), 8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31))
+#      define vzip1q_u16(a, b) (__builtin_shufflevector((a), (b), 0, 8, 1, 9, 2, 10, 3, 11))
+#      define vzip2q_u16(a, b) (__builtin_shufflevector((a), (b), 4, 12, 5, 13, 6, 14, 7, 15))
+#      define vzip1q_s16(a, b) (__builtin_shufflevector((a), (b), 0, 8, 1, 9, 2, 10, 3, 11))
+#      define vzip2q_s16(a, b) (__builtin_shufflevector((a), (b), 4, 12, 5, 13, 6, 14, 7, 15))
+#    elif defined(__GNUC__)
+#      define vzip1q_u8(a, b) (__builtin_shuffle((a), (b), (uint8x16_t) { 0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23 }))
+#      define vzip2q_u8(a, b) (__builtin_shuffle((a), (b), (uint8x16_t) { 8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31 }))
+#      define vzip1q_u16(a, b) (__builtin_shuffle((a), (b), (uint16x8_t) { 0, 8, 1, 9, 2, 10, 3, 11 }))
+#      define vzip2q_u16(a, b) (__builtin_shuffle((a), (b), (uint16x8_t) { 4, 12, 5, 13, 6, 14, 7, 15 }))
+#      define vzip1q_s16(a, b) (__builtin_shuffle((a), (b), (uint16x8_t) { 0, 8, 1, 9, 2, 10, 3, 11 }))
+#      define vzip2q_s16(a, b) (__builtin_shuffle((a), (b), (uint16x8_t) { 4, 12, 5, 13, 6, 14, 7, 15 }))
+#    else  /* just use the older opcode. */
+#      define vzip1q_u8(a, b) (vzipq_u8((a), (b))[0])
+#      define vzip2q_u8(a, b) (vzipq_u8((a), (b))[1])
+#      define vzip1q_u16(a, b) (vzipq_u16((a), (b))[0])
+#      define vzip2q_u16(a, b) (vzipq_u16((a), (b))[1])
+#      define vzip1q_s16(a, b) (vzipq_u16((a), (b))[0])
+#      define vzip2q_s16(a, b) (vzipq_u16((a), (b))[1])
+#    endif
+#  endif
+#endif
+
 static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allocator, const th_info *tinfo, const th_ycbcr_buffer ycbcr)
 {
     const int w = tinfo->pic_width;
@@ -74,9 +103,159 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
         for (posy = 0; posy < h; posy += 2)
         {
             int posx = 0;
-            int poshalfx;
+            int poshalfx = 0;
 
-            for (poshalfx = 0; poshalfx < halfw; poshalfx++, posx += 2)
+            #if THEORAPLAY_CVT_RGB_USE_NEON
+            while ((halfw - poshalfx) >= 16)
+            {
+                int16x8_t vcb1, vcr1, vcg1;
+                int16x8_t vcb2, vcr2, vcg2;
+                {
+                    // load from memory, convert u8 to sint32, subtract the offset
+                    #define THEORAPLAY_NEON_PREP_COMPONENT(src, voffset, a, b, c, d) { \
+                        const uint8x16_t v = vld1q_u8((src)); \
+                        { \
+                            const int16x8_t vhalf = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(v))); \
+                            a = vsubq_s32(vmovl_s16(vget_low_s16(vhalf)), voffset);  /* convert first 4 values to int32 */ \
+                            b = vsubq_s32(vmovl_s16(vget_high_s16(vhalf)), voffset);  /* convert second 4 values to int32 */ \
+                        } { \
+                            const int16x8_t vhalf = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(v))); \
+                            c = vsubq_s32(vmovl_s16(vget_low_s16(vhalf)), voffset);  /* convert third 4 values to int32 */ \
+                            d = vsubq_s32(vmovl_s16(vget_high_s16(vhalf)), voffset);  /* convert fourth 4 values to int32 */ \
+                        } \
+                    }
+
+                    // factor, downshift, and pack back down to int16x8_t
+                    #define THEORAPLAY_NEON_FACTOR_AND_DOWNSHIFT(v1, v2, a, b, c, d, factor, bits) { \
+                        v1 = vcombine_s16(vmovn_s32(vshrq_n_s32(vmulq_n_s32(a, factor), bits)), vmovn_s32(vshrq_n_s32(vmulq_n_s32(b, factor), bits))); \
+                        v2 = vcombine_s16(vmovn_s32(vshrq_n_s32(vmulq_n_s32(c, factor), bits)), vmovn_s32(vshrq_n_s32(vmulq_n_s32(d, factor), bits))); \
+                    }
+
+                    // load, prep, and factor the color components, build out green value, too...
+                    {
+                        const int32x4_t vcbcroffset = vdupq_n_s32(cbcroffset);
+                        int32x4_t ga, gb, gc, gd;
+
+                        // Process Cb...
+                        {
+                            int32x4_t a, b, c, d;
+                            THEORAPLAY_NEON_PREP_COMPONENT(((const uint8_t *) pcb) + poshalfx, vcbcroffset, a, b, c, d);
+                            THEORAPLAY_NEON_FACTOR_AND_DOWNSHIFT(vcb1, vcb2, a, b, c, d, kbfactor, FIXED_POINT_BITS);
+
+                            // a, b, c, and d are still valid Cb values, start building out Cg from them.
+                            ga = vmulq_n_s32(a, green_kbfactor);
+                            gb = vmulq_n_s32(b, green_kbfactor);
+                            gc = vmulq_n_s32(c, green_kbfactor);
+                            gd = vmulq_n_s32(d, green_kbfactor);
+                        }
+
+                        // Process Cr...
+                        {
+                            int32x4_t a, b, c, d;
+                            THEORAPLAY_NEON_PREP_COMPONENT(((const uint8_t *) pcr) + poshalfx, vcbcroffset, a, b, c, d);
+
+                            /* factor the Cr side into our green component and add it to previous work. */
+                            ga = vaddq_s32(ga, vmulq_n_s32(a, green_krfactor));
+                            gb = vaddq_s32(gb, vmulq_n_s32(b, green_krfactor));
+                            gc = vaddq_s32(gc, vmulq_n_s32(c, green_krfactor));
+                            gd = vaddq_s32(gd, vmulq_n_s32(d, green_krfactor));
+
+                            /* okay, we've got the green work covered, factor Cr, shift for fixed point conversion, and pack it down. */
+                            THEORAPLAY_NEON_FACTOR_AND_DOWNSHIFT(vcr1, vcr2, a, b, c, d, krfactor, FIXED_POINT_BITS);
+                        }
+
+                        // Finish off green...
+                        vcg1 = vcombine_s16(vmovn_s32(vshrq_n_s32(ga, FIXED_POINT_BITS)), vmovn_s32(vshrq_n_s32(gb, FIXED_POINT_BITS)));
+                        vcg2 = vcombine_s16(vmovn_s32(vshrq_n_s32(gc, FIXED_POINT_BITS)), vmovn_s32(vshrq_n_s32(gd, FIXED_POINT_BITS)));
+                    }
+                }
+
+                // load Y components and build out pixels! We have enough color components to cover _64_ pixels (32 each in two rows).
+
+                /* so the gameplan is some magic with vzipq:
+                   we start with 16 pixels, with their components in four separate registers:
+
+                     Ra Rb Rc Rd Re Rf Rg Rh Ri Rj Rk Rl Rm Rn Ro Rp
+                     Ga Gb Gc Gd Ge Gf Gg Gh Gi Gj Gk Gl Gm Gn Go Gp
+                     Ba Bb Bc Bd Be Bf Bg Bh Bi Bj Bk Bl Bm Bn Bo Bp
+                     Aa Ab Ac Ad Ae Af Ag Ah Ai Aj Ak Al Am An Ao Ap  (alpha is always 255, so we just vdup_n_u8 this to a register)
+
+                   ...and vzipq1 the values so they combine across two registers:
+                     Ra Ga Rb Gb Rc Gc Rd Gd Re Ge Rf Gf Rg Gg Rh Gh
+                     Ba Aa Bb Ab Bc Ac Bd Ad Be Ae Bf Af Bg Ag Bh Ah
+
+                   ...then reinterpret those registers as 16 bit values and vzip _those_:
+                     Ra Ga Ba Aa Rb Gb Bb Ab Rc Gc Bc Ac Rd Gd Bd Ad
+
+                   ...and then we have four 32-bit pixels in RGBA8888 order ready to be stored out,
+                   and we just have to do this again for the other pixels until all 16 are done. */
+                #define THEORAPLAY_NEON_CVT_TO_RGB(dst, src, vcrdup1, vcgdup1, vcbdup1, vcrdup2, vcgdup2, vcbdup2) { \
+                    int16x8_t vy1, vy2; \
+                    { \
+                        int32x4_t a, b, c, d; \
+                        const int32x4_t vyoffset = vdupq_n_s32(yoffset); \
+                        THEORAPLAY_NEON_PREP_COMPONENT(src, vyoffset, a, b, c, d); \
+                        THEORAPLAY_NEON_FACTOR_AND_DOWNSHIFT(vy1, vy2, a, b, c, d, yfactor, FIXED_POINT_BITS); \
+                    } \
+                    const uint8x16_t vr = vreinterpretq_u8_s8(vcombine_s8(vmovn_s16(vmaxq_s16(vminq_s16(vaddq_s16(vy1, vcrdup1), vdupq_n_s16(255)), vdupq_n_s16(0))), vmovn_s16(vmaxq_s16(vminq_s16(vaddq_s16(vy2, vcrdup2), vdupq_n_s16(255)), vdupq_n_s16(0))))); \
+                    const uint8x16_t vg = vreinterpretq_u8_s8(vcombine_s8(vmovn_s16(vmaxq_s16(vminq_s16(vsubq_s16(vy1, vcgdup1), vdupq_n_s16(255)), vdupq_n_s16(0))), vmovn_s16(vmaxq_s16(vminq_s16(vsubq_s16(vy2, vcgdup2), vdupq_n_s16(255)), vdupq_n_s16(0))))); \
+                    const uint8x16_t vb = vreinterpretq_u8_s8(vcombine_s8(vmovn_s16(vmaxq_s16(vminq_s16(vaddq_s16(vy1, vcbdup1), vdupq_n_s16(255)), vdupq_n_s16(0))), vmovn_s16(vmaxq_s16(vminq_s16(vaddq_s16(vy2, vcbdup2), vdupq_n_s16(255)), vdupq_n_s16(0))))); \
+                    uint8x16_t vzipa, vzipb; \
+                    uint8x16_t vrgba; \
+                    vzipa = vzip1q_u8(vr, vg); \
+                    vzipb = vzip1q_u8(vb, vdupq_n_u8(255)); \
+                    vrgba = vreinterpretq_u8_u16(vzip1q_u16(vreinterpretq_u16_u8(vzipa), vreinterpretq_u16_u8(vzipb))); \
+                    THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, vrgba); \
+                    vrgba = vreinterpretq_u8_u16(vzip2q_u16(vreinterpretq_u16_u8(vzipa), vreinterpretq_u16_u8(vzipb))); \
+                    THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, vrgba); \
+                    vzipa = vzip2q_u8(vr, vg); \
+                    vzipb = vzip2q_u8(vb, vdupq_n_u8(255)); \
+                    vrgba = vreinterpretq_u8_u16(vzip1q_u16(vreinterpretq_u16_u8(vzipa), vreinterpretq_u16_u8(vzipb))); \
+                    THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, vrgba); \
+                    vrgba = vreinterpretq_u8_u16(vzip2q_u16(vreinterpretq_u16_u8(vzipa), vreinterpretq_u16_u8(vzipb))); \
+                    THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, vrgba); \
+                }
+
+                int16x8_t vcrdup1, vcgdup1, vcbdup1, vcrdup2, vcgdup2, vcbdup2;
+
+                /* duplicate every other element (lower half), since pairs of Y values use the same Cr/Cg/Cb components. */
+                vcrdup1 = vzip1q_s16(vcr1, vcr1);
+                vcgdup1 = vzip1q_s16(vcg1, vcg1);
+                vcbdup1 = vzip1q_s16(vcb1, vcb1);
+                vcrdup2 = vzip2q_s16(vcr1, vcr1);
+                vcgdup2 = vzip2q_s16(vcg1, vcg1);
+                vcbdup2 = vzip2q_s16(vcb1, vcb1);
+
+                /* get 16 Y values from the first row. */
+                THEORAPLAY_NEON_CVT_TO_RGB(dst, ((const uint8_t *) py) + posx, vcrdup1, vcgdup1, vcbdup1, vcrdup2, vcgdup2, vcbdup2);
+
+                /* get 16 Y values from the second row. */
+                THEORAPLAY_NEON_CVT_TO_RGB(dst2, ((const uint8_t *) py) + posx + ystride, vcrdup1, vcgdup1, vcbdup1, vcrdup2, vcgdup2, vcbdup2);
+
+                /* duplicate every other element (upper half), since pairs of Y values use the same Cr/Cg/Cb components. */
+                vcrdup1 = vzip1q_s16(vcr2, vcr2);
+                vcgdup1 = vzip1q_s16(vcg2, vcg2);
+                vcbdup1 = vzip1q_s16(vcb2, vcb2);
+                vcrdup2 = vzip2q_s16(vcr2, vcr2);
+                vcgdup2 = vzip2q_s16(vcg2, vcg2);
+                vcbdup2 = vzip2q_s16(vcb2, vcb2);
+
+                /* get second set of 16 Y values from the first row. */
+                THEORAPLAY_NEON_CVT_TO_RGB(dst, ((const uint8_t *) py) + posx + 16, vcrdup1, vcgdup1, vcbdup1, vcrdup2, vcgdup2, vcbdup2);
+
+                /* get second set of 16 Y values from the second row. */
+                THEORAPLAY_NEON_CVT_TO_RGB(dst2, ((const uint8_t *) py) + posx + ystride + 16, vcrdup1, vcgdup1, vcbdup1, vcrdup2, vcgdup2, vcbdup2);
+
+                #undef THEORAPLAY_NEON_PREP_COMPONENT
+                #undef THEORAPLAY_NEON_FACTOR_AND_DOWNSHIFT
+                #undef THEORAPLAY_NEON_CVT_TO_RGB
+
+                poshalfx += 16;
+                posx += 32;
+            }
+            #endif
+
+            while (poshalfx < halfw)  // finish out with scalar operations.
             {
                 const int pb = pcb[poshalfx] - cbcroffset;
                 const int pr = pcr[poshalfx] - cbcroffset;
@@ -111,7 +290,10 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
                     const int b4 = y4 + pb_factored;
                     THEORAPLAY_CVT_RGB_OUTPUT(dst2, r4, g4, b4);
                 }
-            } // for
+
+                poshalfx++;
+                posx += 2;
+            } // while
 
             dst += THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, 1);
             dst2 += THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE(w, 1);
@@ -140,8 +322,18 @@ static unsigned char *THEORAPLAY_CVT_FNNAME_420(const THEORAPLAY_Allocator *allo
 #undef PRECALC_YUVRGB_VALS
 
 #undef THEORAPLAY_CVT_FNNAME_420
+
+#ifndef THEORAPLAY_CVT_RGB_KEEP_SCALAR_DEFINES
 #undef THEORAPLAY_CVT_RGB_DST_BUFFER_SIZE
 #undef THEORAPLAY_CVT_RGB_OUTPUT
+#else
+#undef THEORAPLAY_CVT_RGB_KEEP_SCALAR_DEFINES
+#endif
+
+#ifdef THEORAPLAY_CVT_RGB_USE_NEON
+#undef THEORAPLAY_CVT_RGB_USE_NEON
+#undef THEORAPLAY_CVT_RGB_OUTPUT_NEON
+#endif
 
 // end of theoraplay_cvtrgb.h ...
 

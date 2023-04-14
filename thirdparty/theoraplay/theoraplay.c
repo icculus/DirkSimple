@@ -32,10 +32,14 @@
 #define THEORAPLAY_MUTEX_T     pthread_mutex_t *
 #endif
 
+#ifdef __ARM_NEON__
+#include <arm_neon.h>
+#define THEORAPLAY_HAVE_NEON_INTRINSICS 1
+#endif
+
 #ifndef THEORAPLAY_ONLY_SINGLE_THREADED
 #define THEORAPLAY_ONLY_SINGLE_THREADED 0
 #endif
-
 
 #include "theoraplay.h"
 #include "theora/theoradec.h"
@@ -102,6 +106,29 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
     *(dst++) = (unsigned char) ((g < 0) ? 0 : (g > 255) ? 255 : g); \
     *(dst++) = (unsigned char) ((b < 0) ? 0 : (b > 255) ? 255 : b); \
 }
+#ifdef THEORAPLAY_HAVE_NEON_INTRINSICS
+#define THEORAPLAY_CVT_RGB_KEEP_SCALAR_DEFINES 1
+#include "theoraplay_cvtrgb.h"  /* build out the scalar version. */
+#define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGB_NEON
+#define THEORAPLAY_CVT_RGB_USE_NEON 1
+#define THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, rgba_x4) { /* without alpha, we need to store to a 16-byte aligned piece of stack and copy to dst.  :/ */ \
+    uint8_t aligned_pixels[16]  __attribute__ ((aligned (16))); \
+    vst1q_u8(aligned_pixels, rgba_x4); \
+    dst[0] = aligned_pixels[0]; \
+    dst[1] = aligned_pixels[1]; \
+    dst[2] = aligned_pixels[2]; \
+    dst[3] = aligned_pixels[4]; \
+    dst[4] = aligned_pixels[5]; \
+    dst[5] = aligned_pixels[6]; \
+    dst[6] = aligned_pixels[8]; \
+    dst[7] = aligned_pixels[9]; \
+    dst[8] = aligned_pixels[10]; \
+    dst[9] = aligned_pixels[12]; \
+    dst[10] = aligned_pixels[13]; \
+    dst[11] = aligned_pixels[14]; \
+    dst += 12; \
+}
+#endif
 #include "theoraplay_cvtrgb.h"
 
 // RGBA
@@ -113,6 +140,13 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
     *(dst++) = (unsigned char) ((b < 0) ? 0 : (b > 255) ? 255 : b); \
     *(dst++) = 0xFF; \
 }
+#ifdef THEORAPLAY_HAVE_NEON_INTRINSICS
+#define THEORAPLAY_CVT_RGB_KEEP_SCALAR_DEFINES 1
+#include "theoraplay_cvtrgb.h"  /* build out the scalar version. */
+#define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGBA_NEON
+#define THEORAPLAY_CVT_RGB_USE_NEON 1
+#define THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, rgba_x4) { vst1q_u8(dst, rgba_x4); dst += 16; }
+#endif
 #include "theoraplay_cvtrgb.h"
 
 // BGRA
@@ -124,6 +158,22 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
     *(dst++) = (unsigned char) ((r < 0) ? 0 : (r > 255) ? 255 : r); \
     *(dst++) = 0xFF; \
 }
+#ifdef THEORAPLAY_HAVE_NEON_INTRINSICS
+#define THEORAPLAY_CVT_RGB_KEEP_SCALAR_DEFINES 1
+#include "theoraplay_cvtrgb.h"  /* build out the scalar version. */
+#define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToBGRA_NEON
+#define THEORAPLAY_CVT_RGB_USE_NEON 1
+// !!! FIXME: we can probably find some bit-swizzling magic to do these on the vector registers and then store them out.
+#define THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, rgba_x4) { \
+    unsigned char tmp; \
+    vst1q_u8(dst, rgba_x4); \
+    tmp = dst[0]; dst[0] = dst[2]; dst[2] = tmp; \
+    tmp = dst[4]; dst[4] = dst[6]; dst[6] = tmp; \
+    tmp = dst[8]; dst[8] = dst[10]; dst[10] = tmp; \
+    tmp = dst[12]; dst[12] = dst[14]; dst[14] = tmp; \
+    dst += 16; \
+}
+#endif
 #include "theoraplay_cvtrgb.h"
 
 // RGB565
@@ -137,8 +187,24 @@ static unsigned char *ConvertVideoFrame420ToIYUV(const THEORAPLAY_Allocator *all
     *dst16 = (unsigned short) ((r5 << 11) | (g6 << 5) | b5); \
     dst += 2; \
 }
+#ifdef THEORAPLAY_HAVE_NEON_INTRINSICS
+#define THEORAPLAY_CVT_RGB_KEEP_SCALAR_DEFINES 1
+#include "theoraplay_cvtrgb.h"  /* build out the scalar version. */
+#define THEORAPLAY_CVT_FNNAME_420 ConvertVideoFrame420ToRGB565_NEON
+#define THEORAPLAY_CVT_RGB_USE_NEON 1
+// !!! FIXME: this can maybe at least do the initial bitshifts on the NEON registers...
+#define THEORAPLAY_CVT_RGB_OUTPUT_NEON(dst, rgba_x4) { \
+    uint8_t aligned_pixels[16]  __attribute__ ((aligned (16))); \
+    uint16_t *dst16 = (uint16_t *) dst; \
+    vst1q_u8(aligned_pixels, rgba_x4); \
+    dst16[0] = ((((uint16_t) aligned_pixels[0]) >> 3) << 11) | ((((uint16_t) aligned_pixels[1]) >> 2) << 5) | (((uint16_t) aligned_pixels[2]) >> 3); \
+    dst16[1] = ((((uint16_t) aligned_pixels[4]) >> 3) << 11) | ((((uint16_t) aligned_pixels[5]) >> 2) << 5) | (((uint16_t) aligned_pixels[6]) >> 3); \
+    dst16[2] = ((((uint16_t) aligned_pixels[8]) >> 3) << 11) | ((((uint16_t) aligned_pixels[9]) >> 2) << 5) | (((uint16_t) aligned_pixels[10]) >> 3); \
+    dst16[3] = ((((uint16_t) aligned_pixels[12]) >> 3) << 11) | ((((uint16_t) aligned_pixels[13]) >> 2) << 5) | (((uint16_t) aligned_pixels[14]) >> 3); \
+    dst += 8; \
+}
+#endif
 #include "theoraplay_cvtrgb.h"
-
 
 // !!! FIXME: these volatiles really need to become atomics.
 typedef struct TheoraDecoder
@@ -940,6 +1006,20 @@ THEORAPLAY_Decoder *THEORAPLAY_startDecode(THEORAPLAY_Io *io,
         #define VIDCVT(t) case THEORAPLAY_VIDFMT_##t: vidcvt = ConvertVideoFrame420To##t; break;
         VIDCVT(YV12)
         VIDCVT(IYUV)
+        #undef VIDCVT
+
+        // !!! FIXME: this should actually _check_ for NEON support at runtime (the `&& 1` part).
+        #ifdef THEORAPLAY_HAVE_NEON_INTRINSICS
+        #define VIDCVT_NEON(t) if (!vidcvt && 1) { vidcvt = ConvertVideoFrame420To##t##_NEON; }
+        #else
+        #define VIDCVT_NEON(t)
+        #endif
+
+        #define VIDCVT(t) case THEORAPLAY_VIDFMT_##t: \
+            VIDCVT_NEON(t); \
+            if (!vidcvt) { vidcvt = ConvertVideoFrame420To##t; } \
+            break;
+
         VIDCVT(RGB)
         VIDCVT(RGBA)
         VIDCVT(BGRA)
