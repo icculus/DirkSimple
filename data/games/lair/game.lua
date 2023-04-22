@@ -139,8 +139,10 @@ local function choose_next_scene(is_resurrection)
 
     -- Mark current scene as a success or failure.
     if scene_manager.current_scene ~= nil then
+        if scene_manager.current_scene_name == "the_dragons_lair" then
+
         -- Intro just needs to be marked as done.
-        if scene_manager.current_scene_name == "introduction" then
+        elseif scene_manager.current_scene_name == "introduction" then
             scene_manager.completed_introduction = true
 
         -- have we been through all the scenes except the_dragons_lair? You have to go back and survive the ones you previously failed.
@@ -158,7 +160,7 @@ local function choose_next_scene(is_resurrection)
                 scene_manager.rerunning_failures = false
             end
 
-        else
+        elseif scene_manager.current_scene_name ~= "the_dragons_lair" then  -- normal scene selection logic only applies until you reach the lair.
             if is_resurrection then
                 if scene_manager.total_failed < 8 then   -- the arcade version only queues up to 8 failed levels, which is only a limit if you have it set to infinite lives.
                     scene_manager.total_failed = scene_manager.total_failed + 1
@@ -188,8 +190,12 @@ local function choose_next_scene(is_resurrection)
         start_scene(scene_manager.failed[1], is_resurrection)
 
     -- did we beat the game?
-    elseif (not is_resurrection) and (scene_manager.current_scene_name == "the_dragons_lair") then
-        game_over(true)  -- you beat the game!
+    elseif scene_manager.current_scene_name == "the_dragons_lair" then
+        if is_resurrection then
+            start_scene("the_dragons_lair", true)  -- once you get there, you have to replay the dragon's lair until you beat it.
+        else
+            game_over(true)  -- Didn't die in the lair? You beat the game!
+        end
 
     -- The normal scene choosing logic for everything else.
     else
