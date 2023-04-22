@@ -2025,7 +2025,6 @@ scenes = {
                 { input="down", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq9" },
                 { input="right", from=time_to_ms(1, 835), to=time_to_ms(2, 720), nextsequence="seq9" },
                 { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
-                { input="left", from=time_to_ms(1, 638), to=time_to_ms(2, 490), nextsequence="seq8" },
             }
         },
 
