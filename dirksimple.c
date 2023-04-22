@@ -242,6 +242,10 @@ static uint16_t readui16le(const uint8_t **pptr)
     return retval;
 }
 
+static uint32_t swap32(uint32_t v) {
+    return v << 24 | (v << 8 & 0xff0000) | (v >> 8 & 0xff00) | (v >> 24);
+}
+
 static uint8_t *loadbmp_from_memory(const char *fname, const uint8_t *buf, int buflen, int *_w, int *_h)
 {
     const uint8_t *ptr = buf;
@@ -300,6 +304,9 @@ static uint8_t *loadbmp_from_memory(const char *fname, const uint8_t *buf, int b
     uint8_t *dst = pixels;
     for (int y = 0; y < bmpheight; y++) {
         memcpy(dst, src, rowlen);
+        for (int x = 0; x < bmpwidth; x++) {
+            *(uint32_t*)&dst[4*x] = swap32(*(uint32_t*)&dst[4*x]);
+        }
         dst += rowlen;
         src -= rowlen;
     }
