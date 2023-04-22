@@ -270,18 +270,18 @@ static uint8_t *loadbmp_from_memory(const char *fname, const uint8_t *buf, int b
 
     const uint32_t bmpwidth = readui32le(&ptr);
     const uint32_t bmpheight = readui32le(&ptr);
+
+    ptr += 2;  // skip planes
+    const uint16_t bitcount = readui16le(&ptr);
+
     if ((bmpwidth > 1024) || (bmpheight > 1024)) {
         return invalid_media(fname, "Image is too big");  // this is just an arbitrary limit.
     } else if ((bmpwidth == 0) || (bmpheight == 0)) {
         return invalid_media(fname, "Image is zero pixels in size");
+    } else if (bitcount != 32) {
+        return invalid_media(fname, "Only 32bpp .BMP files supported");
     } else if ((offset_bits + (bmpwidth * bmpheight * 4)) > buflen) {
         return invalid_media(fname, "Incomplete or corrupt .BMP file");
-    }
-
-    ptr += 2;  // skip planes
-    const uint16_t bitcount = readui16le(&ptr);
-    if (bitcount != 32) {
-        return invalid_media(fname, "Only 32bpp .BMP files supported");
     }
 
     const uint32_t compression = readui32le(&ptr);
