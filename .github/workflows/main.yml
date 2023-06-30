@@ -15,9 +15,9 @@ jobs:
     steps:
     - name: Set up SDL
       id: sdl
-      uses: libsdl-org/setup-sdl@master
+      uses: libsdl-org/setup-sdl@main
       with:
-        version: 2.28.0
+        version: sdl2-latest
         discriminator: DirkSimple-SDL2
         verbose: true
       env:

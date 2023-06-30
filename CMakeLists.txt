@@ -4,8 +4,8 @@
 #
 # This file written by Ryan C. Gordon.
 
-project(DirkSimple)
 cmake_minimum_required(VERSION 3.0.0)
+project(DirkSimple)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
     set(ANDROID TRUE)
