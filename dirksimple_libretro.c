@@ -91,7 +91,7 @@ void *DirkSimple_malloc(size_t len) { return malloc(len); }
 void *DirkSimple_calloc(size_t nmemb, size_t len) { return calloc(nmemb, len); }
 void *DirkSimple_realloc(void *ptr, size_t len) { return realloc(ptr, len); }
 char *DirkSimple_strdup(const char *str) { return strdup(str); }
-void DirkSimple_free(void *ptr) { return free(ptr); }
+void DirkSimple_free(void *ptr) { free(ptr); }
 
 
 void DirkSimple_panic(const char *str)
