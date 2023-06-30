@@ -9,15 +9,15 @@ jobs:
     strategy:
       matrix:
         platform:
-        - { name: Linux,   os: ubuntu-20.04, flags: -GNinja }
-        #- { name: Windows, os: windows-latest }
-        #- { name: MacOS,   os: macos-latest }
+        - { name: Linux,   os: ubuntu-latest, flags: -GNinja }
+        - { name: Windows, os: windows-latest }
+        - { name: MacOS,   os: macos-latest }
     steps:
-    - name: Setup Linux dependencies
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install cmake ninja-build libsdl2-dev
+    - name: Set up SDL
+      id: sdl
+      uses: libsdl-org/setup-sdl@master
+      with:
+        version: 2-latest
     - name: Get DirkSimple sources
       uses: actions/checkout@v2
     - name: Configure CMake
