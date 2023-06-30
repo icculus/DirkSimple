@@ -44,6 +44,7 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+    add_definitions(-wd4018)  # signed/unsigned mismatch
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
     if(NOT EMSCRIPTEN AND NOT ANDROID)
