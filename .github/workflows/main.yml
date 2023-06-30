@@ -17,9 +17,11 @@ jobs:
       id: sdl
       uses: libsdl-org/setup-sdl@master
       with:
-        version: 2-latest
+        version: 2.28.0
+        discriminator: DirkSimple-SDL2
+        verbose: true
     - name: Get DirkSimple sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Configure CMake
       run: cmake -B build ${{ matrix.platform.flags }}
     - name: Build
