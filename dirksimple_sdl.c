@@ -10,7 +10,13 @@
 #include <emscripten.h>
 #endif
 
+#ifdef _MSC_VER
+#define WIN32_API_LEAN_AND_MEAN 1
+#include <windows.h>
+#else
 #include <dirent.h>
+#endif
+
 #include "SDL.h"
 
 #include "dirksimple_platform.h"
@@ -596,6 +602,35 @@ int main(int argc, char **argv)
 
     // just look for an .ogv file in the base dir
     if (!gamepath) {
+#ifdef _MSC_VER
+        #define UTF16ToUTF8(S) SDL_iconv_string("UTF-8", "UTF-16LE", (const char *)(S), (SDL_wcslen(S) + 1) * sizeof(WCHAR))
+        #define UTF8ToUTF16(S) (WCHAR *)SDL_iconv_string("UTF-16LE", "UTF-8", (const char *)(S), SDL_strlen(S) + 1)
+        WCHAR *utf16 = UTF8ToUTF16(basedir);
+        LPWIN32_FIND_DATAW data;
+        HANDLE dirp = FindFirstFileW(utf16, &data);
+        SDL_free(utf16);
+        if (dirp != INVALID_HANDLE_VALUE) {
+            do {
+                char *utf8 = UTF16ToUTF8(data.cFileName);
+                if (utf8) {
+                    const char *ptr = SDL_strrchr(utf8, '.');
+                    if (ptr && (SDL_strcmp(ptr, ".ogv") == 0)) {
+                        const size_t slen = SDL_strlen(basedir) + SDL_strlen(utf8) + 2;
+                        foundpath = (char *) SDL_malloc(slen);
+                        if (foundpath) {
+                            SDL_snprintf(foundpath, slen, "%s%s", basedir, utf8);
+                            gamepath = foundpath;
+                        }
+                        break;
+                    }
+                    SDL_free(utf8);
+                }
+            } while (FindNextFileW(dirp, &data) != 0);
+            FindClose(dirp);
+        }
+        #undef UTF16ToUTF8
+        #undef UTF8ToUTF16
+#else
         DIR *dirp = opendir(basedir);
         if (dirp) {
             struct dirent *dent;
@@ -613,6 +648,7 @@ int main(int argc, char **argv)
             }
             closedir(dirp);
         }
+#endif
     }
 
     if (!gamepath) {
