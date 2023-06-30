@@ -10,14 +10,14 @@
 #include <emscripten.h>
 #endif
 
+#include "SDL.h"
+
 #ifdef _MSC_VER
 #define WIN32_API_LEAN_AND_MEAN 1
 #include <windows.h>
 #else
 #include <dirent.h>
 #endif
-
-#include "SDL.h"
 
 #include "dirksimple_platform.h"
 
