@@ -4,7 +4,9 @@
 #
 # This file written by Ryan C. Gordon.
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.12.0)
+cmake_policy(SET CMP0074 NEW)  # ``find_package()`` uses ``<PackageName>_ROOT`` variables.
+
 project(DirkSimple)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
