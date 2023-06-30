@@ -2,6 +2,8 @@ name: Build
 
 on: [push, pull_request]
 
+env: GH_TOKEN: ${{ github.token }}
+
 jobs:
   Build:
     name: ${{ matrix.platform.name }}
