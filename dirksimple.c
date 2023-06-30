@@ -190,7 +190,7 @@ static int theoraplayiobridge_seek(THEORAPLAY_Io *io, long absolute_offset)
 static void theoraplayiobridge_close(THEORAPLAY_Io *io)
 {
     DirkSimple_Io *dio = (DirkSimple_Io *) io->userdata;
-    return dio->close(dio);
+    dio->close(dio);
 }
 
 static uint8_t *invalid_media(const char *fname, const char *err)
