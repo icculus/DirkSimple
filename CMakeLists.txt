@@ -44,6 +44,8 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+    add_definitions(-wd4244)  # possible loss of data
+    add_definitions(-wd4267)  # possible loss of data
     add_definitions(-wd4018)  # signed/unsigned mismatch
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
