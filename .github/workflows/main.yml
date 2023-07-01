@@ -18,8 +18,6 @@ jobs:
       uses: libsdl-org/setup-sdl@main
       with:
         version: sdl2-latest
-        discriminator: DirkSimple-SDL2
-        github-token: ${{ github.token }}
     - name: Get DirkSimple sources
       uses: actions/checkout@v3
     - name: Configure CMake
