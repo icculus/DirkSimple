@@ -12,7 +12,7 @@
 
 #include "SDL.h"
 
-#ifdef _MSC_VER
+#ifdef __WINDOWS__
 #define WIN32_API_LEAN_AND_MEAN 1
 #include <windows.h>
 #else
@@ -602,12 +602,12 @@ int main(int argc, char **argv)
 
     // just look for an .ogv file in the base dir
     if (!gamepath) {
-#ifdef _MSC_VER
+#ifdef __WINDOWS__
         #define UTF16ToUTF8(S) SDL_iconv_string("UTF-8", "UTF-16LE", (const char *)(S), (SDL_wcslen(S) + 1) * sizeof(WCHAR))
         #define UTF8ToUTF16(S) (WCHAR *)SDL_iconv_string("UTF-16LE", "UTF-8", (const char *)(S), SDL_strlen(S) + 1)
         WCHAR *utf16 = UTF8ToUTF16(basedir);
-        LPWIN32_FIND_DATAW data;
-        HANDLE dirp = FindFirstFileW(utf16, &data);
+        WIN32_FIND_DATAW data;
+        HANDLE dirp = utf16 ? FindFirstFileW(utf16, &data) : INVALID_HANDLE_VALUE;
         SDL_free(utf16);
         if (dirp != INVALID_HANDLE_VALUE) {
             do {
