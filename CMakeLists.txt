@@ -43,9 +43,12 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+    # !!! FIXME: apply these only to Ogg, Vorbis, and Theora libraries.
     add_definitions(-wd4244)  # possible loss of data
     add_definitions(-wd4267)  # possible loss of data
     add_definitions(-wd4018)  # signed/unsigned mismatch
+    add_definitions(-wd4334)  # result of 32-bit shift implicitly converted to 64 bits
+    add_definitions(-wd4305)  # truncation from double to float
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
     if(NOT EMSCRIPTEN AND NOT ANDROID)
