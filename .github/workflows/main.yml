@@ -20,7 +20,7 @@ jobs:
         version: sdl2-latest
         discriminator: DirkSimple-SDL2
         verbose: true
-        github_token: ${{ github.token }}
+        github-token: ${{ github.token }}
     - name: Get DirkSimple sources
       uses: actions/checkout@v3
     - name: Configure CMake
