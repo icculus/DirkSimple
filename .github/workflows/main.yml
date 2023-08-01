@@ -15,7 +15,7 @@ jobs:
     steps:
     - name: Set up SDL
       id: sdl
-      uses: libsdl-org/setup-sdl@main
+      uses: libsdl-org/setup-sdl@v1
       with:
         version: sdl2-latest
     - name: Get DirkSimple sources
