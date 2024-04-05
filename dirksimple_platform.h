@@ -151,8 +151,6 @@ extern void DirkSimple_discaudio(const float *pcm, int numframes);
 
 extern void DirkSimple_cleardiscaudio(void);
 
-// !!! FIXME: add in a non-disc audio and video function, for playing bleeps and drawing overlay UI.
-
 // Called once during DirkSimple_tick, if the laserdisc is ready to play.
 //  The platform layer should prepare the screen for a new frame of video
 //  and render the current laserdisc frame. Other drawing commands might
