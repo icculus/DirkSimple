@@ -32,7 +32,7 @@
 #define THEORAPLAY_MUTEX_T     pthread_mutex_t *
 #endif
 
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON__) || defined(__ARM_NEON)
 #include <arm_neon.h>
 #define THEORAPLAY_HAVE_NEON_INTRINSICS 1
 #endif
