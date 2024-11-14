@@ -68,12 +68,8 @@ void DirkSimple_panic(const char *str)
 
 static DIRKSIMPLE_NORETURN void sdlpanic(const char *what)
 {
-    const char *sdlerr = SDL_GetError();
-    const size_t slen = SDL_strlen(sdlerr) + SDL_strlen(what) + 32;
-    char *errstr = SDL_malloc(slen);
-    if (errstr) {
-        SDL_snprintf(errstr, slen, "%s: %s", what, SDL_GetError());
-    }
+    char *errstr = NULL;
+    SDL_asprintf(&errstr, "%s: %s", what, SDL_GetError());
     DirkSimple_panic(errstr ? errstr : what);
 }
 
