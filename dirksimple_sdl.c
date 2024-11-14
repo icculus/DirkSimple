@@ -100,7 +100,7 @@ static int DirkSimple_rwops_seek(DirkSimple_Io *io, long absolute_offset)
 static void DirkSimple_rwops_close(DirkSimple_Io *io)
 {
     SDL_RWclose((SDL_RWops *) io->userdata);
-    free(io);
+    DirkSimple_free(io);
 }
 
 DirkSimple_Io *DirkSimple_openfile_read(const char *path)
