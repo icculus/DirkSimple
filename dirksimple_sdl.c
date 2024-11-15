@@ -235,6 +235,7 @@ void DirkSimple_videoformat(const char *gametitle, uint32_t width, uint32_t heig
         }
     }
 
+    SDL_ShowCursor(0);
     SDL_SetRenderDrawColor(GRenderer, 0, 0, 0, 255);
     SDL_RenderSetLogicalSize(GRenderer, width, height);
     SDL_RenderClear(GRenderer);
