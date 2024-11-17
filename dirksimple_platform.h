@@ -97,6 +97,7 @@ extern const char *DirkSimple_datadir(void);  // root of all DirkSimple data
 //  error. Fills in `*_w` and `*_h` with image dimensions in pixels on
 //  success. Call DirkSimple_free() on the return value when done with it.
 extern uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h);
+extern uint8_t *DirkSimple_loadpng(const char *fname, int *_w, int *_h);
 
 extern void DirkSimple_setcvar(const char *name, const char *newvalue);
 

@@ -9,6 +9,7 @@
 #include "dirksimple_platform.h"
 
 #include "theoraplay.h"
+#include "lodepng.h"
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
@@ -312,8 +313,29 @@ uint8_t *DirkSimple_loadbmp(const char *fname, int *_w, int *_h)
 {
     long flen = 0;
     uint8_t *fbuf = DirkSimple_loadmedia(fname, &flen);
-    uint8_t *pixels = loadbmp_from_memory(fname, fbuf, flen, _w, _h);
+    uint8_t *pixels = fbuf ? loadbmp_from_memory(fname, fbuf, flen, _w, _h) : NULL;
     DirkSimple_free(fbuf);
+    return (uint8_t *) pixels;
+}
+
+uint8_t *DirkSimple_loadpng(const char *fname, int *_w, int *_h)
+{
+    unsigned char *pixels = NULL;
+    long flen = 0;
+    uint8_t *fbuf = DirkSimple_loadmedia(fname, &flen);
+    if (fbuf) {
+        unsigned uw = 0;
+        unsigned uh = 0;
+        if (lodepng_decode32(&pixels, &uw, &uh, (const unsigned char *) fbuf, (size_t) flen) == 0) {
+            *_w = (int) uw;
+            *_h = (int) uh;
+        } else {
+            lodepng_free(pixels);
+            pixels = NULL;
+            *_w = *_h = 0;
+        }
+        DirkSimple_free(fbuf);
+    }
     return (uint8_t *) pixels;
 }
 
@@ -346,12 +368,18 @@ static DirkSimple_Sprite *get_cached_sprite(const char *name)
     }
 
     // not cached yet, load it from disk.
+    int w, h;
+    uint8_t *rgba;
+
     const size_t slen = strlen(GGameDir) + strlen(name) + 8;
     char *fname = (char *) DirkSimple_xmalloc(slen);
-    snprintf(fname, slen, "%s%s.bmp", GGameDir, name);
+    snprintf(fname, slen, "%s%s.png", GGameDir, name);
+    rgba = DirkSimple_loadpng(fname, &w, &h);
+    if (!rgba) {  // maybe it's a bitmap?
+        snprintf(fname, slen, "%s%s.bmp", GGameDir, name);
+        rgba = DirkSimple_loadbmp(fname, &w, &h);
+    }
 
-    int w, h;
-    uint8_t *rgba = DirkSimple_loadbmp(fname, &w, &h);
     if (rgba) {
         DirkSimple_log("Loaded sprite '%s': %dx%d, RGBA", fname, w, h);
     }

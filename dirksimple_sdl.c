@@ -191,12 +191,18 @@ static SDL_bool load_icon_from_dir(SDL_Window *window, const char *dir)
         char *iconpath = (char *) SDL_malloc(slen);
         if (iconpath) {
             SDL_Surface *icon;
-            SDL_snprintf(iconpath, slen, "%sicon.bmp", dir);
-            icon = SDL_LoadBMP(iconpath);
-            if (icon) {
-                SDL_SetWindowIcon(window, icon);
-                SDL_FreeSurface(icon);
-                retval = SDL_TRUE;
+            uint8_t *rgba;
+            int w, h;
+            SDL_snprintf(iconpath, slen, "%sicon.png", dir);
+            rgba = DirkSimple_loadpng(iconpath, &w, &h);
+            if (rgba) {
+                icon = SDL_CreateRGBSurfaceWithFormatFrom(rgba, w, h, 32, w * 4, SDL_PIXELFORMAT_RGBA8888);
+                if (icon) {
+                    SDL_SetWindowIcon(window, icon);
+                    SDL_FreeSurface(icon);
+                    retval = SDL_TRUE;
+                }
+                DirkSimple_free(rgba);
             }
             SDL_free(iconpath);
         }

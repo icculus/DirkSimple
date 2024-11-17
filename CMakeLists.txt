@@ -128,6 +128,11 @@ target_include_directories(dirksimple-theoraplay PRIVATE
 target_compile_definitions(dirksimple-theoraplay PRIVATE "-DTHEORAPLAY_NO_MALLOC_FALLBACK=1")
 target_compile_definitions(dirksimple-theoraplay PRIVATE "-DTHEORAPLAY_NO_FOPEN_FALLBACK=1")
 
+add_library(dirksimple-lodepng STATIC
+    thirdparty/lodepng/lodepng.c
+)
+set_target_properties(dirksimple-lodepng PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 add_library(dirksimple-lua STATIC
     thirdparty/lua/src/lapi.c
     thirdparty/lua/src/ldebug.c
@@ -174,9 +179,10 @@ if(DIRKSIMPLE_SDL)
         ${SDL2_INCLUDE_DIRS} ${SDL2_INCLUDE_DIR}
         thirdparty/lua/src
         thirdparty/theoraplay
+        thirdparty/lodepng
     )
     target_link_libraries(dirksimple ${SDL2_LIBRARIES} ${SDL2_LIBRARY})
-    target_link_libraries(dirksimple dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+    target_link_libraries(dirksimple dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lodepng dirksimple-lua)
     if(USE_PTHREAD)
         target_link_libraries(dirksimple pthread)
     endif()
@@ -221,9 +227,10 @@ if(DIRKSIMPLE_LIBRETRO)
         thirdparty/libretro
         thirdparty/lua/src
         thirdparty/theoraplay
+        thirdparty/lodepng
     )
     set_target_properties(dirksimple_libretro PROPERTIES PREFIX "")
-    target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lua)
+    target_link_libraries(dirksimple_libretro dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lodepng dirksimple-lua)
 
     if(USE_PTHREAD)
         target_link_libraries(dirksimple_libretro pthread)
