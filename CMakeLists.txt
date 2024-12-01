@@ -173,16 +173,26 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 if(DIRKSIMPLE_SDL)
-    find_package(SDL2 REQUIRED)
+    if (EMSCRIPTEN)
+        # FetchContent downloads and configures dependencies
+        include(FetchContent)
+        FetchContent_Declare(
+            SDL3
+            GIT_REPOSITORY "https://github.com/libsdl-org/SDL.git"
+            GIT_TAG "main"
+            EXCLUDE_FROM_ALL
+        )
+        FetchContent_MakeAvailable(SDL3)
+    else()
+        find_package(SDL3 REQUIRED)
+    endif()
     add_executable(dirksimple dirksimple.c dirksimple_sdl.c)
     target_include_directories(dirksimple PRIVATE
-        ${SDL2_INCLUDE_DIRS} ${SDL2_INCLUDE_DIR}
         thirdparty/lua/src
         thirdparty/theoraplay
         thirdparty/lodepng
     )
-    target_link_libraries(dirksimple ${SDL2_LIBRARIES} ${SDL2_LIBRARY})
-    target_link_libraries(dirksimple dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lodepng dirksimple-lua)
+    target_link_libraries(dirksimple SDL3::SDL3 dirksimple-theoraplay dirksimple-theora dirksimple-vorbis dirksimple-ogg dirksimple-lodepng dirksimple-lua)
     if(USE_PTHREAD)
         target_link_libraries(dirksimple pthread)
     endif()
