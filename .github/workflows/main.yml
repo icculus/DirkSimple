@@ -13,14 +13,22 @@ jobs:
         - { name: Windows, os: windows-latest }
         - { name: MacOS,   os: macos-latest }
     steps:
+    - name: Get DirkSimple sources
+      uses: actions/checkout@v4
+    - name: Set up MSVC toolchain
+      uses: ilammy/msvc-dev-cmd@v1
+      if: ${{ matrix.platform.name == 'Windows' }}
+      with:
+        arch: x64
+    - name: Set up ninja
+      uses: ./.github/actions/setup-ninja
     - name: Set up SDL
       id: sdl
       uses: libsdl-org/setup-sdl@v1
       with:
         version: sdl3-latest
-    - name: Get DirkSimple sources
-      uses: actions/checkout@v3
+        cmake-generator: Ninja
     - name: Configure CMake
-      run: cmake -B build ${{ matrix.platform.flags }}
+      run: cmake -B build -GNinja ${{ matrix.platform.flags }}
     - name: Build
       run: cmake --build build/
