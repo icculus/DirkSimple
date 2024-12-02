@@ -533,7 +533,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         const char *errstr = SDL_GetError();
         SDL_Log("Failed to initialize SDL: %s", errstr);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Failed to initialize SDL", errstr, NULL);  // in case this works.
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
 #ifdef DIRKSIMPLE_FORCE_BASE_DIR  // let Linux distros hardcode this to something under /usr/share, or whatever.
@@ -546,7 +546,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         const char *errstr = SDL_GetError();
         SDL_Log("Failed to determine base dir: %s", errstr);
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Failed to determine base dir", errstr, NULL);  // in case this works.
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
     for (i = 1; i < argc; i++) {
@@ -580,7 +580,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     if (!gamepath) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Can't find a movie file!", "Include an .ogv file with the build or put it on the command line.", NULL);
         SDL_Quit();
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
     DirkSimple_startup(basedir, gamepath, gamename, DIRKSIMPLE_PIXFMT_IYUV);
