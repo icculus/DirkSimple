@@ -17,7 +17,7 @@ jobs:
       id: sdl
       uses: libsdl-org/setup-sdl@v1
       with:
-        version: sdl2-latest
+        version: sdl3-latest
     - name: Get DirkSimple sources
       uses: actions/checkout@v3
     - name: Configure CMake
