@@ -75,17 +75,17 @@ void DirkSimple_writelog(const char *str)
 
 static long DirkSimple_rwops_read(DirkSimple_Io *io, void *buf, long buflen)
 {
-    return (long) /* FIXME MIGRATION: double-check if you use the returned value of SDL_RWread() */
-        SDL_ReadIO((SDL_IOStream *) io->userdata, buf, buflen);
+    SDL_IOStream *stream = (SDL_IOStream *) io->userdata;
+    const size_t br = SDL_ReadIO(stream, buf, buflen);
+    if ((br == 0) && (SDL_GetIOStatus(stream) != SDL_IO_STATUS_EOF)) {
+        return -1;
+    }
+    return (long) br;
 }
 
 static long DirkSimple_rwops_streamlen(DirkSimple_Io *io)
 {
-    SDL_IOStream *rwops = (SDL_IOStream *) io->userdata;
-    const Sint64 origpos = SDL_TellIO(rwops);
-    const long retval = (long) SDL_SeekIO(rwops, 0, SDL_IO_SEEK_END);
-    SDL_SeekIO(rwops, origpos, SDL_IO_SEEK_SET);
-    return retval;
+    return (long) SDL_GetIOSize((SDL_IOStream *) io->userdata);
 }
 
 static int DirkSimple_rwops_seek(DirkSimple_Io *io, long absolute_offset)
