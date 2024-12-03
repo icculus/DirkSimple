@@ -3987,7 +3987,7 @@ scenes = {
 
         seq10 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(5, 676), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 441), nextsequence=nil }
         },
 
         seq11 = {
@@ -4118,7 +4118,7 @@ scenes = {
 
         seq10 = {
             start_time = time_laserdisc_noseek(),
-            timeout = { when=time_to_ms(5, 438), nextsequence=nil }
+            timeout = { when=time_to_ms(3, 203), nextsequence=nil }
         },
 
         seq11 = {
