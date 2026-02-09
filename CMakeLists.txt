@@ -133,7 +133,7 @@ add_library(dirksimple-lodepng STATIC
 )
 set_target_properties(dirksimple-lodepng PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-add_library(dirksimple-lua STATIC
+set(LUA_SOURCES
     thirdparty/lua/src/lapi.c
     thirdparty/lua/src/ldebug.c
     thirdparty/lua/src/ldo.c
@@ -161,12 +161,18 @@ add_library(dirksimple-lua STATIC
     thirdparty/lua/src/linit.c
     thirdparty/lua/src/lctype.c
     thirdparty/lua/src/ldblib.c
-    thirdparty/lua/src/liolib.c
     thirdparty/lua/src/lmathlib.c
-    thirdparty/lua/src/loslib.c
     thirdparty/lua/src/lcorolib.c
     thirdparty/lua/src/loadlib.c
 )
+# loslib.c and liolib.c use system()/popen() which are unavailable on iOS/tvOS
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+    list(APPEND LUA_SOURCES
+        thirdparty/lua/src/loslib.c
+        thirdparty/lua/src/liolib.c
+    )
+endif()
+add_library(dirksimple-lua STATIC ${LUA_SOURCES})
 set_target_properties(dirksimple-lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_POSIX=1")
