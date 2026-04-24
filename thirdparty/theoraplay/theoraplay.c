@@ -20,7 +20,7 @@
 #define THEORAPLAY_THREAD_T    HANDLE
 #define THEORAPLAY_MUTEX_T     HANDLE
 #define sleepms(x) Sleep(x)
-#elif defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+#elif defined(DJGPP) || (defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__))
 #define THEORAPLAY_ONLY_SINGLE_THREADED 1
 #define THEORAPLAY_THREAD_T    int
 #define THEORAPLAY_MUTEX_T     int

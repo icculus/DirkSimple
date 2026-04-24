@@ -19,6 +19,11 @@ CHECK_LIBRARY_EXISTS(m floor "" HAVE_LIB_M)
 set(DIRKSIMPLE_SDL_DEFAULT ON)
 set(DIRKSIMPLE_LIBRETRO_DEFAULT ON)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "DOS")
+  set(DOS TRUE)
+  set(DIRKSIMPLE_LIBRETRO_DEFAULT OFF)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   set(EMSCRIPTEN TRUE)
   set(IPO_SUPPORTED YES)  # !!! FIXME: -flto=thin currently broken in Emscripten: https://github.com/emscripten-core/emscripten/issues/12763
@@ -51,7 +56,7 @@ if(MSVC)
     add_definitions(-wd4305)  # truncation from double to float
 else()  # This assumes you have GCC or Clang at the moment.
     add_definitions(-Wall)
-    if(NOT EMSCRIPTEN AND NOT ANDROID)
+    if(NOT DOS AND NOT EMSCRIPTEN AND NOT ANDROID)
         set(USE_PTHREAD TRUE)
     endif()
 endif()
@@ -60,7 +65,9 @@ add_library(dirksimple-ogg STATIC
 	thirdparty/libogg/src/bitwise.c
 	thirdparty/libogg/src/framing.c
 )
-set_target_properties(dirksimple-ogg PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(NOT DOS)
+    set_target_properties(dirksimple-ogg PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 target_include_directories(dirksimple-ogg PRIVATE
     thirdparty/libogg/include
 )
@@ -88,7 +95,9 @@ add_library(dirksimple-vorbis STATIC
     thirdparty/libvorbis/lib/vorbisfile.c
     thirdparty/libvorbis/lib/window.c
 )
-set_target_properties(dirksimple-vorbis PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(NOT DOS)
+    set_target_properties(dirksimple-vorbis PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 target_include_directories(dirksimple-vorbis PRIVATE
     thirdparty/libogg/include
     thirdparty/libvorbis/include
@@ -110,7 +119,9 @@ add_library(dirksimple-theora STATIC
     thirdparty/libtheora/lib/quant.c
     thirdparty/libtheora/lib/state.c
 )
-set_target_properties(dirksimple-theora PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(NOT DOS)
+    set_target_properties(dirksimple-theora PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 target_include_directories(dirksimple-theora PRIVATE
     thirdparty/libogg/include
     thirdparty/libtheora/include
@@ -119,7 +130,9 @@ target_include_directories(dirksimple-theora PRIVATE
 add_library(dirksimple-theoraplay STATIC
     thirdparty/theoraplay/theoraplay.c
 )
-set_target_properties(dirksimple-theoraplay PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(NOT DOS)
+    set_target_properties(dirksimple-theoraplay PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 target_include_directories(dirksimple-theoraplay PRIVATE
     thirdparty/libogg/include
     thirdparty/libvorbis/include
@@ -131,8 +144,9 @@ target_compile_definitions(dirksimple-theoraplay PRIVATE "-DTHEORAPLAY_NO_FOPEN_
 add_library(dirksimple-lodepng STATIC
     thirdparty/lodepng/lodepng.c
 )
-set_target_properties(dirksimple-lodepng PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
+if(NOT DOS)
+    set_target_properties(dirksimple-lodepng PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 add_library(dirksimple-lua STATIC
     thirdparty/lua/src/lapi.c
     thirdparty/lua/src/ldebug.c
@@ -167,8 +181,11 @@ add_library(dirksimple-lua STATIC
     thirdparty/lua/src/lcorolib.c
     thirdparty/lua/src/loadlib.c
 )
-set_target_properties(dirksimple-lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if(NOT DOS)
+    set_target_properties(dirksimple-lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(NOT DOS AND NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_definitions(dirksimple-lua PRIVATE "-DLUA_USE_POSIX=1")
 endif()
 
@@ -198,6 +215,9 @@ if(DIRKSIMPLE_SDL)
     endif()
     if(HAVE_LIB_M)
         target_link_libraries(dirksimple m)
+    endif()
+    if(DOS)
+        set_target_properties(dirksimple PROPERTIES OUTPUT_NAME "DIRKSIMP")   # 8.3 file names!
     endif()
     if(EMSCRIPTEN)
         set_target_properties(dirksimple PROPERTIES OUTPUT_NAME "dirksimple-wasm")

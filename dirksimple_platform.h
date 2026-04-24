@@ -31,6 +31,8 @@
 
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
 #define DIRKSIMPLE_MULTITHREADED 0
+#elif defined(DJGPP)
+#define DIRKSIMPLE_MULTITHREADED 0
 #else
 #define DIRKSIMPLE_MULTITHREADED 1
 #endif
