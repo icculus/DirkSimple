@@ -1,16 +1,16 @@
 # DESCRIPTION: GitLab CI/CD for libRetro (NOT FOR GitLab-proper)
-﻿
+
 ##############################################################################
 ################################# BOILERPLATE ################################
 ##############################################################################
-﻿
+
 # Core definitions
 .core-defs:
   variables:
     GIT_SUBMODULE_STRATEGY: normal
     CORENAME: dirksimple
     CORE_ARGS: -DLIBRETRO=ON
-﻿
+
 # Inclusion templates, required for the build to work
 include:
   ################################## DESKTOPS ################################    
@@ -29,7 +29,7 @@ include:
   # MacOS
   - project: 'libretro-infrastructure/ci-templates'
     file: 'osx-cmake-x86.yml'
-﻿
+
   ################################## CELLULAR ################################
   # Android
   - project: 'libretro-infrastructure/ci-templates'
@@ -58,7 +58,7 @@ stages:
   - build-prepare
   - build-shared
   - build-static
-﻿
+
 ##############################################################################
 #################################### STAGES ##################################
 ##############################################################################
@@ -69,25 +69,29 @@ libretro-build-linux-x64:
   extends:
     - .libretro-linux-cmake-x86_64
     - .core-defs
-﻿
+
 # Linux ARM 64-bit
 libretro-build-linux-aarch64:
   extends:
     - .libretro-linux-cmake-aarch64
     - .core-defs
-﻿
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:backports
+  variables:
+    CC: /usr/bin/gcc-14
+    CXX: /usr/bin/g++-14
+
 # Linux 32-bit
 libretro-build-linux-i686:
   extends:
     - .libretro-linux-cmake-x86
     - .core-defs
-﻿
+
 # Windows 64-bit
 libretro-build-windows-x64:
   extends:
     - .libretro-windows-cmake-x86_64
     - .core-defs
-﻿
+
 # Windows 32-bit
 libretro-build-windows-i686:
   extends:
@@ -105,26 +109,26 @@ libretro-build-osx-arm64:
   extends:
     - .libretro-osx-cmake-arm64
     - .core-defs
-﻿
+
 ################################### CELLULAR #################################
 # Android ARMv7a
 android-armeabi-v7a:
   extends:
     - .libretro-android-cmake-armeabi-v7a
     - .core-defs
-﻿
+
 # Android ARMv8a
 android-arm64-v8a:
   extends:
     - .libretro-android-cmake-arm64-v8a
     - .core-defs
-﻿
+
 # Android 64-bit x86
 android-x86_64:
   extends:
     - .libretro-android-cmake-x86_64
     - .core-defs
-﻿
+
 # Android 32-bit x86
 android-x86:
   extends:
